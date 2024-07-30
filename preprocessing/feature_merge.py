@@ -18,7 +18,6 @@ for i in range(25, 30):
     pose_df.drop(columns=["Unnamed: 0"], inplace=True)
 
     audio_df = pd.read_csv(audio_url)
-    audio_df.drop(columns=["file", "start", "end", "start_frame"], inplace=True)
 
     face_pose_merged_df = pd.merge(pose_df, relevant_face_df, on="frame", how="inner")
     face_pose_audio_merged_df = pd.merge(face_pose_merged_df, audio_df, on="frame", how="inner")
