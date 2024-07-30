@@ -10,9 +10,9 @@ The robot failure was verbalized as "Sorry, I do not understand" and occurred at
 
 ## Table of Contents
 
-1. [Feature Extraction](https://github.com/shannon-jliu/badrobotsIRL/tree/main?tab=readme-ov-file#feature-extraction)
-2. [Labels](https://github.com/shannon-jliu/badrobotsIRL?tab=readme-ov-file#labels)
-3. [Participant Exclusion](https://github.com/shannon-jliu/badrobotsIRL/tree/main?tab=readme-ov-file#participant-exclusion)
+1. [Feature Extraction](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#feature-extraction)
+2. [Labels](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#labels)
+3. [Participant Exclusion](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#participant-exclusion)
 
 ## Feature Extraction
 
@@ -26,7 +26,7 @@ The OpenFace toolkit can be found here: https://github.com/TadasBaltrusaitis/Ope
 
 #### Feature Exclusion
 
-Irrelevant features were excluded from the OpenFace output and this process was completed while merging all feature data. Facial feature exclusion is found in this Python script: [feature_merge.py](https://github.com/shannon-jliu/badrobotsIRL/blob/main/preprocessing/feature_merge.py). For the facial feature exclusion portion of the script, the CSV file path of the facial features for each participant and final facial feature list were required as input.
+Irrelevant features were excluded from the OpenFace output and this process was completed while merging all feature data. Facial feature exclusion is found in this Python script: [feature_merge.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/feature_merge.py). For the facial feature exclusion portion of the script, the CSV file path of the facial features for each participant and final facial feature list were required as input.
 
 Final facial feature list (mainly action units):
 ```
@@ -38,14 +38,16 @@ facial_features = ['AU01_r', 'AU02_r', 'AU04_r', 'AU05_r', 'AU06_r', 'AU07_r', '
 
 ### Pose Features & Estimation
 
-The OpenPose toolkit and the BODY_25 model were used to obtain keypoints of the participant's body features and required video file path as input and a JSON file path to store the output. The JSON files were parsed and converted into CSV files listing pose features per frame for each video file. The following was executed in the command line interface to return a JSON file of 25 keypoints per frame:
+The OpenPose toolkit and the BODY_25 model were used to obtain keypoints of the participant's body features and required video file path as input and a JSON file path to store the output. The JSON files were parsed and converted into CSV files listing pose features per frame for each video file with this script: [parse_openpose.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/parse_openpose.py). 
+
+The following was executed in the command line interface to return a JSON file of 25 keypoints per frame:
 ```
 bin\OpenPoseDemo.exe --video {input_video_file_path} --write_json {output_file_path}
 ```
 
 #### Feature Exclusion
 
-Only upper body keypoints were relevant to the video dataset so the lower body keypoints (mid hip, right hip, left hip, right knee, left knee, right ankle, left ankle, right big toe, left big toe, right small toe, left small toe, right heel, left heel) were removed during preprocessing. The Python script used to exclude lower body features is found here: [feature_exclusion.py](https://github.com/shannon-jliu/badrobotsIRL/blob/main/preprocessing/feature_exclusion.py). Required input for the script includes the directory path to the directory holding all participant CSV files and a CSV file path for each participant to store output.
+Only upper body keypoints were relevant to the video dataset so the lower body keypoints (mid hip, right hip, left hip, right knee, left knee, right ankle, left ankle, right big toe, left big toe, right small toe, left small toe, right heel, left heel) were removed during preprocessing. The Python script used to exclude lower body features is found here: [feature_exclusion.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/feature_exclusion.py). Required input for the script includes the directory path to the directory holding all participant CSV files and a CSV file path for each participant to store output.
 
 Final pose feature list: 
 ```
@@ -59,7 +61,7 @@ The OpenPose toolkit can be found here: https://github.com/CMU-Perceptual-Comput
 
 #### Body Keypoint Delta Calculations
 
-In addition to the original features produced with OpenPose, another column titled "[original feature name]_delta" was appended and included the change in value from the previous frame's original feature value to the current frame's original feature value. The Python script used for updating the CSV with delta values is found here: [features_delta_calculations.py](https://github.com/shannon-jliu/badrobotsIRL/blob/main/preprocessing/features_delta_calculations.py). Required input to obtain delta calculations for each participant includes the CSV file path of pose features for the participant and a CSV file path to store the output or additional delta columns and values.
+In addition to the original features produced with OpenPose, another column titled "[original feature name]_delta" was appended and included the change in value from the previous frame's original feature value to the current frame's original feature value. The Python script used for updating the CSV with delta values is found here: [features_delta_calculations.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/features_delta_calculations.py). Required input to obtain delta calculations for each participant includes the CSV file path of pose features for the participant and a CSV file path to store the output or additional delta columns and values.
 
 ### Audio Features
 
@@ -75,7 +77,7 @@ file = f"{input_audio_file_path}"
 y = smile.process_file(file)
 y.to_csv(f"{output_file_path}")
 ```
-The script can also be found here: [audio_extraction.py](https://github.com/shannon-jliu/badrobotsIRL/blob/main/preprocessing/audio_extraction.py). Required inputs for the script included a directory of all participant audio files and a CSV file path for each participant to store output.
+The script can also be found here: [audio_extraction.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/audio_extraction.py). Required inputs for the script included a directory of all participant audio files and a CSV file path for each participant to store output.
 
 Final audio feature list:
 ```
@@ -112,23 +114,23 @@ The output of the speaker diarization was an RTTM file. This was converted into 
 
 pyannote speaker diarization toolkit can be found here: https://huggingface.co/pyannote/speaker-diarization-3.1 or https://github.com/pyannote/pyannote-audio
 
-Once the timestamps for each speaker were extracted, audio features corresponding to the participant's speech were retained, while those corresponding to other speakers' speech were removed. The Python script used to achieve this is found here: [filter_audio_features.py](https://github.com/shannon-jliu/badrobotsIRL/blob/main/preprocessing/filter_audio_features.py). Required inputs for the script to filter features for a single participant include the CSV file of openSMILE audio extracted features, the CSV file of timestamps produced from speaker diarization, and a CSV file path to store the output.
+Once the timestamps for each speaker were extracted, audio features corresponding to the participant's speech were retained, while those corresponding to other speakers' speech were removed. The Python script used to achieve this is found here: [filter_audio_features.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/filter_audio_features.py). Required inputs for the script to filter features for a single participant include the CSV file of openSMILE audio extracted features, the CSV file of timestamps produced from speaker diarization, and a CSV file path to store the output.
 
 #### Timestamp to Frame Conversion
 
-The CSV files of features achieved from openSMILE used start and end timestamps in the format "0 days 00:00:00.00", and each row included audio features for 0.02 seconds (between the start and end timestamps). However, the study was interested in utilizing frames instead of timestamps. Therefore, start imestamps were converted into frames by running this Python script: [audio_features_frames.py](https://github.com/shannon-jliu/badrobotsIRL/blob/main/preprocessing/audio_features_frames.py). Required inputs to obtain frames included a directory of all participant CSV files of filtered audio features and a CSV file path for each participant to store the new output CSV.
+The CSV files of features achieved from openSMILE used start and end timestamps in the format "0 days 00:00:00.00", and each row included audio features for 0.02 seconds (between the start and end timestamps). However, the study was interested in utilizing frames instead of timestamps. Therefore, start imestamps were converted into frames by running this Python script: [audio_features_frames.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/audio_features_frames.py). Required inputs to obtain frames included a directory of all participant CSV files of filtered audio features and a CSV file path for each participant to store the new output CSV.
 
 ### Feature Merge
 
-After facial, pose, and audio features were processed to include relevant features per frame per participant, all features were merged into one CSV file representing the features per frame of a single participant. The Python script for merging features for each participant is found here: [feature_merge.py](https://github.com/shannon-jliu/badrobotsIRL/blob/main/preprocessing/feature_merge.py)
+After facial, pose, and audio features were processed to include relevant features per frame per participant, all features were merged into one CSV file representing the features per frame of a single participant. The Python script for merging features for each participant is found here: [feature_merge.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/feature_merge.py)
 
-Finally, all participant's features were merged into a collective CSV file containing all rows from each participant's merged features data. The Python script for merging all participant feature data is found here: [feature_all_participants.py](https://github.com/shannon-jliu/badrobotsIRL/blob/main/preprocessing/feature_all_participants.py)
+Finally, all participant's features were merged into a collective CSV file containing all rows from each participant's merged features data. The Python script for merging all participant feature data is found here: [feature_all_participants.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/feature_all_participants.py)
 
 ## Labels
 
 Two types of labeling methods were used: binary labeling and multiclass labeling. A label was applied to each frame of the video of the interaction between the participant and the robot. Labels were initially appended to the pose feature CSV files.
 
-The Python script used for efficient labeling are found here: [features_create_labels_csvs.py](https://github.com/shannon-jliu/badrobotsIRL/blob/main/preprocessing/features_create_labels_csvs.py). Required inputs for the script to store binary and multiclass labels for each participant included a CSV file to store the features and labels, the frame numbers for when binary labels should be added, and the frame numbers for when multiclass labels should be added. Additionally, an input directory path was required for the location to store CSV files of features and labels for each participant.
+The Python script used for efficient labeling are found here: [features_create_labels_csvs.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/features_create_labels_csvs.py). Required inputs for the script to store binary and multiclass labels for each participant included a CSV file to store the features and labels, the frame numbers for when binary labels should be added, and the frame numbers for when multiclass labels should be added. Additionally, an input directory path was required for the location to store CSV files of features and labels for each participant.
 
 ### Binary Labeling
 
@@ -218,7 +220,7 @@ Participant 29's interaction consisted of 5 errors. Therefore, it contained 2 ad
 - Average percentage of "3" label: 19.0%
 - Average percentage of additional labels: 2.2%
 
-The Python script that assisted with the label analysis is found here: [label_analysis.py](https://github.com/shannon-jliu/badrobotsIRL/blob/main/preprocessing/label_analysis.py)
+The Python script that assisted with the label analysis is found here: [label_analysis.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/label_analysis.py)
 
 ## Participant Exclusion
 
