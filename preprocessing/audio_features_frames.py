@@ -32,26 +32,40 @@ def create_frames_audio_csv(file, participant):
 
     df = pandas.read_csv(file)
 
+    df.fillna(0, inplace=True)
+    df.replace([np.inf, -np.inf], 0, inplace=True)
+
+    float_cols = df.columns[3:]
+
+    for col in float_cols:
+        df[col] = pandas.to_numeric(df[col], errors='coerce')
+    
     df['start_frame'] = df['start'].apply(lambda x: time_to_frame(x))
 
     new_rows = []
-
-    counter = 0
 
     for _, row in df.iterrows():
 
         start_frame = row['start_frame']
 
-        if start_frame == counter:
-            new_row = row.copy()
-            new_row['frame'] = start_frame
-            new_rows.append(new_row)
-            counter += 1
+        new_row = row.copy()
+
+        new_row['frame'] = start_frame
+        new_rows.append(new_row)
 
     new_df = pandas.DataFrame(new_rows)
-    new_df.drop(columns=["start_frame"])
+    
+    numeric_columns = new_df.select_dtypes(include='number').columns
 
-    new_df.to_csv(f"preprocessing/final_features/audio/{participant}_audio.csv", index=False)
+    grouped_df = new_df.groupby('frame')[numeric_columns].mean()
+
+    cols = list(grouped_df.columns)
+    cols.insert(0, cols.pop(cols.index('frame')))
+    grouped_df = grouped_df[cols]
+    grouped_df['frame'] = grouped_df['frame'].astype(int)
+    grouped_df.drop(columns='start_frame', inplace=True)
+
+    grouped_df.to_csv(f"preprocessing/final_features/audio_averaged/{participant}_audio.csv", index=False)
 
 
 directory = "preprocessing/nodbot_filtered_audio_features"
