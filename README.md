@@ -118,7 +118,7 @@ Once the timestamps for each speaker were extracted, audio features correspondin
 
 #### Timestamp to Frame Conversion
 
-The CSV files of features achieved from openSMILE used start and end timestamps in the format "0 days 00:00:00.00", and each row included audio features for 0.02 seconds (between the start and end timestamps). However, the study was interested in utilizing frames instead of timestamps. Therefore, start imestamps were converted into frames by running this Python script: [audio_features_frames.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/audio_features_frames.py). Required inputs to obtain frames included a directory of all participant CSV files of filtered audio features and a CSV file path for each participant to store the new output CSV.
+The CSV files of features achieved from openSMILE used start and end timestamps in the format "0 days 00:00:00.00", and each row included audio features for 0.02 seconds (between the start and end timestamps). However, this study is interested in utilizing frames instead of timestamps. Therefore, start timestamps were converted into frames. For multiple rows with the same frame number, the average feature value was calculated and used as the frame's feature value for each feature. The Python script used to convert timestamps to frames and process features is found here: [audio_features_frames.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/audio_features_frames.py). Required inputs to obtain frames included a directory of all participant CSV files of filtered audio features and a CSV file path for each participant to store the new output CSV.
 
 ### Feature Merge
 
