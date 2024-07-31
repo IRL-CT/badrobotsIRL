@@ -124,7 +124,9 @@ The CSV files of features achieved from openSMILE used start and end timestamps 
 
 After facial, pose, and audio features were processed to include relevant features per frame per participant, all features were merged into one CSV file representing the features per frame of a single participant. The Python script for merging features for each participant is found here: [feature_merge.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/feature_merge.py)
 
-Finally, all participant's features were merged into a collective CSV file containing all rows from each participant's merged features data. The Python script for merging all participant feature data is found here: [feature_all_participants.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/feature_all_participants.py)
+All participant's features were merged into a collective CSV file containing all rows from each participant's merged features data. The Python script for merging all participant feature data is found here: [feature_all_participants.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/feature_all_participants.py).
+
+Features were checked for NaN and inf values and then normalized for model training. The Python script for checking feature values is found here: [check_features.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/check_features.py) and for normalizing features is found here [normalization.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/normalization.py)
 
 ## Labels
 
