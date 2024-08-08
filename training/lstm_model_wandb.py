@@ -1,36 +1,38 @@
 import wandb
-
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold
 from keras.models import Sequential
 from keras.layers import LSTM, Dense, Dropout, BatchNormalization, Input, Bidirectional
 from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.regularizers import l1_l2
+from keras.regularizers import l1_l2, l1, l2
 import tensorflow as tf
-
 from create_data_splits import create_data_splits
 from get_metrics import get_metrics
+import datetime
 
-
-def train():
+def train(df):
     wandb.init()
     config = wandb.config
+    print(config)
 
-    df = pd.read_csv("preprocessing/merged_features/all_participants_normalized.csv")
-    df['fold_id'] = -1
-    kf = KFold(n_splits=5, shuffle=True, random_state=42)
-    for fold, (train_index, test_index) in enumerate(kf.split(df)):
-        df.loc[test_index, 'fold_id'] = fold + 1
-
-    with_val = 1
-    fold_no = 1
+    num_lstm_layers = config.num_lstm_layers
+    lstm_units = config.lstm_units
+    batch_size = config.batch_size
+    epochs = config.epochs
+    activation = config.activation_function
+    use_bidirectional = config.use_bidirectional
+    dropout = config.dropout_rate
+    optimizer = config.optimizer
+    learning_rate = config.learning_rate
+    dense_units = config.dense_units
+    kernel_regularizer = config.recurrent_regularizer
+    loss = config.loss
 
     splits = create_data_splits(
         df,
-        fold_no=fold_no,
-        with_val=with_val,
-        fold_col='fold_id',
+        fold_no=0,
+        num_folds=5,
         seed_value=42,
         sequence_length=1
     )
@@ -38,52 +40,68 @@ def train():
     if splits is None:
         return
 
-    X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences = splits
-    X_train = np.reshape(X_train, (X_train.shape[0], 1, X_train.shape[1]))
-    X_val = np.reshape(X_val, (X_val.shape[0], 1, X_val.shape[1]))
-    X_test_sequences = np.array(X_test_sequences, dtype=float)
+    X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length = splits
+
+    print("X_train_sequences shape:", X_train_sequences.shape)
+    print("X_val_sequences shape:", X_val_sequences.shape)
+    print("X_test_sequences shape:", X_test_sequences.shape)
 
     model = Sequential()
-    model.add(Input(shape=(X_train_sequences.shape[1], X_train_sequences.shape[2])))
+    model.add(Input(shape=(sequence_length, X_train_sequences.shape[2])))
 
-    # Add (Bidirectional) LSTM layers
-    for _ in range(config.num_lstm_layers):
-        if config.use_bidirectional:
-            model.add(Bidirectional(LSTM(config.lstm_units, return_sequences=True, activation='tanh', kernel_regularizer=l1_l2(l1=0.01, l2=0.01))))
-        else:
-            model.add(LSTM(config.lstm_units, return_sequences=True, activation='tanh', kernel_regularizer=l1_l2(l1=0.01, l2=0.01)))
-        model.add(Dropout(config.dropout_rate))
-        model.add(BatchNormalization())
-
-    if config.use_bidirectional:
-        model.add(Bidirectional(LSTM(config.lstm_units, activation='tanh')))
+    if kernel_regularizer == "l1":
+        reg = l1(0.01)
+    elif kernel_regularizer == "l2":
+        reg = l2(0.01)
+    elif kernel_regularizer == "l1_l2":
+        reg = l1_l2(0.01, 0.01)
     else:
-        model.add(LSTM(config.lstm_units, activation='tanh'))
-    model.add(Dropout(config.dropout_rate))
-    model.add(BatchNormalization())
+        reg = None
+
+    if num_lstm_layers == 1:
+        if use_bidirectional:
+            model.add(Bidirectional(LSTM(lstm_units, activation=activation, kernel_regularizer=reg)))
+        else:
+            model.add(LSTM(lstm_units, activation=activation, kernel_regularizer=reg))
     
-    # Add Dense layers
-    model.add(Dense(config.dense_units, activation=config.activation_function))
-    model.add(Dense(config.dense_units, activation=config.activation_function))
+    else:
+        for _ in range(num_lstm_layers - 1):
+            if use_bidirectional:
+                model.add(Bidirectional(LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=reg)))
+            else:
+                model.add(LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=reg))
+            model.add(Dropout(dropout))
+            model.add(BatchNormalization())
+
+        if use_bidirectional:
+            model.add(Bidirectional(LSTM(lstm_units, activation=activation)))
+        else:
+            model.add(LSTM(lstm_units, activation=activation))
+        model.add(Dropout(dropout))
+        model.add(BatchNormalization())
+    
+    model.add(Dense(dense_units, activation=activation))
     model.add(Dense(1, activation="sigmoid"))
 
-    optimizer = config.optimizer.lower()
     if optimizer == 'adam':
-        optimizer = tf.keras.optimizers.Adam(learning_rate=config.learning_rate)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     elif optimizer == 'sgd':
-        optimizer = tf.keras.optimizers.SGD(learning_rate=config.learning_rate)
+        optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate)
+    elif optimizer == 'adadelta':
+        optimizer = tf.keras.optimizers.Adadelta(learning_rate=learning_rate)
 
-    model.compile(optimizer=optimizer, loss="binary_crossentropy", metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
+    model.summary()
+    
+    model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
 
-    early_stopping = EarlyStopping(monitor="val_accuracy", patience=10, restore_best_weights=True)
     model_checkpoint = ModelCheckpoint("training/best_model.keras", monitor="val_accuracy", save_best_only=True)
     
     model_history = model.fit(
-        X_train, y_train,
-        epochs=config.epochs,
-        batch_size=config.batch_size,
-        validation_data=(X_val, y_val),
-        callbacks=[model_checkpoint, early_stopping],
+        X_train_sequences, y_train_sequences,
+        epochs=epochs,
+        batch_size=batch_size,
+        validation_data=(X_val_sequences, y_val_sequences),
+        callbacks=[model_checkpoint],
         verbose=2
     )
 
@@ -121,22 +139,34 @@ def train():
     print(test_metrics)
 
 
-sweep_config = {
-    'method': 'grid',
-    'name': 'lstm_vs_bilstm_sweep',
-    'parameters': {
-        'use_bidirectional': {'values': [False]},
-        'num_lstm_layers': {'values': [1, 2, 3]},
-        'lstm_units': {'values': [64, 128, 256]},
-        'dropout_rate': {'values': [0.2, 0.3, 0.4]},
-        'dense_units': {'values': [32, 64, 128]},
-        'activation_function': {'values': ['tanh', 'relu', 'sigmoid']},
-        'optimizer': {'values': ['adam', 'sgd']},
-        'learning_rate': {'values': [0.001, 0.01, 0.005]},
-        'batch_size': {'values': [64, 128]},
-        'epochs': {'value': 100},
-    }
-}
+def main():
+    global df
+    df = pd.read_csv("preprocessing/merged_features/all_participants_normalized.csv")
 
-sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_vs_bilstm_comparison")
-wandb.agent(sweep_id, function=train, count=100)
+    sweep_config = {
+        'method': 'random',
+        'name': 'lstm_sweep_v3',
+        'parameters': {
+            'use_bidirectional': {'values': [True, False]},
+            'num_lstm_layers': {'values': [1, 2]},
+            'lstm_units': {'values': [64, 128, 256]},
+            'dropout_rate': {'values': [0.0, 0.2, 0.3, 0.4, 0.5, 0.8]},
+            'dense_units': {'values': [32, 64, 128]},
+            'activation_function': {'values': ['tanh', 'relu', 'sigmoid']},
+            'optimizer': {'values': ['adam', 'sgd', 'adadelta']},
+            'learning_rate': {'values': [0.001, 0.01, 0.005]},
+            'batch_size': {'values': [32, 64, 128]},
+            'epochs': {'value': 500},
+            'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
+            'loss' : {'value' : "binary_crossentropy"}
+        }
+    }
+
+    def train_wrapper():
+        train(df)
+
+    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_sweep_v3")
+    wandb.agent(sweep_id, function=train_wrapper)
+
+if __name__ == '__main__':
+    main()
