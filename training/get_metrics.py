@@ -44,7 +44,7 @@ def get_metrics(y_pred, y_true, sessions=None, tolerance=0):
     f1_tolerant = f1_score(y_true, y_pred_tolerant, labels=classes, average="macro", zero_division=0)
 
     return {
-        "accuracy": accuracy,
+        "test_accuracy": accuracy,
         "precision": precision,
         "recall": recall,
         "f1": f1,
