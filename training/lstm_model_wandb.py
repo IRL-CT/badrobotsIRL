@@ -28,13 +28,14 @@ def train(df):
     dense_units = config.dense_units
     kernel_regularizer = config.recurrent_regularizer
     loss = config.loss
+    sequence_length = config.sequence_length
 
     splits = create_data_splits(
         df,
         fold_no=0,
         num_folds=5,
         seed_value=42,
-        sequence_length=1
+        sequence_length=sequence_length
     )
 
     if splits is None:
@@ -63,6 +64,8 @@ def train(df):
             model.add(Bidirectional(LSTM(lstm_units, activation=activation, kernel_regularizer=reg)))
         else:
             model.add(LSTM(lstm_units, activation=activation, kernel_regularizer=reg))
+        model.add(Dropout(dropout))
+        model.add(BatchNormalization())
     
     else:
         for _ in range(num_lstm_layers - 1):
@@ -150,7 +153,7 @@ def main():
             'use_bidirectional': {'values': [True, False]},
             'num_lstm_layers': {'values': [1, 2]},
             'lstm_units': {'values': [64, 128, 256]},
-            'dropout_rate': {'values': [0.0, 0.2, 0.3, 0.4, 0.5, 0.8]},
+            'dropout_rate': {'values': [0.0, 0.3, 0.5, 0.8]},
             'dense_units': {'values': [32, 64, 128]},
             'activation_function': {'values': ['tanh', 'relu', 'sigmoid']},
             'optimizer': {'values': ['adam', 'sgd', 'adadelta']},
@@ -158,7 +161,8 @@ def main():
             'batch_size': {'values': [32, 64, 128]},
             'epochs': {'value': 500},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
-            'loss' : {'value' : "binary_crossentropy"}
+            'loss' : {'value' : "binary_crossentropy"},
+            'sequence_length' : {'values' : [1, 5, 15, 30]}
         }
     }
 
