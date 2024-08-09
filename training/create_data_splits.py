@@ -5,6 +5,17 @@ import random
 from sklearn.model_selection import train_test_split, KFold
 from sklearn.preprocessing import MinMaxScaler
 
+'''
+Generates and returns:
+- an array of sequences of data
+- an array of corresponding target values
+
+Requires:
+- an array of input data that will be used to create sequences 
+- an array of target values corresponding to the data
+- an array of ids or sessions that will be used to group sequences
+- an integer equal to the length of each sequence that will be created.
+'''
 def create_sequences(data, target, sessions, sequence_length):
     sequences = []
     targets = []
@@ -22,7 +33,25 @@ def create_sequences(data, target, sessions, sequence_length):
     
     return np.array(sequences), np.array(targets)
 
+'''
+Requires:
+- a dataframe consisting of features to be trained on and target values
+- an integer equal to the number of folds to create for cross validation
+- the index of the fold to be used for the current train validation test split
+- an integer seed value for random number generator
+- an integer equal to the length of each sequence that will be created.
 
+Creates and returns:
+- X_train: training set data
+- y_train: training set targets
+- X_val: validation set data
+- y_val: validation set targets
+- X_test: testing set data
+- y_test: testing set targets
+- X_train_sequences: sequences generated from training set data
+- y_train_sequences: an array of corresponding target values
+- sequence_length: the length of the sequences returned
+'''
 def create_data_splits(df, num_folds = 5, fold_no=0, seed_value=42, sequence_length=1):
     
     try:
