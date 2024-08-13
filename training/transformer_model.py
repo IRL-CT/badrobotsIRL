@@ -1,0 +1,187 @@
+import torch
+import torch.nn as nn
+import pandas as pd
+import numpy as np
+import wandb
+from create_data_splits import create_data_splits
+from get_metrics import get_metrics
+from sklearn.metrics import accuracy_score
+
+class TransformerModel(nn.Module):
+    def __init__(self, input_dim, num_heads, hidden_dim, num_layers, num_classes, dropout, activation):
+        super(TransformerModel, self).__init__()
+        encoder_layers = nn.TransformerEncoderLayer(
+            d_model=input_dim, 
+            nhead=num_heads, 
+            dim_feedforward=hidden_dim, 
+            dropout=dropout, 
+            batch_first=True
+        )
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layers, num_layers=num_layers)
+        self.fc = nn.Linear(input_dim, num_classes)
+        
+        self.activations = {
+            'relu': nn.ReLU(),
+            'tanh': nn.Tanh(),
+            'sigmoid': nn.Sigmoid()
+        }
+        
+        self.activation = self.activations.get(activation, nn.Sigmoid())
+
+    def forward(self, x):
+        x = self.transformer_encoder(x)
+        x = x.mean(dim=1)
+        x = self.fc(x)
+        x = self.activation(x)
+        return x
+
+def train(df):
+    wandb.init()
+    config = wandb.config
+    print(config)
+
+    num_heads = config.num_heads
+    hidden_dim = config.hidden_dim
+    num_layers = config.num_layers
+    batch_size = config.batch_size
+    activation = config.activation_function
+    dropout = config.dropout_rate
+    optimizer_type = config.optimizer
+    learning_rate = config.learning_rate
+    loss_type = config.loss
+    sequence_length = config.sequence_length
+    output_dim = 1
+    
+    splits = create_data_splits(
+        df,
+        fold_no=0,
+        num_folds=5,
+        seed_value=42,
+        sequence_length=sequence_length
+    )
+    
+    if splits is None:
+        return
+
+    X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length = splits
+
+    print("X_train_sequences shape:", X_train_sequences.shape)
+    print("X_val_sequences shape:", X_val_sequences.shape)
+    print("X_test_sequences shape:", X_test_sequences.shape)
+
+    input_dim = X_train_sequences.shape[2]
+
+    if input_dim % num_heads != 0:
+        num_heads = 1
+        wandb.config.num_heads = num_heads
+
+    model = TransformerModel(
+        input_dim=input_dim, 
+        num_heads=num_heads, 
+        hidden_dim=hidden_dim, 
+        num_layers=num_layers, 
+        num_classes=output_dim, 
+        dropout=dropout, 
+        activation=activation
+    )
+
+    if optimizer_type == 'adam':
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    elif optimizer_type == 'sgd':
+        optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
+    elif optimizer_type == 'adadelta':
+        optimizer = torch.optim.Adadelta(model.parameters(), lr=learning_rate)
+    elif optimizer_type == 'RMSprop':
+        optimizer = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
+    
+    if loss_type == "binary_crossentropy":
+        criterion = nn.BCEWithLogitsLoss()
+    else:
+        raise ValueError(f"Unsupported loss function: {loss_type}")
+
+    train_loader = torch.utils.data.DataLoader(
+        torch.utils.data.TensorDataset(torch.Tensor(X_train_sequences), torch.Tensor(y_train_sequences).unsqueeze(1)),
+        batch_size=batch_size,
+        shuffle=True
+    )
+    
+    val_loader = torch.utils.data.DataLoader(
+        torch.utils.data.TensorDataset(torch.Tensor(X_val_sequences), torch.Tensor(y_val_sequences).unsqueeze(1)),
+        batch_size=batch_size,
+        shuffle=False
+    )
+
+    for epoch in range(config.epochs):
+        model.train()
+        train_loss = 0.0
+        y_true_train, y_pred_train = [], []
+
+        for batch_idx, (data, target) in enumerate(train_loader):
+            optimizer.zero_grad()
+            output = model(data)
+            loss = criterion(output, target)
+            loss.backward()
+            optimizer.step()
+            train_loss += loss.item()
+            
+            y_true_train.extend(target.cpu().numpy())
+            y_pred_train.extend(output.detach().cpu().numpy())
+
+        metrics_train = get_metrics(np.round(y_pred_train), y_true_train)
+        wandb.log({
+            'train_loss': train_loss / len(train_loader),
+            **metrics_train
+        })
+        print(f'Epoch {epoch+1}, Train Loss: {train_loss / len(train_loader)}, Train Metrics: {metrics_train}')
+
+        model.eval()
+        val_loss = 0.0
+        y_true_val, y_pred_val = [], []
+
+        with torch.no_grad():
+            for data, target in val_loader:
+                output = model(data)
+                loss = criterion(output, target)
+                val_loss += loss.item()
+                
+                y_true_val.extend(target.cpu().numpy())
+                y_pred_val.extend(output.cpu().numpy())
+        
+        val_accuracy = accuracy_score(y_true_val, np.round(y_pred_val))
+        metrics_val = get_metrics(np.round(y_pred_val), y_true_val)
+        wandb.log({
+            'val_loss': val_loss / len(val_loader),
+            'val_accuracy': val_accuracy,
+            **metrics_val
+        })
+        print(f'Epoch {epoch+1}, Val Loss: {val_loss / len(val_loader)}, Val Accuracy: {val_accuracy}, Val Metrics: {metrics_val}')
+
+def main():
+    df = pd.read_csv("preprocessing/merged_features/all_participants_normalized.csv")
+
+    sweep_config = {
+        'method': 'random',
+        'name': 'transformer_sweep',
+        'parameters': {
+            'num_heads': {'values': [1, 7, 25, 100]},
+            'num_layers': {'values': [2, 3]},
+            'hidden_dim': {'values': [64, 128, 256]},
+            'dropout_rate': {'values': [0.0, 0.3, 0.5, 0.8]},
+            'activation_function': {'values': ['tanh', 'relu', 'sigmoid']},
+            'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'RMSprop']},
+            'learning_rate': {'values': [0.001, 0.01, 0.005]},
+            'batch_size': {'values': [32, 64, 128, 256]},
+            'epochs': {'value': 500},
+            'loss': {'value': "binary_crossentropy"},
+            'sequence_length': {'values': [1, 5, 15, 30]}
+        }
+    }
+
+    def train_wrapper():
+        train(df)
+
+    sweep_id = wandb.sweep(sweep=sweep_config, project="transformer_sweep_v1")
+    wandb.agent(sweep_id, function=train_wrapper)
+
+if __name__ == '__main__':
+    main()
