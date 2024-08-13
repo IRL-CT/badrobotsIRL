@@ -2,14 +2,17 @@ import torch
 import torch.nn as nn
 import pandas as pd
 import numpy as np
-import wandb
-from create_data_splits import create_data_splits
-from get_metrics import get_metrics
 from sklearn.metrics import accuracy_score
 
+import wandb
+
+from create_data_splits import create_data_splits
+from get_metrics import get_metrics
+
 class TransformerModel(nn.Module):
-    def __init__(self, input_dim, num_heads, hidden_dim, num_layers, num_classes, dropout, activation):
+    def __init__(self, input_dim, num_heads, hidden_dim, num_layers, num_classes, dropout, activation, loss_type):
         super(TransformerModel, self).__init__()
+        
         encoder_layers = nn.TransformerEncoderLayer(
             d_model=input_dim, 
             nhead=num_heads, 
@@ -17,22 +20,22 @@ class TransformerModel(nn.Module):
             dropout=dropout, 
             batch_first=True
         )
+
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers, num_layers=num_layers)
         self.fc = nn.Linear(input_dim, num_classes)
-        
-        self.activations = {
-            'relu': nn.ReLU(),
-            'tanh': nn.Tanh(),
-            'sigmoid': nn.Sigmoid()
-        }
-        
-        self.activation = self.activations.get(activation, nn.Sigmoid())
 
+        if loss_type == "binary_crossentropy":
+            self.output_activation = nn.Sigmoid()
+        elif loss_type == "categorical_crossentropy":
+            self.output_activation = nn.Softmax(dim=1)
+        else:
+            raise ValueError(f"Unsupported loss function: {loss_type}")
+        
     def forward(self, x):
         x = self.transformer_encoder(x)
         x = x.mean(dim=1)
         x = self.fc(x)
-        x = self.activation(x)
+        x = self.output_activation(x)
         return x
 
 def train(df):
@@ -82,7 +85,8 @@ def train(df):
         num_layers=num_layers, 
         num_classes=output_dim, 
         dropout=dropout, 
-        activation=activation
+        activation=activation,
+        loss_type=loss_type
     )
 
     if optimizer_type == 'adam':
@@ -96,6 +100,8 @@ def train(df):
     
     if loss_type == "binary_crossentropy":
         criterion = nn.BCEWithLogitsLoss()
+    elif loss_type == "categorical_crossentropy":
+        criterion = nn.CrossEntropyLoss()
     else:
         raise ValueError(f"Unsupported loss function: {loss_type}")
 
@@ -107,6 +113,12 @@ def train(df):
     
     val_loader = torch.utils.data.DataLoader(
         torch.utils.data.TensorDataset(torch.Tensor(X_val_sequences), torch.Tensor(y_val_sequences).unsqueeze(1)),
+        batch_size=batch_size,
+        shuffle=False
+    )
+
+    test_loader = torch.utils.data.DataLoader(
+        torch.utils.data.TensorDataset(torch.Tensor(X_test_sequences), torch.Tensor(y_test_sequences).unsqueeze(1)),
         batch_size=batch_size,
         shuffle=False
     )
@@ -127,12 +139,14 @@ def train(df):
             y_true_train.extend(target.cpu().numpy())
             y_pred_train.extend(output.detach().cpu().numpy())
 
+        train_accuracy = accuracy_score(y_true_train, np.round(y_pred_train))
         metrics_train = get_metrics(np.round(y_pred_train), y_true_train)
         wandb.log({
             'train_loss': train_loss / len(train_loader),
+            'train_accuracy': train_accuracy,
             **metrics_train
         })
-        print(f'Epoch {epoch+1}, Train Loss: {train_loss / len(train_loader)}, Train Metrics: {metrics_train}')
+        print(f'Epoch {epoch+1}, Train Loss: {train_loss / len(train_loader)}, Train Accuracy: {train_accuracy}, Train Metrics: {metrics_train}')
 
         model.eval()
         val_loss = 0.0
@@ -146,7 +160,7 @@ def train(df):
                 
                 y_true_val.extend(target.cpu().numpy())
                 y_pred_val.extend(output.cpu().numpy())
-        
+
         val_accuracy = accuracy_score(y_true_val, np.round(y_pred_val))
         metrics_val = get_metrics(np.round(y_pred_val), y_true_val)
         wandb.log({
@@ -155,6 +169,30 @@ def train(df):
             **metrics_val
         })
         print(f'Epoch {epoch+1}, Val Loss: {val_loss / len(val_loader)}, Val Accuracy: {val_accuracy}, Val Metrics: {metrics_val}')
+    
+
+    model.eval()
+    test_loss = 0.0
+    y_true_test, y_pred_test = [], []
+
+    with torch.no_grad():
+        for data, target in test_loader:
+            output = model(data)
+            loss = criterion(output, target)
+            test_loss += loss.item()
+            
+            y_true_test.extend(target.cpu().numpy())
+            y_pred_test.extend(output.cpu().numpy())
+
+    test_accuracy = accuracy_score(y_true_test, np.round(y_pred_test))
+    metrics_test = get_metrics(np.round(y_pred_test), y_true_test)
+    wandb.log({
+        'test_loss': test_loss / len(test_loader),
+        'test_accuracy': test_accuracy,
+        **metrics_test
+    })
+    print(f'Test Loss: {test_loss / len(test_loader)}, Test Accuracy: {test_accuracy}, Test Metrics: {metrics_test}')
+
 
 def main():
     df = pd.read_csv("preprocessing/merged_features/all_participants_normalized.csv")
@@ -167,12 +205,12 @@ def main():
             'num_layers': {'values': [2, 3]},
             'hidden_dim': {'values': [64, 128, 256]},
             'dropout_rate': {'values': [0.0, 0.3, 0.5, 0.8]},
-            'activation_function': {'values': ['tanh', 'relu', 'sigmoid']},
+            'activation_function': {'values': ['tanh', 'relu', 'sigmoid', 'softmax']},
             'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'RMSprop']},
             'learning_rate': {'values': [0.001, 0.01, 0.005]},
             'batch_size': {'values': [32, 64, 128, 256]},
             'epochs': {'value': 500},
-            'loss': {'value': "binary_crossentropy"},
+            'loss': {'values': ["binary_crossentropy", "categorical_crossentropy"]},
             'sequence_length': {'values': [1, 5, 15, 30]}
         }
     }
