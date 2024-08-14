@@ -1,20 +1,27 @@
 import wandb
 import numpy as np
 import pandas as pd
+import random
 from sklearn.model_selection import KFold
 from keras.models import Sequential
 from keras.layers import GRU, Dense, Dropout, BatchNormalization, Input, Bidirectional
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import ModelCheckpoint
 from keras.regularizers import l1_l2, l1, l2
+from keras.utils import to_categorical
 import tensorflow as tf
 from create_data_splits import create_data_splits
 from get_metrics import get_metrics
-import datetime
 
 def train(df):
+
     wandb.init()
     config = wandb.config
     print(config)
+
+    seed_value = 42
+    np.random.seed(seed_value)
+    random.seed(seed_value)
+    tf.random.set_seed(seed_value)
 
     num_gru_layers = config.num_gru_layers
     gru_units = config.gru_units
@@ -42,6 +49,11 @@ def train(df):
         return
 
     X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length = splits
+
+    if loss == "categorical_crossentropy":
+        y_train_sequences = to_categorical(y_train_sequences)
+        y_val_sequences = to_categorical(y_val_sequences)
+        y_test_sequences = to_categorical(y_test_sequences)
 
     print("X_train_sequences shape:", X_train_sequences.shape)
     print("X_val_sequences shape:", X_val_sequences.shape)
@@ -80,11 +92,17 @@ def train(df):
             model.add(Bidirectional(GRU(gru_units, activation=activation)))
         else:
             model.add(GRU(gru_units, activation=activation))
+
         model.add(Dropout(dropout))
         model.add(BatchNormalization())
     
-    model.add(Dense(dense_units, activation=activation))
-    model.add(Dense(1, activation="sigmoid"))
+    if loss == "categorical_crossentropy":
+        num_classes = len(np.unique(y_train_sequences))
+        model.add(Dense(dense_units, activation=activation))
+        model.add(Dense(num_classes, activation="softmax"))
+    else:
+        model.add(Dense(dense_units, activation=activation))
+        model.add(Dense(1, activation="sigmoid"))
 
     if optimizer == 'adam':
         optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
@@ -92,7 +110,7 @@ def train(df):
         optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate)
     elif optimizer == 'adadelta':
         optimizer = tf.keras.optimizers.Adadelta(learning_rate=learning_rate)
-    elif optimizer == 'RMSprop':
+    elif optimizer == 'rmsprop':
         optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)
 
     model.summary()
@@ -136,8 +154,13 @@ def train(df):
         wandb.log(metrics)
 
     y_predict_probs = model.predict(X_test_sequences)
-    y_pred = (y_predict_probs > 0.5).astype(int).flatten()
-    y_test_sequences = y_test_sequences.astype(int).flatten()
+    
+    if loss == "categorical_crossentropy":
+        y_pred = np.argmax(y_predict_probs, axis=1)
+        y_test_sequences = np.argmax(y_test_sequences, axis=1)
+    else:
+        y_pred = (y_predict_probs > 0.5).astype(int).flatten()
+        y_test_sequences = y_test_sequences.astype(int).flatten()
 
     test_metrics = get_metrics(y_pred, y_test_sequences, tolerance=1)
     wandb.log(test_metrics)
@@ -153,17 +176,17 @@ def main():
         'name': 'gru_sweep_v1',
         'parameters': {
             'use_bidirectional': {'values': [True, False]},
-            'num_gru_layers': {'values': [1, 2]},
+            'num_gru_layers': {'values': [1, 2, 3]},
             'gru_units': {'values': [64, 128, 256]},
             'dropout_rate': {'values': [0.0, 0.3, 0.5, 0.8]},
             'dense_units': {'values': [32, 64, 128]},
             'activation_function': {'values': ['tanh', 'relu', 'sigmoid']},
-            'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'RMSprop']},
+            'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'rmsprop']},
             'learning_rate': {'values': [0.001, 0.01, 0.005]},
             'batch_size': {'values': [32, 64, 128]},
             'epochs': {'value': 500},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
-            'loss' : {'value' : "binary_crossentropy"},
+            'loss' : {'values' : ["binary_crossentropy", "categorical_crossentropy"]},
             'sequence_length' : {'values' : [1, 5, 15, 30]}
         }
     }
