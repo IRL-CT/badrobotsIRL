@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import pandas as pd
 import numpy as np
+import random
 from sklearn.metrics import accuracy_score
 
 import wandb
@@ -39,6 +40,7 @@ class TransformerModel(nn.Module):
         return x
 
 def train(df):
+    
     wandb.init()
     config = wandb.config
     print(config)
@@ -196,6 +198,12 @@ def train(df):
 
 def main():
     df = pd.read_csv("preprocessing/merged_features/all_participants_normalized.csv")
+
+    seed_value = 42
+    np.random.seed(seed_value)
+    random.seed(seed_value)
+    torch.manual_seed(seed_value)
+    torch.cuda.manual_seed_all(seed_value)
 
     sweep_config = {
         'method': 'random',
