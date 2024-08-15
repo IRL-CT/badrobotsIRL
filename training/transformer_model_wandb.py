@@ -3,7 +3,7 @@ import torch.nn as nn
 import pandas as pd
 import numpy as np
 import random
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 import wandb
 
@@ -142,13 +142,22 @@ def train(df):
             y_pred_train.extend(output.detach().cpu().numpy())
 
         train_accuracy = accuracy_score(y_true_train, np.round(y_pred_train))
-        metrics_train = get_metrics(np.round(y_pred_train), y_true_train)
+        train_precision = precision_score(y_true_train, np.round(y_pred_train))
+        train_recall = recall_score(y_true_train, np.round(y_pred_train))
+        train_f1 = f1_score(y_true_train, np.round(y_pred_train))
+
+        print(f'Epoch {epoch+1}, Train Loss: {train_loss / len(train_loader)}, '
+              f'Train Accuracy: {train_accuracy}, Precision: {train_precision}, '
+              f'Recall: {train_recall}, F1-score: {train_f1}')
+
         wandb.log({
-            'train_loss': train_loss / len(train_loader),
-            'train_accuracy': train_accuracy,
-            **metrics_train
-        })
-        print(f'Epoch {epoch+1}, Train Loss: {train_loss / len(train_loader)}, Train Accuracy: {train_accuracy}, Train Metrics: {metrics_train}')
+                    'train_loss': train_loss / len(train_loader),
+                    'train_accuracy': train_accuracy,
+                    'train_precision': train_precision,
+                    'train_recall': train_recall,
+                    'train_f1': train_f1,
+                    'epoch': epoch + 1
+                })
 
         model.eval()
         val_loss = 0.0
@@ -164,14 +173,22 @@ def train(df):
                 y_pred_val.extend(output.cpu().numpy())
 
         val_accuracy = accuracy_score(y_true_val, np.round(y_pred_val))
-        metrics_val = get_metrics(np.round(y_pred_val), y_true_val)
+        val_precision = precision_score(y_true_val, np.round(y_pred_val))
+        val_recall = recall_score(y_true_val, np.round(y_pred_val))
+        val_f1 = f1_score(y_true_val, np.round(y_pred_val))
+
+        print(f'Epoch {epoch+1}, Val Loss: {val_loss / len(val_loader)}, '
+              f'Val Accuracy: {val_accuracy}, Precision: {val_precision}, '
+              f'Recall: {val_recall}, F1-score: {val_f1}')
+        
         wandb.log({
             'val_loss': val_loss / len(val_loader),
             'val_accuracy': val_accuracy,
-            **metrics_val
+            'val_precision': val_precision,
+            'val_recall': val_recall,
+            'val_f1': val_f1,
+            'epoch': epoch + 1
         })
-        print(f'Epoch {epoch+1}, Val Loss: {val_loss / len(val_loader)}, Val Accuracy: {val_accuracy}, Val Metrics: {metrics_val}')
-    
 
     model.eval()
     test_loss = 0.0
