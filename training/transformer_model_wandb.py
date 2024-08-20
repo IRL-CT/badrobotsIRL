@@ -7,7 +7,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 
 import wandb
 
-from create_data_splits import create_data_splits
+from create_data_splits import create_data_splits, create_data_splits_pca
 from get_metrics import get_metrics
 
 class TransformerModel(nn.Module):
