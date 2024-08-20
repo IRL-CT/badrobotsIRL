@@ -9,7 +9,7 @@ from keras.callbacks import ModelCheckpoint
 from keras.regularizers import l1_l2, l1, l2
 from keras.utils import to_categorical
 import tensorflow as tf
-from create_data_splits import create_data_splits
+from create_data_splits import create_data_splits, create_data_splits_pca
 from get_metrics import get_metrics
 
 def train(df):
@@ -37,7 +37,15 @@ def train(df):
     loss = config.loss
     sequence_length = config.sequence_length
 
-    splits = create_data_splits(
+    # splits = create_data_splits(
+    #     df,
+    #     fold_no=0,
+    #     num_folds=5,
+    #     seed_value=42,
+    #     sequence_length=sequence_length
+    # )
+
+    splits = create_data_splits_pca(
         df,
         fold_no=0,
         num_folds=5,
@@ -181,7 +189,7 @@ def main():
             'epochs': {'value': 500},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["binary_crossentropy", "categorical_crossentropy"]},
-            'sequence_length' : {'values' : [1, 5, 15, 30]}
+            'sequence_length' : {'values' : [1, 5, 15, 30, 60, 90]}
         }
     }
 
