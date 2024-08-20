@@ -117,3 +117,42 @@ def plot_confusion_matrix(y_true, y_pred, fold_no, model, sweep_name):
     plt.savefig(file_path)
     plt.close()
 
+
+def calculate_and_save_average_metrics(input_directory, output_filepath):
+    """
+    Calculates average metrics across multiple files in a directory and saves them to a file.
+
+    Requires:
+        the directory containing the metrics files.
+        the path to the output file where the average metrics will be saved.
+    """
+    all_metrics = defaultdict(list)
+    file_count = 0
+
+    for filename in os.listdir(input_directory):
+        if filename.endswith(".txt"):
+            filepath = os.path.join(input_directory, filename)
+
+            with open(filepath, 'r') as file:
+                lines = file.readlines()
+                for line in lines:
+                    match = re.match(r'(\w+): ([\d.]+)', line)
+                    if match:
+                        metric_name = match.group(1)
+                        metric_value = float(match.group(2))
+                        all_metrics[metric_name].append(metric_value)
+            file_count += 1
+
+    if file_count == 0:
+        print("No metrics files found.")
+        return
+
+    average_metrics = {key: sum(values)/file_count for key, values in all_metrics.items()}
+
+    with open(output_filepath, 'w') as file:
+        file.write("Average Metrics\n")
+        file.write("="*50 + "\n")
+        for key, value in average_metrics.items():
+            file.write(f"{key}: {value}\n")
+    
+    print(f"Average metrics have been saved to {output_filepath}")
