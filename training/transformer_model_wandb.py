@@ -57,7 +57,15 @@ def train(df):
     sequence_length = config.sequence_length
     output_dim = 1
     
-    splits = create_data_splits(
+    # splits = create_data_splits(
+    #     df,
+    #     fold_no=0,
+    #     num_folds=5,
+    #     seed_value=42,
+    #     sequence_length=sequence_length
+    # )
+
+    splits = create_data_splits_pca(
         df,
         fold_no=0,
         num_folds=5,
@@ -236,7 +244,7 @@ def main():
             'batch_size': {'values': [32, 64, 128, 256]},
             'epochs': {'value': 500},
             'loss': {'values': ["binary_crossentropy", "categorical_crossentropy"]},
-            'sequence_length': {'values': [1, 5, 15, 30]}
+            'sequence_length': {'values': [1, 5, 15, 30, 60, 90]}
         }
     }
 
