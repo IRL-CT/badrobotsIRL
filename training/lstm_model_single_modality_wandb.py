@@ -36,15 +36,15 @@ def train(df_pose, df_face, df_audio):
     loss = config.loss
     sequence_length = config.sequence_length
 
-    
-    modalities = [df_pose, df_face, df_audio]
     all_predictions = []
-    y_test_sequences_combined = []
+    y_test_sequences_combined = None
 
-    for modality in modalities:
+    modalities = [(df_pose, "pose"), (df_face, "face"), (df_audio, "audio")]
+
+    for df, modality in modalities:
 
         # splits = create_data_splits(
-        #     modality,
+        #     df,
         #     fold_no=0,
         #     num_folds=5,
         #     seed_value=42,
@@ -52,7 +52,7 @@ def train(df_pose, df_face, df_audio):
         # )
 
         splits = create_data_splits_pca(
-            modality,
+            df,
             fold_no=0,
             num_folds=5,
             seed_value=42,
@@ -171,7 +171,8 @@ def train(df_pose, df_face, df_audio):
         y_test_sequences = y_test_sequences.astype(int).flatten()
 
         all_predictions.append(y_predict_probs)
-        y_test_sequences_combined.append(y_test_sequences)
+        if y_test_sequences_combined is None:
+            y_test_sequences_combined = y_test_sequences
 
         test_metrics = get_metrics(y_pred, y_test_sequences, tolerance=1)
         wandb.log(test_metrics)
@@ -186,7 +187,7 @@ def train(df_pose, df_face, df_audio):
         y_final_pred = (all_predictions > 0.5).astype(int).flatten()
 
 
-    final_test_metrics = get_metrics(y_final_pred, y_test_sequences_combined[-1], tolerance=1)
+    final_test_metrics = get_metrics(y_final_pred, y_test_sequences_combined, tolerance=1)
     wandb.log(final_test_metrics)
     print("Final test metrics after late fusion:", final_test_metrics)
 
