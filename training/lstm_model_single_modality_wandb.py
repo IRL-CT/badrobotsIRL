@@ -205,7 +205,7 @@ def main():
 
     sweep_config = {
         'method': 'random',
-        'name': 'lstm_sweep_v3',
+        'name': 'lstm_sweep_single_modality',
         'parameters': {
             'use_bidirectional': {'values': [True, False]},
             'num_lstm_layers': {'values': [1, 2, 3]},
