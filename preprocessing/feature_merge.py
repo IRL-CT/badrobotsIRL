@@ -4,7 +4,7 @@ for i in range(25, 30):
 
     face_url = f"preprocessing/final_features/face/p{i}nodbot.csv"
     pose_url = f"preprocessing/final_features/pose/p{i}nodbot_pose_features_deltas_labels.csv"
-    audio_url = f"preprocessing/final_features/audio/p{i}nodbot_audio.csv"
+    audio_url = f"preprocessing/final_features/audio_averaged/p{i}nodbot_audio.csv"
 
     face_df = pd.read_csv(face_url)
     vis_features = ['frame', ' AU01_r', ' AU02_r', ' AU04_r', ' AU05_r', ' AU06_r', ' AU07_r', ' AU09_r', 
@@ -16,6 +16,10 @@ for i in range(25, 30):
 
     pose_df = pd.read_csv(pose_url)
     pose_df.drop(columns=["Unnamed: 0"], inplace=True)
+    participant_frame = pose_df.iloc[:, :2]
+    delta_columns = pose_df.filter(regex='delta$', axis=1)
+    label_columns = pose_df.iloc[:, -2:]
+    pose_df = pd.concat([participant_frame, delta_columns, label_columns], axis=1)
 
     audio_df = pd.read_csv(audio_url)
 
@@ -31,4 +35,4 @@ for i in range(25, 30):
 
     print(face_pose_audio_merged_df)
 
-    face_pose_audio_merged_df.to_csv(f"preprocessing/merged_features/p{i}nodbot_all_features.csv", index=False)
+    face_pose_audio_merged_df.to_csv(f"preprocessing/merged_features/merged_features_correct/p{i}nodbot_all_features_correct.csv", index=False)
