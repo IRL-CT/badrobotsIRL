@@ -551,7 +551,7 @@ def main():
     def train_wrapper():
         train(df)
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_sweep_v1")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_sweep_v2")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':
