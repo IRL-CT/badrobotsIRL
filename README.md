@@ -13,6 +13,7 @@ The robot failure was verbalized as "Sorry, I do not understand" and occurred at
 1. [Feature Extraction](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#feature-extraction)
 2. [Labels](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#labels)
 3. [Participant Exclusion](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#participant-exclusion)
+4. [Principal Component Analysis](https://github.com/FAR-Lab/badrobotsIRL/tree/main?tab=readme-ov-file#principal-component-analysis-pca)
 
 ## Feature Extraction
 
