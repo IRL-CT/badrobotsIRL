@@ -232,3 +232,23 @@ Participants were excluded based on the following reasons:
 - Feature extraction compound confidence scores below 0.50.
 
 Final number of participants: 24.
+
+## Principal Component Analysis (PCA)
+
+PCA is a method used to reduce the number of variables in a large dataset by retaining patterns in the data. PCA was conducted on the dataset of 84 features containing facial, pose, and audio features. The short script below was used to retain 90% of the variance and apply the PCA to the dataset.
+
+```python
+x = df.iloc[:, 4:]
+x = StandardScaler().fit_transform(x.values)
+pca = PCA()
+principal_components = pca.fit_transform(x)
+
+pca = PCA(n_components=0.90)
+principal_components = pca.fit_transform(x)
+
+principal_df = pd.DataFrame(data=principal_components, columns=['principal component ' + str(i) for i in range(principal_components.shape[1])])
+principal_df = pd.concat([df.iloc[:, :4], principal_df], axis=1)
+
+df = principal_df
+```
+The script was embedded into the create_data_splits_pca.py method in [create_data_splits.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/training/create_data_splits.py). The resulting dataframe consisted of 40 principal components.
