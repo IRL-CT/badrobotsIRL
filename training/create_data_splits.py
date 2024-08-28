@@ -186,6 +186,8 @@ def create_data_splits_pca(df, fold_no, num_folds=5, seed_value=42, sequence_len
         torch.manual_seed(seed_value)
         torch.cuda.manual_seed_all(seed_value)
 
+        participant_frames_labels = df.iloc[:, :4]
+
         x = df.iloc[:, 4:]
         x = StandardScaler().fit_transform(x.values)
         pca = PCA()
@@ -197,7 +199,7 @@ def create_data_splits_pca(df, fold_no, num_folds=5, seed_value=42, sequence_len
         print(principal_components.shape)
 
         principal_df = pd.DataFrame(data=principal_components, columns=['principal component ' + str(i) for i in range(principal_components.shape[1])])
-        principal_df = pd.concat([df.iloc[:, :4], principal_df], axis=1)
+        principal_df = pd.concat([participant_frames_labels, principal_df], axis=1)
 
         df = principal_df
 
