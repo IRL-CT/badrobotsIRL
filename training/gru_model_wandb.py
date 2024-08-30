@@ -230,14 +230,20 @@ def train_intermediate_fusion(df, config):
     for feature_input in feature_inputs:
         x = feature_input
         for _ in range(num_gru_layers):
-            x = GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer)(x)
+            if use_bidirectional:
+                x = Bidirectional(GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer))
+            else:
+                x = GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer)(x)
             x = Dropout(dropout)(x)
             x = BatchNormalization()(x)
         feature_outputs.append(x)
 
     concatenated_features = concatenate(feature_outputs)
 
-    x = GRU(gru_units, activation=activation, kernel_regularizer=kernel_regularizer)(concatenated_features)
+    if use_bidirectional:
+        x = Bidirectional(GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer))
+    else:
+        x = GRU(gru_units, activation=activation, kernel_regularizer=kernel_regularizer)(concatenated_features)
     x = Dropout(dropout)(x)
     x = BatchNormalization()(x)
 
@@ -522,7 +528,7 @@ def train(df):
 
 def main():
     global df
-    df = pd.read_csv("preprocessing/merged_features/all_participants_merged_correct_normalized.csv")
+    df = pd.read_csv("/Users/Shannon/all_participants_merged_correct_normalized.csv")
 
     sweep_config = {
         'method': 'random',
