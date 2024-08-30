@@ -431,7 +431,6 @@ def train(df, config):
 
         wandb.finish()
 
-
     elif fusion_type == "late":
 
         df_pose = df.iloc[:, 4:29]
@@ -559,7 +558,6 @@ def train(df, config):
             f'Recall: {test_metrics["recall"]}, F1-score: {test_metrics["f1"]}')
 
         wandb.finish()
-
 
 
 def main():
