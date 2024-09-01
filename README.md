@@ -253,4 +253,8 @@ print(principal_components.shape)
 principal_df = pd.DataFrame(data=principal_components, columns=['principal component ' + str(i) for i in range(principal_components.shape[1])])
 principal_df = pd.concat([participant_frames_labels, principal_df], axis=1)
 ```
-The script was embedded into the create_data_splits_pca.py method in [create_data_splits.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/training/create_data_splits.py). The resulting dataframe consisted of 40 principal components.
+The script was embedded into the create_data_splits_pca.py method in [create_data_splits.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/training/create_data_splits.py).
+
+The resulting dataframe consisted of 41 principal components.
+
+Running PCA on pose, facial, and audio features separately yielded 13, 24, and 7 principal components, respectively.
