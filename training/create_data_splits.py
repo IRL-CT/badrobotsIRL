@@ -73,37 +73,37 @@ def create_data_splits(df, fold_no, num_folds=5, seed_value=42, sequence_length=
 
         if num_of_sessions < num_folds:
             raise ValueError("Number of sessions is less than the number of folds. Adjust the number of folds.")
+    
+        # 70-20-10 train-val-test split, make sure at least 1 sample per split
+        train_size = int(np.floor(0.7 * num_of_sessions))
+        val_size = int(np.ceil(0.2 * num_of_sessions))
+        test_size = num_of_sessions - train_size - val_size
 
         np.random.shuffle(fold_sessions)
-        
-        fold_size = num_of_sessions // num_folds
-        remainder = num_of_sessions % num_folds
-
-        fold_indices = []
-        current_index = 0
-
-        for i in range(num_folds):
-            size = fold_size + (1 if i < remainder else 0)
-            fold_indices.append(fold_sessions[current_index:current_index + size])
-            current_index += size
 
         train_folds = []
         val_folds = []
         test_folds = []
 
         for i in range(num_folds):
-            test_fold = fold_indices[i]
-            remaining_folds = np.concatenate([fold_indices[j] for j in range(num_folds) if j != i])
-            np.random.shuffle(remaining_folds)
 
-            # 70-20-10 train-val-test split, make sure at least 1 sample per split
+            start_train_index = i * val_size
+            end_train_index = (start_train_index + train_size if start_train_index+train_size <= len(fold_sessions) else start_train_index +  train_size - len(fold_sessions))
 
-            num_test = max(len(test_fold), 1)
-            num_val = max(len(test_fold) // 5, 1)
-            num_train = len(fold_sessions) - num_val - num_test
+            if start_train_index >= end_train_index:
+                train_fold = np.concatenate((fold_sessions[start_train_index:], fold_sessions[:end_train_index]))
+            else:
+                train_fold = fold_sessions[start_train_index : end_train_index]
 
-            val_fold = remaining_folds[:num_val]
-            train_fold = remaining_folds[num_val:num_val + num_train]
+            val_train_index = end_train_index
+            val_end_index = (val_train_index + val_size if val_train_index+val_size <= len(fold_sessions) else val_train_index +  val_size - len(fold_sessions))
+
+            if val_train_index >= val_end_index:
+                val_fold = np.concatenate((fold_sessions[val_train_index:], fold_sessions[:val_end_index]))
+            else:
+                val_fold = fold_sessions[val_train_index : val_end_index]
+
+            test_fold = np.setdiff1d(fold_sessions, np.concatenate((train_fold, val_fold)))
 
             train_folds.append(train_fold)
             val_folds.append(val_fold)
@@ -202,6 +202,7 @@ def create_data_splits_pca(df, fold_no, num_folds=5, seed_value=42, sequence_len
         principal_df = pd.concat([participant_frames_labels, principal_df], axis=1)
 
         df = principal_df
+        df.to_csv("training/principal_df.csv")
 
         print(df)
 
@@ -214,37 +215,37 @@ def create_data_splits_pca(df, fold_no, num_folds=5, seed_value=42, sequence_len
 
         if num_of_sessions < num_folds:
             raise ValueError("Number of sessions is less than the number of folds. Adjust the number of folds.")
+    
+        # 70-20-10 train-val-test split, make sure at least 1 sample per split
+        train_size = int(np.floor(0.7 * num_of_sessions))
+        val_size = int(np.ceil(0.2 * num_of_sessions))
+        test_size = num_of_sessions - train_size - val_size
 
         np.random.shuffle(fold_sessions)
-        
-        fold_size = num_of_sessions // num_folds
-        remainder = num_of_sessions % num_folds
-
-        fold_indices = []
-        current_index = 0
-
-        for i in range(num_folds):
-            size = fold_size + (1 if i < remainder else 0)
-            fold_indices.append(fold_sessions[current_index:current_index + size])
-            current_index += size
 
         train_folds = []
         val_folds = []
         test_folds = []
 
         for i in range(num_folds):
-            test_fold = fold_indices[i]
-            remaining_folds = np.concatenate([fold_indices[j] for j in range(num_folds) if j != i])
-            np.random.shuffle(remaining_folds)
 
-            # 70-20-10 train-val-test split, make sure at least 1 sample per split
+            start_train_index = i * val_size
+            end_train_index = (start_train_index + train_size if start_train_index+train_size <= len(fold_sessions) else start_train_index +  train_size - len(fold_sessions))
 
-            num_test = max(len(test_fold), 1)
-            num_val = max(len(test_fold) // 5, 1)
-            num_train = len(fold_sessions) - num_val - num_test
+            if start_train_index >= end_train_index:
+                train_fold = np.concatenate((fold_sessions[start_train_index:], fold_sessions[:end_train_index]))
+            else:
+                train_fold = fold_sessions[start_train_index : end_train_index]
 
-            val_fold = remaining_folds[:num_val]
-            train_fold = remaining_folds[num_val:num_val + num_train]
+            val_train_index = end_train_index
+            val_end_index = (val_train_index + val_size if val_train_index+val_size <= len(fold_sessions) else val_train_index +  val_size - len(fold_sessions))
+
+            if val_train_index >= val_end_index:
+                val_fold = np.concatenate((fold_sessions[val_train_index:], fold_sessions[:val_end_index]))
+            else:
+                val_fold = fold_sessions[val_train_index : val_end_index]
+
+            test_fold = np.setdiff1d(fold_sessions, np.concatenate((train_fold, val_fold)))
 
             train_folds.append(train_fold)
             val_folds.append(val_fold)
@@ -299,3 +300,4 @@ def create_data_splits_pca(df, fold_no, num_folds=5, seed_value=42, sequence_len
     except Exception as e:
         print(f"An error occurred: {e}")
         return None
+
