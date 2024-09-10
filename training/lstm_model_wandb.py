@@ -175,9 +175,14 @@ def train_early_fusion(df, config):
 
 def train_intermediate_fusion(df, config):
 
+    participant_frames_labels = df.iloc[:, :4]
+
     df_pose = df.iloc[:, 4:29]
+    df_pose = pd.concat([participant_frames_labels, df_pose], axis=1)
     df_facial = df.iloc[:, 29:65]
+    df_facial = pd.concat([participant_frames_labels, df_facial], axis=1)
     df_audio = df.iloc[:, 65:]
+    df_pose = pd.concat([participant_frames_labels, df_audio], axis=1)
 
     num_lstm_layers = config.num_lstm_layers
     lstm_units = config.lstm_units
@@ -230,20 +235,14 @@ def train_intermediate_fusion(df, config):
     for feature_input in feature_inputs:
         x = feature_input
         for _ in range(num_lstm_layers):
-            if use_bidirectional:
-                x = Bidirectional(LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer))
-            else:
-                x = LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer)(x)
+            x = LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer)(x)
             x = Dropout(dropout)(x)
             x = BatchNormalization()(x)
         feature_outputs.append(x)
 
     concatenated_features = concatenate(feature_outputs)
 
-    if use_bidirectional:
-        x = Bidirectional(LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer))
-    else:
-        x = LSTM(lstm_units, activation=activation, kernel_regularizer=kernel_regularizer)(concatenated_features)
+    x = LSTM(lstm_units, activation=activation, kernel_regularizer=kernel_regularizer)(concatenated_features)
     x = Dropout(dropout)(x)
     x = BatchNormalization()(x)
 
@@ -334,9 +333,14 @@ def train_intermediate_fusion(df, config):
 
 def train_late_fusion(df, config):
 
+    participant_frames_labels = df.iloc[:, :4]
+
     df_pose = df.iloc[:, 4:29]
+    df_pose = pd.concat([participant_frames_labels, df_pose], axis=1)
     df_facial = df.iloc[:, 29:65]
+    df_facial = pd.concat([participant_frames_labels, df_facial], axis=1)
     df_audio = df.iloc[:, 65:]
+    df_audio = pd.concat([participant_frames_labels, df_audio], axis=1)
 
     num_lstm_layers = config.num_lstm_layers
     lstm_units = config.lstm_units
@@ -528,7 +532,7 @@ def train(df):
 
 def main():
     global df
-    df = pd.read_csv("/Users/Shannon/all_participants_merged_correct_normalized.csv")
+    df = pd.read_csv("preprocessing/merged_features/all_participants_merged_correct_normalized.csv")
 
     sweep_config = {
         'method': 'random',
@@ -547,7 +551,7 @@ def main():
             'epochs': {'value': 500},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["binary_crossentropy", "categorical_crossentropy"]},
-            'sequence_length' : {'values' : [1, 5, 15, 30, 60, 90]},
+            'sequence_length' : {'values' : [30, 60, 90]},
             'fusion_type': {'values': ['early', 'intermediate', 'late']}
         }
     }
