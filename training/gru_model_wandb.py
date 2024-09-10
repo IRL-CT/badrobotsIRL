@@ -175,9 +175,14 @@ def train_early_fusion(df, config):
 
 def train_intermediate_fusion(df, config):
 
+    participant_frames_labels = df.iloc[:, :4]
+
     df_pose = df.iloc[:, 4:29]
+    df_pose = pd.concat([participant_frames_labels, df_pose], axis=1)
     df_facial = df.iloc[:, 29:65]
+    df_facial = pd.concat([participant_frames_labels, df_facial], axis=1)
     df_audio = df.iloc[:, 65:]
+    df_audio = pd.concat([participant_frames_labels, df_audio], axis=1)
 
     num_gru_layers = config.num_gru_layers
     gru_units = config.gru_units
@@ -230,20 +235,14 @@ def train_intermediate_fusion(df, config):
     for feature_input in feature_inputs:
         x = feature_input
         for _ in range(num_gru_layers):
-            if use_bidirectional:
-                x = Bidirectional(GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer))
-            else:
-                x = GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer)(x)
+            x = GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer)(x)
             x = Dropout(dropout)(x)
             x = BatchNormalization()(x)
         feature_outputs.append(x)
 
     concatenated_features = concatenate(feature_outputs)
 
-    if use_bidirectional:
-        x = Bidirectional(GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer))
-    else:
-        x = GRU(gru_units, activation=activation, kernel_regularizer=kernel_regularizer)(concatenated_features)
+    x = GRU(gru_units, activation=activation, kernel_regularizer=kernel_regularizer)(concatenated_features)
     x = Dropout(dropout)(x)
     x = BatchNormalization()(x)
 
@@ -334,9 +333,14 @@ def train_intermediate_fusion(df, config):
 
 def train_late_fusion(df, config):
 
+    participant_frames_labels = df.iloc[:, :4]
+
     df_pose = df.iloc[:, 4:29]
+    df_pose = pd.concat([participant_frames_labels, df_pose], axis=1)
     df_facial = df.iloc[:, 29:65]
+    df_facial = pd.concat([participant_frames_labels, df_facial], axis=1)
     df_audio = df.iloc[:, 65:]
+    df_audio = pd.concat([participant_frames_labels, df_audio], axis=1)
 
     num_gru_layers = config.num_gru_layers
     gru_units = config.gru_units
@@ -528,11 +532,11 @@ def train(df):
 
 def main():
     global df
-    df = pd.read_csv("/Users/Shannon/all_participants_merged_correct_normalized.csv")
+    df = pd.read_csv("preprocessing/merged_features/all_participants_merged_correct_normalized.csv")
 
     sweep_config = {
         'method': 'random',
-        'name': 'gru_sweep_v1',
+        'name': 'gru_sweep_v3',
         'parameters': {
             'use_pca': {'values': [True, False]},
             'use_bidirectional': {'values': [True, False]},
@@ -557,7 +561,7 @@ def main():
     def train_wrapper():
         train(df)
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_sweep_v2")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_sweep_v4")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':
