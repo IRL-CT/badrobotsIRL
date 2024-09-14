@@ -43,7 +43,7 @@ The OpenPose toolkit and the BODY_25 model were used to obtain keypoints of the 
 
 The following was executed in the command line interface to return a JSON file of 25 keypoints per frame:
 ```
-bin\OpenPoseDemo.exe --video {input_video_file_path} --write_json {output_file_path}
+bin\OpenPoseDemo.exe --video {input_video_file_path} --write_video {output_file_path} --write_json {output_file_path} 
 ```
 
 #### Feature Exclusion
