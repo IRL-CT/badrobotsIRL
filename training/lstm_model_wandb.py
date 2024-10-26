@@ -10,7 +10,7 @@ from keras.regularizers import l1_l2, l1, l2
 from keras.utils import to_categorical
 import tensorflow as tf
 from create_data_splits import create_data_splits, create_data_splits_pca
-from get_metrics import get_metrics
+from get_metrics import get_test_metrics
 
 def build_early_late_model(sequence_length, input_shape, num_lstm_layers, lstm_units, activation, use_bidirectional, dropout, reg):
     model = Sequential()
@@ -123,7 +123,7 @@ def train_early_fusion(df, config):
     
     model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
 
-    model_checkpoint = ModelCheckpoint("training/best_model.keras", monitor="val_accuracy", save_best_only=True)
+    model_checkpoint = ModelCheckpoint("../best_model.keras", monitor="val_accuracy", save_best_only=True)
     
     model_history = model.fit(
         X_train_sequences, y_train_sequences,
@@ -168,7 +168,7 @@ def train_early_fusion(df, config):
         y_pred = (y_predict_probs > 0.5).astype(int).flatten()
         y_test_sequences = y_test_sequences.astype(int).flatten()
 
-    test_metrics = get_metrics(y_pred, y_test_sequences, tolerance=1)
+    test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
     wandb.log(test_metrics)
     print(test_metrics)
 
@@ -182,7 +182,7 @@ def train_intermediate_fusion(df, config):
     df_facial = df.iloc[:, 29:65]
     df_facial = pd.concat([participant_frames_labels, df_facial], axis=1)
     df_audio = df.iloc[:, 65:]
-    df_pose = pd.concat([participant_frames_labels, df_audio], axis=1)
+    df_audio = pd.concat([participant_frames_labels, df_audio], axis=1)
 
     num_lstm_layers = config.num_lstm_layers
     lstm_units = config.lstm_units
@@ -269,7 +269,7 @@ def train_intermediate_fusion(df, config):
     
     model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
 
-    model_checkpoint = ModelCheckpoint("training/best_model.keras", monitor="val_accuracy", save_best_only=True)
+    model_checkpoint = ModelCheckpoint("../best_model.keras", monitor="val_accuracy", save_best_only=True)
 
     model_history = model.fit(
         [X_train_pose_seq, X_train_facial_seq, X_train_audio_seq], y_train_sequences,
@@ -289,31 +289,25 @@ def train_intermediate_fusion(df, config):
         if 'val_loss' in model_history.history:
             metrics['total_val_loss'] = model_history.history['val_loss'][epoch]
 
-        for i, feature_name in enumerate(["pose", "facial", "audio"]):
-            if f'loss_{feature_name}' in model_history.history:
-                metrics[f'{feature_name}_train_loss'] = model_history.history[f'loss_{feature_name}'][epoch]
-            if f'val_loss_{feature_name}' in model_history.history:
-                metrics[f'{feature_name}_val_loss'] = model_history.history[f'val_loss_{feature_name}'][epoch]
-
-            if 'accuracy' in model_history.history:
-                metrics[f'{feature_name}_train_accuracy'] = model_history.history[f'accuracy_{feature_name}'][epoch]
-            if 'val_accuracy' in model_history.history:
-                metrics[f'{feature_name}_val_accuracy'] = model_history.history[f'val_accuracy_{feature_name}'][epoch]
-            
-            if 'precision' in model_history.history:
-                metrics[f'{feature_name}_train_precision'] = model_history.history[f'precision_{feature_name}'][epoch]
-            if 'val_precision' in model_history.history:
-                metrics[f'{feature_name}_val_precision'] = model_history.history[f'val_precision_{feature_name}'][epoch]
-            
-            if 'recall' in model_history.history:
-                metrics[f'{feature_name}_train_recall'] = model_history.history[f'recall_{feature_name}'][epoch]
-            if 'val_recall' in model_history.history:
-                metrics[f'{feature_name}_val_recall'] = model_history.history[f'val_recall_{feature_name}'][epoch]
-            
-            if 'auc' in model_history.history:
-                metrics[f'{feature_name}_train_auc'] = model_history.history[f'auc_{feature_name}'][epoch]
-            if 'val_auc' in model_history.history:
-                metrics[f'{feature_name}_val_auc'] = model_history.history[f'val_auc_{feature_name}'][epoch]
+        if 'accuracy' in model_history.history:
+            metrics['train_accuracy'] = model_history.history['accuracy'][epoch]
+        if 'val_accuracy' in model_history.history:
+            metrics['val_accuracy'] = model_history.history['val_accuracy'][epoch]
+        
+        if 'precision' in model_history.history:
+            metrics['train_precision'] = model_history.history['precision'][epoch]
+        if 'val_precision' in model_history.history:
+            metrics['val_precision'] = model_history.history['val_precision'][epoch]
+        
+        if 'recall' in model_history.history:
+            metrics['train_recall'] = model_history.history['recall'][epoch]
+        if 'val_recall' in model_history.history:
+            metrics['val_recall'] = model_history.history['val_recall'][epoch]
+        
+        if 'auc' in model_history.history:
+            metrics['train_auc'] = model_history.history['auc'][epoch]
+        if 'val_auc' in model_history.history:
+            metrics['val_auc'] = model_history.history['val_auc'][epoch]
 
         wandb.log(metrics)
 
@@ -326,7 +320,7 @@ def train_intermediate_fusion(df, config):
         y_pred = (y_predict_probs > 0.5).astype(int).flatten()
         y_test_sequences = y_test_sequences.astype(int).flatten()
 
-    test_metrics = get_metrics(y_pred, y_test_sequences, tolerance=1)
+    test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
     wandb.log(test_metrics)
     print(test_metrics)
 
@@ -373,13 +367,17 @@ def train_late_fusion(df, config):
     X_train_facial, _, _, _, _, _, X_train_facial_seq, _, X_val_facial_seq, _, X_test_facial_seq, _, _ = splits_facial
     X_train_audio, _, _, _, _, _, X_train_audio_seq, _, X_val_audio_seq, _, X_test_audio_seq, _, _ = splits_audio
 
+    pose_input = Input(shape=(sequence_length, X_train_pose_seq.shape[2]))
+    facial_input = Input(shape=(sequence_length, X_train_facial_seq.shape[2]))
+    audio_input = Input(shape=(sequence_length, X_train_audio_seq.shape[2]))
+
     pose_model = build_early_late_model(sequence_length, X_train_pose_seq.shape[2], num_lstm_layers, lstm_units, activation, use_bidirectional, dropout, kernel_regularizer)
     facial_model = build_early_late_model(sequence_length, X_train_facial_seq.shape[2], num_lstm_layers, lstm_units, activation, use_bidirectional, dropout, kernel_regularizer)
     audio_model = build_early_late_model(sequence_length, X_train_audio_seq.shape[2], num_lstm_layers, lstm_units, activation, use_bidirectional, dropout, kernel_regularizer)
 
-    pose_output = pose_model(X_train_pose_seq)
-    facial_output = facial_model(X_train_facial_seq)
-    audio_output = audio_model(X_train_audio_seq)
+    pose_output = pose_model(pose_input)
+    facial_output = facial_model(facial_input)
+    audio_output = audio_model(audio_input)
 
     concatenated = concatenate([pose_output, facial_output, audio_output])
 
@@ -391,7 +389,7 @@ def train_late_fusion(df, config):
         x = Dense(dense_units, activation=activation)(concatenated)
         output = Dense(1, activation="sigmoid")(x)
     
-    model = Model(inputs=[pose_model.input, facial_model.input, audio_model.input], outputs=output)
+    model = Model(inputs=[pose_input, facial_input, audio_input], outputs=output)
 
     if optimizer == 'adam':
         optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
@@ -404,7 +402,7 @@ def train_late_fusion(df, config):
 
     model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
     
-    model_checkpoint = ModelCheckpoint("training/best_model.keras", monitor="val_accuracy", save_best_only=True)
+    model_checkpoint = ModelCheckpoint("../best_model.keras", monitor="val_accuracy", save_best_only=True)
 
     model_history = model.fit(
         [X_train_pose_seq, X_train_facial_seq, X_train_audio_seq], y_train_sequences,
@@ -423,44 +421,26 @@ def train_late_fusion(df, config):
             metrics['total_train_loss'] = model_history.history['loss'][epoch]
         if 'val_loss' in model_history.history:
             metrics['total_val_loss'] = model_history.history['val_loss'][epoch]
-        if 'accuracy' in model_history.history:
-            metrics['total_train_accuracy'] = model_history.history['accuracy'][epoch]
-        if 'val_accuracy' in model_history.history:
-            metrics['total_val_accuracy'] = model_history.history['val_accuracy'][epoch]
-        if 'precision' in model_history.history:
-            metrics['total_train_precision'] = model_history.history['precision'][epoch]
-        if 'val_precision' in model_history.history:
-            metrics['total_val_precision'] = model_history.history['val_precision'][epoch]
-        if 'recall' in model_history.history:
-            metrics['total_train_recall'] = model_history.history['recall'][epoch]
-        if 'val_recall' in model_history.history:
-            metrics['total_val_recall'] = model_history.history['val_recall'][epoch]
-        if 'auc' in model_history.history:
-            metrics['total_train_auc'] = model_history.history['auc'][epoch]
-        if 'val_auc' in model_history.history:
-            metrics['total_val_auc'] = model_history.history['val_auc'][epoch]
 
-        for i, feature_name in enumerate(["pose", "facial", "audio"]):
-            if f'loss_{feature_name}' in model_history.history:
-                metrics[f'{feature_name}_train_loss'] = model_history.history[f'loss_{feature_name}'][epoch]
-            if f'val_loss_{feature_name}' in model_history.history:
-                metrics[f'{feature_name}_val_loss'] = model_history.history[f'val_loss_{feature_name}'][epoch]
-            if f'accuracy_{feature_name}' in model_history.history:
-                metrics[f'{feature_name}_train_accuracy'] = model_history.history[f'accuracy_{feature_name}'][epoch]
-            if f'val_accuracy_{feature_name}' in model_history.history:
-                metrics[f'{feature_name}_val_accuracy'] = model_history.history[f'val_accuracy_{feature_name}'][epoch]
-            if f'precision_{feature_name}' in model_history.history:
-                metrics[f'{feature_name}_train_precision'] = model_history.history[f'precision_{feature_name}'][epoch]
-            if f'val_precision_{feature_name}' in model_history.history:
-                metrics[f'{feature_name}_val_precision'] = model_history.history[f'val_precision_{feature_name}'][epoch]
-            if f'recall_{feature_name}' in model_history.history:
-                metrics[f'{feature_name}_train_recall'] = model_history.history[f'recall_{feature_name}'][epoch]
-            if f'val_recall_{feature_name}' in model_history.history:
-                metrics[f'{feature_name}_val_recall'] = model_history.history[f'val_recall_{feature_name}'][epoch]
-            if f'auc_{feature_name}' in model_history.history:
-                metrics[f'{feature_name}_train_auc'] = model_history.history[f'auc_{feature_name}'][epoch]
-            if f'val_auc_{feature_name}' in model_history.history:
-                metrics[f'{feature_name}_val_auc'] = model_history.history[f'val_auc_{feature_name}'][epoch]
+        if 'accuracy' in model_history.history:
+            metrics['train_accuracy'] = model_history.history['accuracy'][epoch]
+        if 'val_accuracy' in model_history.history:
+            metrics['val_accuracy'] = model_history.history['val_accuracy'][epoch]
+        
+        if 'precision' in model_history.history:
+            metrics['train_precision'] = model_history.history['precision'][epoch]
+        if 'val_precision' in model_history.history:
+            metrics['val_precision'] = model_history.history['val_precision'][epoch]
+        
+        if 'recall' in model_history.history:
+            metrics['train_recall'] = model_history.history['recall'][epoch]
+        if 'val_recall' in model_history.history:
+            metrics['val_recall'] = model_history.history['val_recall'][epoch]
+        
+        if 'auc' in model_history.history:
+            metrics['train_auc'] = model_history.history['auc'][epoch]
+        if 'val_auc' in model_history.history:
+            metrics['val_auc'] = model_history.history['val_auc'][epoch]
 
         wandb.log(metrics)
 
@@ -473,7 +453,7 @@ def train_late_fusion(df, config):
         y_pred = (y_predict_probs > 0.5).astype(int).flatten()
         y_test_sequences = y_test_sequences.astype(int).flatten()
 
-    test_metrics = get_metrics(y_pred, y_test_sequences, tolerance=1)
+    test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
     wandb.log(test_metrics)
     print(test_metrics)
 
@@ -532,11 +512,11 @@ def train(df):
 
 def main():
     global df
-    df = pd.read_csv("preprocessing/merged_features/all_participants_merged_correct_normalized.csv")
+    df = pd.read_csv("../training/all_participants_merged_correct_normalized.csv")
 
     sweep_config = {
         'method': 'random',
-        'name': 'lstm_sweep_v3',
+        'name': 'lstm_sweep_v9_late',
         'parameters': {
             'use_pca': {'values': [True, False]},
             'use_bidirectional': {'values': [True, False]},
@@ -552,7 +532,7 @@ def main():
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["binary_crossentropy", "categorical_crossentropy"]},
             'sequence_length' : {'values' : [30, 60, 90]},
-            'fusion_type': {'values': ['early', 'intermediate', 'late']}
+            'fusion_type': {'values': ['late']}
         }
     }
 
@@ -561,7 +541,7 @@ def main():
     def train_wrapper():
         train(df)
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_sweep_v4")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_sweep_v9_late")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':

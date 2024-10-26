@@ -15,4 +15,4 @@
 source /share/apps/anaconda3/2020.11/bin/conda.sh
 conda activate /share/ju/conda_virtualenvs/badrobotsirl/
 
-python3 lstm_model_wandb.py
+python3 transformer_model_wandb.py

@@ -1,0 +1,7 @@
+training/wandb
+training/__pycache__
+training/minirocket_classifiers/wandb
+training/minirocket_classifiers/__pycache__
+training_outputs
+best_model.keras
+get-pip.py

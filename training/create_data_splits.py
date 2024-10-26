@@ -202,7 +202,7 @@ def create_data_splits_pca(df, fold_no, num_folds=5, seed_value=42, sequence_len
         principal_df = pd.concat([participant_frames_labels, principal_df], axis=1)
 
         df = principal_df
-        df.to_csv("training/principal_df.csv")
+        df.to_csv("principal_df.csv", index=False)
 
         print(df)
 

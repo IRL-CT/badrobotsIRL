@@ -677,11 +677,11 @@ def train(df, config):
 
 def main():
 
-    df = pd.read_csv("preprocessing/merged_features/all_participants_merged_correct_normalized.csv")
+    df = pd.read_csv("../training/all_participants_merged_correct_normalized.csv")
 
     sweep_config = {
         'method': 'random',
-        'name': 'transformer_sweep',
+        'name': 'transformer_sweep_v5',
         'parameters': {
             'use_pca': {'values': [True, False]},
             'num_heads': {'values': [2, 4, 8, 16, 32, 100]},
@@ -704,7 +704,7 @@ def main():
         config = wandb.config
         train(df, config)
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="transformer_sweep_v1")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="transformer_sweep_v5")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':

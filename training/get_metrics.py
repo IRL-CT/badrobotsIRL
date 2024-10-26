@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
-def get_metrics(y_pred, y_true, sessions=None, tolerance=0):
+def get_test_metrics(y_pred, y_true, sessions=None, tolerance=0):
     y_pred = np.array(y_pred)
     y_true = np.array(y_true)
 
@@ -45,12 +45,12 @@ def get_metrics(y_pred, y_true, sessions=None, tolerance=0):
 
     return {
         "test_accuracy": accuracy,
-        "precision": precision,
-        "recall": recall,
-        "f1": f1,
-        "accuracy_tolerant": accuracy_tolerant,
-        "precision_tolerant": precision_tolerant,
-        "recall_tolerant": recall_tolerant,
-        "f1_tolerant": f1_tolerant
+        "test_precision": precision,
+        "test_recall": recall,
+        "test_f1": f1,
+        "test_accuracy_tolerant": accuracy_tolerant,
+        "test_precision_tolerant": precision_tolerant,
+        "test_recall_tolerant": recall_tolerant,
+        "test_f1_tolerant": f1_tolerant
     }
 
