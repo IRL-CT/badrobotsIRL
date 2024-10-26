@@ -12,7 +12,9 @@ import tensorflow as tf
 from create_data_splits import create_data_splits, create_data_splits_pca
 from get_metrics import get_test_metrics
 
-def train(df, config):
+def train_model(df, config):
+
+    print("training model")
 
     num_lstm_layers = config.num_lstm_layers
     lstm_units = config.lstm_units
@@ -27,24 +29,14 @@ def train(df, config):
     kernel_regularizer = config.recurrent_regularizer
     loss = config.loss
     sequence_length = config.sequence_length
-    use_pca = config.use_pca
 
-    if use_pca == True:
-        splits = create_data_splits_pca(
-        df,
-        fold_no=0,
-        num_folds=5,
-        seed_value=42,
-        sequence_length=sequence_length
-        )
-    else:
-        splits = create_data_splits(
-            df,
-            fold_no=0,
-            num_folds=5,
-            seed_value=42,
-            sequence_length=sequence_length
-        )
+    splits = create_data_splits(
+    df,
+    fold_no=0,
+    num_folds=5,
+    seed_value=42,
+    sequence_length=sequence_length
+    )
 
     if splits is None:
         return
@@ -178,29 +170,29 @@ def train():
     random.seed(seed_value)
     tf.random.set_seed(seed_value)
 
-    df = "../preprocessing/individual_features/all_participants_pose_features.csv"
-    df_norm = "../preprocessing/individual_features/all_participants_pose_features_pca.csv"
-    df_pca = "../preprocessing/individual_features/all_participants_pose_features_norm.csv"
-    df_norm_pca = "../preprocessing/individual_features/all_participants_pose_features_norm_pca.csv"
+    df = pd.read_csv("../preprocessing/individual_features/all_participants_pose_features.csv")
+    df_norm = pd.read_csv("../preprocessing/individual_features/all_participants_pose_features_pca.csv")
+    df_pca = pd.read_csv("../preprocessing/individual_features/all_participants_pose_features_norm.csv")
+    df_norm_pca = pd.read_csv("../preprocessing/individual_features/all_participants_pose_features_norm_pca.csv")
 
     use_pca = config.use_pca
     use_norm = config.use_norm
 
     if use_norm:
         if use_pca:
-            train(df_norm_pca, config)
+            train_model(df_norm_pca, config)
         else:
-            train(df_norm, config)
+            train_model(df_norm, config)
     else:
         if use_pca:
-            train(df, config)
+            train_model(df_pca, config)
         else:
-            train(df_pca, config)
+            train_model(df, config)
 
 def main():
     sweep_config = {
         'method': 'random',
-        'name': 'lstm_only_pose_features',
+        'name': 'lstm_pose_features',
         'parameters': {
             'use_pca': {'values': [True, False]},
             'use_norm': {'values': [True, False]},
