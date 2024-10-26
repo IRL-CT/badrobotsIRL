@@ -167,7 +167,7 @@ def train(df, config):
     wandb.log(test_metrics)
     print(test_metrics)
 
-def train(df):
+def train():
 
     wandb.init()
     config = wandb.config
@@ -178,25 +178,32 @@ def train(df):
     random.seed(seed_value)
     tf.random.set_seed(seed_value)
 
-    df = "../training/all_participants_merged_correct_normalized.csv"
-    df_pca = "../training/all_participants_merged_correct_normalized.csv"
+    df = "../preprocessing/individual_features/all_participants_pose_features.csv"
+    df_norm = "../preprocessing/individual_features/all_participants_pose_features_pca.csv"
+    df_pca = "../preprocessing/individual_features/all_participants_pose_features_norm.csv"
+    df_norm_pca = "../preprocessing/individual_features/all_participants_pose_features_norm_pca.csv"
 
     use_pca = config.use_pca
+    use_norm = config.use_norm
 
-    if use_pca:
-        train(df_pca, config)
+    if use_norm:
+        if use_pca:
+            train(df_norm_pca, config)
+        else:
+            train(df_norm, config)
     else:
-        train(df, config)
+        if use_pca:
+            train(df, config)
+        else:
+            train(df_pca, config)
 
 def main():
-    global df
-    df = pd.read_csv("../training/all_participants_merged_correct_normalized.csv")
-
     sweep_config = {
         'method': 'random',
-        'name': 'lstm_pose_features',
+        'name': 'lstm_only_pose_features',
         'parameters': {
             'use_pca': {'values': [True, False]},
+            'use_norm': {'values': [True, False]},
             'use_bidirectional': {'values': [True, False]},
             'num_lstm_layers': {'values': [1, 2, 3]},
             'lstm_units': {'values': [64, 128, 256]},
@@ -216,7 +223,7 @@ def main():
     print(sweep_config)
 
     def train_wrapper():
-        train(df)
+        train()
 
     sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_pose_features")
     wandb.agent(sweep_id, function=train_wrapper)
