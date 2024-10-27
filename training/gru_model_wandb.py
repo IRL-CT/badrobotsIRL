@@ -469,6 +469,8 @@ def train(df):
     random.seed(seed_value)
     tf.random.set_seed(seed_value)
 
+    use_pca = config.use_pca
+    use_norm = config.use_norm
     fusion_type = config.fusion_type
 
     '''
@@ -500,20 +502,53 @@ def train(df):
     df.iloc[:, 65:]
     '''
 
-    if fusion_type == 'early':
-        train_early_fusion(df, config)
+    df = pd.read_csv("../preprocessing/merged_features/all_participants_merged_correct.csv")
+    df_norm = pd.read_csv("../preprocessing/merged_features/all_participants_merged_correct_normalized.csv")
+    df_pca = pd.read_csv("../preprocessing/merged_features/all_participants_merged_correct_principal.csv")
+    df_norm_pca = pd.read_csv("../preprocessing/merged_features/all_participants_merged_correct_normalized_principal.csv")
 
-    elif fusion_type == 'intermediate':
-        train_intermediate_fusion(df, config)
+    if use_norm:
+        if use_pca:
+            if fusion_type == 'early':
+                train_early_fusion(df_norm_pca, config)
 
-    elif fusion_type == 'late':
-        train_late_fusion(df, config)
+            elif fusion_type == 'intermediate':
+                train_intermediate_fusion(df_norm_pca, config)
+
+            elif fusion_type == 'late':
+                train_late_fusion(df_norm_pca, config)
+        else:
+            if fusion_type == 'early':
+                train_early_fusion(df_norm, config)
+
+            elif fusion_type == 'intermediate':
+                train_intermediate_fusion(df_norm, config)
+
+            elif fusion_type == 'late':
+                train_late_fusion(df_norm, config)
+    else:
+        if use_pca:
+            if fusion_type == 'early':
+                train_early_fusion(df_pca, config)
+
+            elif fusion_type == 'intermediate':
+                train_intermediate_fusion(df_pca, config)
+
+            elif fusion_type == 'late':
+                train_late_fusion(df_pca, config)
+        else:
+            if fusion_type == 'early':
+                train_early_fusion(df, config)
+
+            elif fusion_type == 'intermediate':
+                train_intermediate_fusion(df, config)
+
+            elif fusion_type == 'late':
+                train_late_fusion(df, config)
         
 
 def main():
-    global df
-    df = pd.read_csv("../training/all_participants_merged_correct_normalized.csv")
-
+    
     sweep_config = {
         'method': 'random',
         'name': 'gru_sweep_v8_late',

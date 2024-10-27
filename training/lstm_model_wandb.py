@@ -458,7 +458,7 @@ def train_late_fusion(df, config):
     print(test_metrics)
 
 
-def train(df):
+def train():
 
     wandb.init()
     config = wandb.config
@@ -468,7 +468,9 @@ def train(df):
     np.random.seed(seed_value)
     random.seed(seed_value)
     tf.random.set_seed(seed_value)
-
+    
+    use_pca = config.use_pca
+    use_norm = config.use_norm
     fusion_type = config.fusion_type
 
     '''
@@ -499,24 +501,55 @@ def train(df):
     F3amplitudeLogRelF0_sma3nz
     df.iloc[:, 65:]
     '''
+    df = pd.read_csv("../preprocessing/merged_features/all_participants_merged_correct.csv")
+    df_norm = pd.read_csv("../preprocessing/merged_features/all_participants_merged_correct_normalized.csv")
+    df_pca = pd.read_csv("../preprocessing/merged_features/all_participants_merged_correct_principal.csv")
+    df_norm_pca = pd.read_csv("../preprocessing/merged_features/all_participants_merged_correct_normalized_principal.csv")
 
-    if fusion_type == 'early':
-        train_early_fusion(df, config)
+    if use_norm:
+        if use_pca:
+            if fusion_type == 'early':
+                train_early_fusion(df_norm_pca, config)
 
-    elif fusion_type == 'intermediate':
-        train_intermediate_fusion(df, config)
+            elif fusion_type == 'intermediate':
+                train_intermediate_fusion(df_norm_pca, config)
 
-    elif fusion_type == 'late':
-        train_late_fusion(df, config)
-        
+            elif fusion_type == 'late':
+                train_late_fusion(df_norm_pca, config)
+        else:
+            if fusion_type == 'early':
+                train_early_fusion(df_norm, config)
+
+            elif fusion_type == 'intermediate':
+                train_intermediate_fusion(df_norm, config)
+
+            elif fusion_type == 'late':
+                train_late_fusion(df_norm, config)
+    else:
+        if use_pca:
+            if fusion_type == 'early':
+                train_early_fusion(df_pca, config)
+
+            elif fusion_type == 'intermediate':
+                train_intermediate_fusion(df_pca, config)
+
+            elif fusion_type == 'late':
+                train_late_fusion(df_pca, config)
+        else:
+            if fusion_type == 'early':
+                train_early_fusion(df, config)
+
+            elif fusion_type == 'intermediate':
+                train_intermediate_fusion(df, config)
+
+            elif fusion_type == 'late':
+                train_late_fusion(df, config)
 
 def main():
-    global df
-    df = pd.read_csv("../training/all_participants_merged_correct_normalized.csv")
-
+    
     sweep_config = {
         'method': 'random',
-        'name': 'lstm_sweep_v9_late',
+        'name': 'lstm_sweep_v8_early',
         'parameters': {
             'use_pca': {'values': [True, False]},
             'use_bidirectional': {'values': [True, False]},
@@ -532,16 +565,16 @@ def main():
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["binary_crossentropy", "categorical_crossentropy"]},
             'sequence_length' : {'values' : [30, 60, 90]},
-            'fusion_type': {'values': ['late']}
+            'fusion_type': {'values': ['early']}
         }
     }
 
     print(sweep_config)
 
     def train_wrapper():
-        train(df)
+        train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_sweep_v9_late")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_sweep_v8_early")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':

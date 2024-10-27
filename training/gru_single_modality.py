@@ -170,10 +170,10 @@ def train():
     random.seed(seed_value)
     tf.random.set_seed(seed_value)
 
-    df = pd.read_csv("../preprocessing/individual_features/all_participants_pose_features.csv")
-    df_norm = pd.read_csv("../preprocessing/individual_features/all_participants_pose_features_pca.csv")
-    df_pca = pd.read_csv("../preprocessing/individual_features/all_participants_pose_features_norm.csv")
-    df_norm_pca = pd.read_csv("../preprocessing/individual_features/all_participants_pose_features_norm_pca.csv")
+    df = pd.read_csv("../preprocessing/individual_features/all_participants_facial_features.csv")
+    df_norm = pd.read_csv("../preprocessing/individual_features/all_participants_facial_features_pca.csv")
+    df_pca = pd.read_csv("../preprocessing/individual_features/all_participants_facial_features_norm.csv")
+    df_norm_pca = pd.read_csv("../preprocessing/individual_features/all_participants_facial_features_norm_pca.csv")
 
     use_pca = config.use_pca
     use_norm = config.use_norm
@@ -192,7 +192,7 @@ def train():
 def main():
     sweep_config = {
         'method': 'random',
-        'name': 'gru_pose_features',
+        'name': 'facial_features_gru_v1',
         'parameters': {
             'use_pca': {'values': [True, False]},
             'use_norm': {'values': [True, False]},
@@ -217,7 +217,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_pose_features")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="facial_features_gru_v1")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':
