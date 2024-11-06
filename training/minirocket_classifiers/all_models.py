@@ -60,7 +60,7 @@ print("\n -----------------------\n Number of interations",
       len(param_grid), "x 5", "\n -----------------------")
 
 
-df_name = "../training/minirocket_classifiers/all_participants_merged_correct.csv"
+df_name = "all_participants_merged_correct.csv"
 #df_full = pd.read_csv('../../data/' + df_name)
 #features = df_full.columns[4:]
 #print('FEATURES', features)

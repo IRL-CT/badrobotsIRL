@@ -12,7 +12,7 @@ import tensorflow as tf
 from create_data_splits import create_data_splits, create_data_splits_pca
 from get_metrics import get_test_metrics
 
-def train_model(df, config):
+def train_single_modality_model(df, config):
 
     print("training model")
 
@@ -117,7 +117,7 @@ def train_model(df, config):
         epochs=epochs,
         batch_size=batch_size,
         validation_data=(X_val_sequences, y_val_sequences),
-        callbacks=[model_checkpoint],
+        # callbacks=[model_checkpoint],
         verbose=2
     )
 
@@ -159,66 +159,62 @@ def train_model(df, config):
     wandb.log(test_metrics)
     print(test_metrics)
 
-def train():
+# def train():
 
-    wandb.init()
-    config = wandb.config
-    print(config)
+#     wandb.init()
+#     config = wandb.config
+#     print(config)
 
-    seed_value = 42
-    np.random.seed(seed_value)
-    random.seed(seed_value)
-    tf.random.set_seed(seed_value)
+#     seed_value = 42
+#     np.random.seed(seed_value)
+#     random.seed(seed_value)
+#     tf.random.set_seed(seed_value)
 
-    df = pd.read_csv("../preprocessing/individual_features/all_participants_facial_features.csv")
-    df_norm = pd.read_csv("../preprocessing/individual_features/all_participants_facial_features_pca.csv")
-    df_pca = pd.read_csv("../preprocessing/individual_features/all_participants_facial_features_norm.csv")
-    df_norm_pca = pd.read_csv("../preprocessing/individual_features/all_participants_facial_features_norm_pca.csv")
+#     use_pca = config.use_pca
+#     use_norm = config.use_norm
 
-    use_pca = config.use_pca
-    use_norm = config.use_norm
+#     df = pd.read_csv("../preprocessing/individual_features/all_participants_pose_features.csv")
+#     df_norm = pd.read_csv("../preprocessing/individual_features/all_participants_pose_features_norm.csv")
+#     df_norm_pca = pd.read_csv("../preprocessing/individual_features/all_participants_pose_features_norm_pca.csv")
 
-    if use_norm:
-        if use_pca:
-            train_model(df_norm_pca, config)
-        else:
-            train_model(df_norm, config)
-    else:
-        if use_pca:
-            train_model(df_pca, config)
-        else:
-            train_model(df, config)
+#     if use_norm:
+#         if use_pca:
+#             train_single_modality_model(df_norm_pca, config)
+#         else:
+#             train_single_modality_model(df_norm, config)
+#     else:
+#         train_single_modality_model(df, config)
 
-def main():
-    sweep_config = {
-        'method': 'random',
-        'name': 'facial_features_gru_v1',
-        'parameters': {
-            'use_pca': {'values': [True, False]},
-            'use_norm': {'values': [True, False]},
-            'use_bidirectional': {'values': [True, False]},
-            'num_gru_layers': {'values': [1, 2, 3]},
-            'gru_units': {'values': [64, 128, 256]},
-            'dropout_rate': {'values': [0.0, 0.3, 0.5, 0.8]},
-            'dense_units': {'values': [32, 64, 128]},
-            'activation_function': {'values': ['tanh', 'relu', 'sigmoid']},
-            'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'rmsprop']},
-            'learning_rate': {'values': [0.001, 0.01, 0.005]},
-            'batch_size': {'values': [32, 64, 128]},
-            'epochs': {'value': 500},
-            'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
-            'loss' : {'values' : ["binary_crossentropy", "categorical_crossentropy"]},
-            'sequence_length' : {'values' : [30, 60, 90]},
-        }
-    }
+# def main():
+#     sweep_config = {
+#         'method': 'random',
+#         'name': 'pose_features_gru_v2',
+#         'parameters': {
+#             'use_pca': {'values': [True, False]},
+#             'use_norm': {'values': [True, False]},
+#             'use_bidirectional': {'values': [True, False]},
+#             'num_gru_layers': {'values': [1, 2, 3]},
+#             'gru_units': {'values': [64, 128, 256]},
+#             'dropout_rate': {'values': [0.0, 0.3, 0.5, 0.8]},
+#             'dense_units': {'values': [32, 64, 128]},
+#             'activation_function': {'values': ['tanh', 'relu', 'sigmoid']},
+#             'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'rmsprop']},
+#             'learning_rate': {'values': [0.001, 0.01, 0.005]},
+#             'batch_size': {'values': [32, 64, 128]},
+#             'epochs': {'value': 500},
+#             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
+#             'loss' : {'values' : ["binary_crossentropy", "categorical_crossentropy"]},
+#             'sequence_length' : {'values' : [30, 60, 90]},
+#         }
+#     }
 
-    print(sweep_config)
+#     print(sweep_config)
 
-    def train_wrapper():
-        train()
+#     def train_wrapper():
+#         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="facial_features_gru_v1")
-    wandb.agent(sweep_id, function=train_wrapper)
+#     sweep_id = wandb.sweep(sweep=sweep_config, project="pose_features_gru_v2")
+#     wandb.agent(sweep_id, function=train_wrapper)
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()

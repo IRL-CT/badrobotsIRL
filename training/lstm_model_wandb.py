@@ -11,6 +11,7 @@ from keras.utils import to_categorical
 import tensorflow as tf
 from create_data_splits import create_data_splits, create_data_splits_pca
 from get_metrics import get_test_metrics
+from lstm_single_modality import train_single_modality_model
 
 def build_early_late_model(sequence_length, input_shape, num_lstm_layers, lstm_units, activation, use_bidirectional, dropout, reg):
     model = Sequential()
@@ -130,7 +131,7 @@ def train_early_fusion(df, config):
         epochs=epochs,
         batch_size=batch_size,
         validation_data=(X_val_sequences, y_val_sequences),
-        callbacks=[model_checkpoint],
+        # callbacks=[model_checkpoint],
         verbose=2
     )
 
@@ -173,16 +174,7 @@ def train_early_fusion(df, config):
     print(test_metrics)
 
 
-def train_intermediate_fusion(df, config):
-
-    participant_frames_labels = df.iloc[:, :4]
-
-    df_pose = df.iloc[:, 4:29]
-    df_pose = pd.concat([participant_frames_labels, df_pose], axis=1)
-    df_facial = df.iloc[:, 29:65]
-    df_facial = pd.concat([participant_frames_labels, df_facial], axis=1)
-    df_audio = df.iloc[:, 65:]
-    df_audio = pd.concat([participant_frames_labels, df_audio], axis=1)
+def train_intermediate_fusion(df_pose, df_facial, df_audio, config):
 
     num_lstm_layers = config.num_lstm_layers
     lstm_units = config.lstm_units
@@ -197,16 +189,10 @@ def train_intermediate_fusion(df, config):
     kernel_regularizer = config.recurrent_regularizer
     loss = config.loss
     sequence_length = config.sequence_length
-    use_pca = config.use_pca
 
-    if use_pca:
-        splits_pose = create_data_splits_pca(df_pose, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
-        splits_facial = create_data_splits_pca(df_facial, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
-        splits_audio = create_data_splits_pca(df_audio, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
-    else:
-        splits_pose = create_data_splits(df_pose, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
-        splits_facial = create_data_splits(df_facial, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
-        splits_audio = create_data_splits(df_audio, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
+    splits_pose = create_data_splits(df_pose, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
+    splits_facial = create_data_splits(df_facial, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
+    splits_audio = create_data_splits(df_audio, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
 
     if splits_pose is None or splits_facial is None or splits_audio is None:
         return
@@ -325,16 +311,7 @@ def train_intermediate_fusion(df, config):
     print(test_metrics)
 
 
-def train_late_fusion(df, config):
-
-    participant_frames_labels = df.iloc[:, :4]
-
-    df_pose = df.iloc[:, 4:29]
-    df_pose = pd.concat([participant_frames_labels, df_pose], axis=1)
-    df_facial = df.iloc[:, 29:65]
-    df_facial = pd.concat([participant_frames_labels, df_facial], axis=1)
-    df_audio = df.iloc[:, 65:]
-    df_audio = pd.concat([participant_frames_labels, df_audio], axis=1)
+def train_late_fusion(df_pose, df_facial, df_audio, config):
 
     num_lstm_layers = config.num_lstm_layers
     lstm_units = config.lstm_units
@@ -351,14 +328,9 @@ def train_late_fusion(df, config):
     sequence_length = config.sequence_length
     use_pca = config.use_pca
 
-    if use_pca:
-        splits_pose = create_data_splits_pca(df_pose, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
-        splits_facial = create_data_splits_pca(df_facial, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
-        splits_audio = create_data_splits_pca(df_audio, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
-    else:
-        splits_pose = create_data_splits(df_pose, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
-        splits_facial = create_data_splits(df_facial, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
-        splits_audio = create_data_splits(df_audio, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
+    splits_pose = create_data_splits(df_pose, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
+    splits_facial = create_data_splits(df_facial, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
+    splits_audio = create_data_splits(df_audio, fold_no=0, num_folds=5, seed_value=42, sequence_length=sequence_length)
 
     if splits_pose is None or splits_facial is None or splits_audio is None:
         return
@@ -472,69 +444,58 @@ def train():
     use_pca = config.use_pca
     use_norm = config.use_norm
     fusion_type = config.fusion_type
+    modality = config.modality
 
-    '''
-    frame,participant,binary_label,multiclass_label df.iloc[:, :4]
-    nose_x_delta,nose_y_delta,neck_x_delta,neck_y_delta,
-    rightshoulder_x_delta,rightshoulder_y_delta,rightelbow_x_delta,rightelbow_y_delta,
-    rightwrist_x_delta,rightwrist_y_delta,leftshoulder_x_delta,leftshoulder_y_delta,
-    leftelbow_x_delta,leftelbow_y_delta,leftwrist_x_delta,leftwrist_y_delta,
-    righteye_x_delta,righteye_y_delta,lefteye_x_delta,lefteye_y_delta,
-    rightear_x_delta,rightear_y_delta,leftear_x_delta,leftear_y_delta ..24 elements
-    df.iloc[:, 4:29]
-    AU01_r, AU02_r, AU04_r, AU05_r, AU06_r, 
-    AU07_r, AU09_r, AU10_r, AU12_r, AU14_r, 
-    AU15_r, AU17_r, AU20_r, AU23_r, AU25_r, 
-    AU26_r, AU45_r, AU01_c, AU02_c, AU04_c, 
-    AU05_c, AU06_c, AU07_c, AU09_c, AU10_c, 
-    AU12_c, AU14_c, AU15_c, AU17_c, AU20_c, 
-    AU23_c, AU25_c, AU26_c, AU28_c, AU45_c ..35 elements
-    df.iloc[:, 29:65]
-    Loudness_sma3,alphaRatio_sma3,hammarbergIndex_sma3,
-    slope0-500_sma3,slope500-1500_sma3,spectralFlux_sma3,
-    mfcc1_sma3,mfcc2_sma3,mfcc3_sma3,
-    mfcc4_sma3,F0semitoneFrom27.5Hz_sma3nz,jitterLocal_sma3nz,
-    shimmerLocaldB_sma3nz,HNRdBACF_sma3nz,logRelF0-H1-H2_sma3nz,
-    logRelF0-H1-A3_sma3nz,F1frequency_sma3nz,F1bandwidth_sma3nz,
-    F1amplitudeLogRelF0_sma3nz,F2frequency_sma3nz,F2bandwidth_sma3nz,
-    F2amplitudeLogRelF0_sma3nz,F3frequency_sma3nz,F3bandwidth_sma3nz,
-    F3amplitudeLogRelF0_sma3nz
-    df.iloc[:, 65:]
-    '''
     df = pd.read_csv("../preprocessing/merged_features/all_participants_merged_correct.csv")
     df_norm = pd.read_csv("../preprocessing/merged_features/all_participants_merged_correct_normalized.csv")
-    df_pca = pd.read_csv("../preprocessing/merged_features/all_participants_merged_correct_principal.csv")
     df_norm_pca = pd.read_csv("../preprocessing/merged_features/all_participants_merged_correct_normalized_principal.csv")
 
-    if use_norm:
-        if use_pca:
-            if fusion_type == 'early':
-                train_early_fusion(df_norm_pca, config)
+    df_pose = pd.read_csv("../preprocessing/individual_features/all_participants_pose_features.csv")
+    df_pose_norm = pd.read_csv("../preprocessing/individual_features/all_participants_pose_features_norm.csv")
+    df_pose_norm_pca = pd.read_csv("../preprocessing/individual_features/all_participants_pose_features_norm_pca.csv")
 
-            elif fusion_type == 'intermediate':
-                train_intermediate_fusion(df_norm_pca, config)
+    df_facial = pd.read_csv("../preprocessing/individual_features/all_participants_facial_features.csv")
+    df_facial_norm = pd.read_csv("../preprocessing/individual_features/all_participants_facial_features_norm.csv")
+    df_facial_norm_pca = pd.read_csv("../preprocessing/individual_features/all_participants_facial_features_norm_pca.csv")
 
-            elif fusion_type == 'late':
-                train_late_fusion(df_norm_pca, config)
-        else:
-            if fusion_type == 'early':
-                train_early_fusion(df_norm, config)
+    df_audio = pd.read_csv("../preprocessing/individual_features/all_participants_audio_features.csv")
+    df_audio_norm = pd.read_csv("../preprocessing/individual_features/all_participants_audio_features_norm.csv")
+    df_audio_norm_pca = pd.read_csv("../preprocessing/individual_features/all_participants_audio_features_norm_pca.csv")
 
-            elif fusion_type == 'intermediate':
-                train_intermediate_fusion(df_norm, config)
+    df_pose_facial = pd.read_csv("../preprocessing/semi_merged_features/all_participants_pose_facial_features.csv")
+    df_pose_facial_norm = pd.read_csv("../preprocessing/semi_merged_features/all_participants_pose_facial_features_norm.csv")
+    df_pose_facial_norm_pca = pd.read_csv("../preprocessing/semi_merged_features/all_participants_pose_facial_features_norm_pca.csv")
 
-            elif fusion_type == 'late':
-                train_late_fusion(df_norm, config)
-    else:
-        if use_pca:
-            if fusion_type == 'early':
-                train_early_fusion(df_pca, config)
+    df_pose_audio = pd.read_csv("../preprocessing/semi_merged_features/all_participants_pose_audio_features.csv")
+    df_pose_audio_norm = pd.read_csv("../preprocessing/semi_merged_features/all_participants_pose_audio_features_norm.csv")
+    df_pose_audio_norm_pca = pd.read_csv("../preprocessing/semi_merged_features/all_participants_pose_audio_features_norm_pca.csv")
 
-            elif fusion_type == 'intermediate':
-                train_intermediate_fusion(df_pca, config)
+    df_facial_audio = pd.read_csv("../preprocessing/semi_merged_features/all_participants_facial_audio_features.csv")
+    df_facial_audio_norm = pd.read_csv("../preprocessing/semi_merged_features/all_participants_facial_audio_features_norm.csv")
+    df_facial_audio_norm_pca = pd.read_csv("../preprocessing/semi_merged_features/all_participants_facial_audio_features_norm_pca.csv")
 
-            elif fusion_type == 'late':
-                train_late_fusion(df_pca, config)
+    if modality == "combined":
+        if use_norm:
+            if use_pca:
+                if fusion_type == 'early':
+                    train_early_fusion(df_norm_pca, config)
+
+                elif fusion_type == 'intermediate':
+                    train_intermediate_fusion(df_pose_norm_pca, df_facial_norm_pca, df_audio_norm_pca, config)
+
+                elif fusion_type == 'late':
+                    train_late_fusion(df_pose_norm_pca, df_facial_norm_pca, df_audio_norm_pca, config)
+
+            else:
+                if fusion_type == 'early':
+                    train_early_fusion(df_norm, config)
+
+                elif fusion_type == 'intermediate':
+                    train_intermediate_fusion(df_pose_norm, df_facial_norm, df_audio_norm, config)
+
+                elif fusion_type == 'late':
+                    train_late_fusion(df_pose_norm, df_facial_norm, df_audio_norm, config)
+
         else:
             if fusion_type == 'early':
                 train_early_fusion(df, config)
@@ -545,13 +506,68 @@ def train():
             elif fusion_type == 'late':
                 train_late_fusion(df, config)
 
+    elif modality == "pose":
+        if use_norm:
+            if use_pca:
+                train_single_modality_model(df_pose_norm_pca, config)
+            else:
+                train_single_modality_model(df_pose_norm, config)
+        else:
+            train_single_modality_model(df_pose, config)
+
+    elif modality == "facial":
+        if use_norm:
+            if use_pca:
+                train_single_modality_model(df_facial_norm_pca, config)
+            else:
+                train_single_modality_model(df_facial_norm, config)
+        else:
+            train_single_modality_model(df_facial, config)
+
+    elif modality == "audio":
+        if use_norm:
+            if use_pca:
+                train_single_modality_model(df_audio_norm_pca, config)
+            else:
+                train_single_modality_model(df_audio_norm, config)
+        else:
+            train_single_modality_model(df_audio, config)
+
+    elif modality == "pose_facial":
+        if use_norm:
+            if use_pca:
+                train_single_modality_model(df_pose_facial_norm_pca, config)
+            else:
+                train_single_modality_model(df_pose_facial_norm, config)
+        else:
+            train_single_modality_model(df_pose_facial, config)
+
+    elif modality == "pose_audio":
+        if use_norm:
+            if use_pca:
+                train_single_modality_model(df_pose_audio_norm_pca, config)
+            else:
+                train_single_modality_model(df_pose_audio_norm, config)
+        else:
+            train_single_modality_model(df_pose_audio, config)
+
+    elif modality == "facial_audio":
+        if use_norm:
+            if use_pca:
+                train_single_modality_model(df_facial_audio_norm_pca, config)
+            else:
+                train_single_modality_model(df_facial_audio_norm, config)
+        else:
+            train_single_modality_model(df_facial_audio, config)
+
 def main():
     
     sweep_config = {
         'method': 'random',
-        'name': 'lstm_sweep_v8_early',
+        'name': 'lstm_all_v0',
         'parameters': {
             'use_pca': {'values': [True, False]},
+            'use_norm' : {'values' : [True, False]},
             'use_bidirectional': {'values': [True, False]},
             'num_lstm_layers': {'values': [1, 2, 3]},
             'lstm_units': {'values': [64, 128, 256]},
@@ -565,7 +581,8 @@ def main():
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["binary_crossentropy", "categorical_crossentropy"]},
             'sequence_length' : {'values' : [30, 60, 90]},
-            'fusion_type': {'values': ['early']}
+            'fusion_type': {'values': ['early', 'intermediate', 'late']},
+            'modality' : {'values': ['combined', 'pose', 'facial', 'audio', 'pose_facial', 'pose_audio', 'facial_audio']}
         }
     }
 
@@ -574,7 +591,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_sweep_v8_early")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_all_v0")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':

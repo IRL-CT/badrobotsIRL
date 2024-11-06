@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH -J facial_features_lstm_v1                         # Job name
-#SBATCH -o ../training_outputs/facial_features_lstm_v1%j.out                  # output file (%j expands to jobID)
-#SBATCH -e ../training_outputs/facial_features_lstm_v1%j.err                  # error log file (%j expands to jobID)
+#SBATCH -J pose_features_gru_v2                         # Job name
+#SBATCH -o ../training_outputs/pose_features_gru_v2%j.out                  # output file (%j expands to jobID)
+#SBATCH -e ../training_outputs/pose_features_gru_v2%j.err                  # error log file (%j expands to jobID)
 #SBATCH --mail-type=ALL                      # Request status by email 
 #SBATCH --mail-user=sjl356@cornell.edu        # Email address to send results to.
 #SBATCH -N 1                                 # Total number of nodes requested
@@ -14,4 +14,4 @@
 
 export WANDB_API_KEY=62b9e0d8a9a27d5eaa28a5f553cf4c4a7442a4a0
 
-python3 lstm_single_modality.py
+python3 gru_single_modality.py
