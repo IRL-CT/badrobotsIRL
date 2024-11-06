@@ -262,7 +262,7 @@ def train_intermediate_fusion(df_pose, df_facial, df_audio, config):
         epochs=epochs,
         batch_size=batch_size,
         validation_data=([X_val_pose_seq, X_val_facial_seq, X_val_audio_seq], y_val_sequences),
-        callbacks=[model_checkpoint],
+        # callbacks=[model_checkpoint],
         verbose=2
     )
 
@@ -381,7 +381,7 @@ def train_late_fusion(df_pose, df_facial, df_audio, config):
         epochs=epochs,
         batch_size=batch_size,
         validation_data=([X_val_pose_seq, X_val_facial_seq, X_val_audio_seq], y_val_sequences),
-        callbacks=[model_checkpoint],
+        # callbacks=[model_checkpoint],
         verbose=2
     )
 
