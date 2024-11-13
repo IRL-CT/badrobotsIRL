@@ -62,9 +62,9 @@ def create_data_splits(df, num_folds = 5, fold_no=0, seed_value=42, sequence_len
 
         features = df.iloc[:, 4:]
         target = df.iloc[:, 2].values.astype('int')
-        sessions = df['participant_id'].values
+        sessions = df['participant'].values
         
-        fold_sessions = df['participant_id'].unique()
+        fold_sessions = df['participant'].unique()
 
         num_of_sessions = len(fold_sessions)
 
@@ -113,9 +113,9 @@ def create_data_splits(df, num_folds = 5, fold_no=0, seed_value=42, sequence_len
 
         print("folds:", train_fold, val_fold, test_fold)
 
-        train_indices = df[df['participant_id'].isin(train_fold)].index
-        val_indices = df[df['participant_id'].isin(val_fold)].index
-        test_indices = df[df['participant_id'].isin(test_fold)].index
+        train_indices = df[df['participant'].isin(train_fold)].index
+        val_indices = df[df['participant'].isin(val_fold)].index
+        test_indices = df[df['participant'].isin(test_fold)].index
 
         X_train = features.loc[train_indices]
         y_train = target[train_indices]
@@ -158,9 +158,9 @@ def create_data_splits_ids(df, num_folds = 5, fold_no=0, seed_value=42, sequence
 
         features = df.iloc[:, 4:]
         target = df.iloc[:, 2].values.astype('int')
-        sessions = df['participant_id'].values
+        sessions = df['participant'].values
         
-        fold_sessions = df['participant_id'].unique()
+        fold_sessions = df['participant'].unique()
 
         num_of_sessions = len(fold_sessions)
 

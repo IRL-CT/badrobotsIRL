@@ -97,11 +97,11 @@ def read_in_data(df_name, threshold, interval_length, stride_train, stride_eval,
     
     df = pd.read_csv(path)
     #transform participant ids to be in ascendent order from 0 to n_p
-    participants_uniques = df['participant_id'].unique()
+    participants_uniques = df['participant'].unique()
     dict_participant = {participants_uniques[i]: i for i in range(len(participants_uniques))}
     #print(dict_participant)
-    df['participant_id'] = df['participant_id'].map(dict_participant)
-    participants_uniques = df['participant_id'].unique()
+    df['participant'] = df['participant'].map(dict_participant)
+    participants_uniques = df['participant'].unique()
     #print(participants_uniques)
 
 
@@ -109,7 +109,7 @@ def read_in_data(df_name, threshold, interval_length, stride_train, stride_eval,
         participant = i
         data[participant] = {}
         #print('in', i)
-        df_p = df[df["participant_id"] == i]
+        df_p = df[df["participant"] == i]
         #reindex
         df_p = df_p.reset_index(drop=True)
 
@@ -650,13 +650,13 @@ def cross_validate(val_fold_size, config, group, name):
 
             dataset_processing = config.dataset_processing
             if dataset_processing == "norm":
-                df = pd.read_csv("../training/minirocket_classifiers/all_participants_merged_correct_normalized.csv")
+                df = pd.read_csv("all_participants_merged_correct_normalized.csv")
                 df_name = "all_participants_merged_correct_normalized.csv"
             elif dataset_processing == "pca":
-                df = pd.read_csv("../training/minirocket_classifiers/all_participants_merged_correct_principal.csv")
-                df_name = "all_participants_merged_correct_principal.csv"
+                df = pd.read_csv("all_participants_merged_correct_normalized_principal.csv")
+                df_name = "all_participants_merged_correct_normalized_principal.csv"
             else:
-                df = pd.read_csv("../training/minirocket_classifiers/all_participants_merged_correct.csv")
+                df = pd.read_csv("all_participants_merged_correct.csv")
                 df_name = "all_participants_merged_correct.csv"
         else:
             df = pd.read_csv(config.df_name)
@@ -673,11 +673,11 @@ def cross_validate(val_fold_size, config, group, name):
         config.df_name = df_name
 
         #transform participant ids to be in ascendent order from 0 to n_p
-        participants_uniques = df['participant_id'].unique()
+        participants_uniques = df['participant'].unique()
         dict_participant = {participants_uniques[i]: i for i in range(len(participants_uniques))}
         #print(dict_participant)S
-        df['participant_id'] = df['participant_id'].map(dict_participant)
-        #print(df['participant_id'].unique())
+        df['participant'] = df['participant'].map(dict_participant)
+        #print(df['participant'].unique())
         #print('FINISHED CROSS_VALIDATION')
 
 
@@ -712,7 +712,7 @@ def cross_validate(val_fold_size, config, group, name):
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         # , settings=wandb.Settings(start_method="fork")):
         dataset = config.dataset
-        with wandb.init(project=f"minirocket4_{dataset}", config=config, group="summary-"+group, name=now+"_"+group):
+        with wandb.init(project="minirocket_br_irl", config=config, group="summary-"+group, name=now+"_"+group):
 
             for i in range(len(train_metrics_all)):
                 #get metrics all for fold 0
@@ -783,7 +783,7 @@ def cross_validate(val_fold_size, config, group, name):
     except Exception as e:
         dataset = config.dataset
         print(e)
-        with wandb.init(project=f"minirocket4_{dataset}", config=config, group="error-"+group, name=group):
+        with wandb.init(project="minirocket_br_irl", config=config, group="error-"+group, name=group):
 
             wandb.log({"Error": str(e)})
             for key in config.keys():
@@ -821,13 +821,13 @@ def cross_validate_bestepoch(val_fold_size, config, group, name):
 
             dataset_processing = config.dataset_processing
             if dataset_processing == "norm":
-                df = pd.read_csv("../training/minirocket_classifiers/all_participants_merged_correct_normalized.csv")
+                df = pd.read_csv("all_participants_merged_correct_normalized.csv")
                 df_name = "all_participants_merged_correct_normalized.csv"
             elif dataset_processing == "pca":
-                df = pd.read_csv("../training/minirocket_classifiers/all_participants_merged_correct_principal.csv")
-                df_name = "all_participants_merged_correct_principal.csv"
+                df = pd.read_csv("all_participants_merged_correct_normalized_principal.csv")
+                df_name = "all_participants_merged_correct_normalized_principal.csv"
             else:
-                df = pd.read_csv("../training/minirocket_classifiers/all_participants_merged_correct.csv")
+                df = pd.read_csv("all_participants_merged_correct.csv")
                 df_name = "all_participants_merged_correct.csv"
         else:
             df = pd.read_csv(config.df_name)
@@ -843,11 +843,11 @@ def cross_validate_bestepoch(val_fold_size, config, group, name):
 
 
         #transform participant ids to be in ascendent order from 0 to n_p
-        participants_uniques = df['participant_id'].unique()
+        participants_uniques = df['participant'].unique()
         dict_participant = {participants_uniques[i]: i for i in range(len(participants_uniques))}
         #print(dict_participant)
-        df['participant_id'] = df['participant_id'].map(dict_participant)
-        #print(df['participant_id'].unique())
+        df['participant'] = df['participant'].map(dict_participant)
+        #print(df['participant'].unique())
         #print('FINISHED CROSS_VALIDATION')
 
 
@@ -1036,13 +1036,13 @@ def cross_validate_bestmodel(val_fold_size, config, group, name):
 
             dataset_processing = config.dataset_processing
             if dataset_processing == "norm":
-                df = pd.read_csv("../training/minirocket_classifiers/all_participants_merged_correct_normalized.csv")
+                df = pd.read_csv("all_participants_merged_correct_normalized.csv")
                 df_name = "all_participants_merged_correct_normalized.csv"
             elif dataset_processing == "pca":
-                df = pd.read_csv("../training/minirocket_classifiers/all_participants_merged_correct_principal.csv")
-                df_name = "all_participants_merged_correct_principal.csv"
+                df = pd.read_csv("all_participants_merged_correct_normalized_principal.csv")
+                df_name = "all_participants_merged_correct_normalized_principal.csv"
             else:
-                df = pd.read_csv("../training/minirocket_classifiers/all_participants_merged_correct.csv")
+                df = pd.read_csv("all_participants_merged_correct.csv")
                 df_name = "all_participants_merged_correct.csv"
         else:
             df = pd.read_csv(config.df_name)
@@ -1059,11 +1059,11 @@ def cross_validate_bestmodel(val_fold_size, config, group, name):
 
 
         #transform participant ids to be in ascendent order from 0 to n_p
-        participants_uniques = df['participant_id'].unique()
+        participants_uniques = df['participant'].unique()
         dict_participant = {participants_uniques[i]: i for i in range(len(participants_uniques))}
         #print(dict_participant)
-        df['participant_id'] = df['participant_id'].map(dict_participant)
-        #print(df['participant_id'].unique())
+        df['participant'] = df['participant'].map(dict_participant)
+        #print(df['participant'].unique())
         #print('FINISHED CROSS_VALIDATION')
 
 
@@ -1965,13 +1965,13 @@ def cross_validate_pretrained(val_fold_size, config, group, name):
 
             dataset_processing = config.dataset_processing
             if dataset_processing == "norm":
-                df = pd.read_csv("../training/minirocket_classifiers/all_participants_merged_correct_normalized.csv")
+                df = pd.read_csv("all_participants_merged_correct_normalized.csv")
                 df_name = "all_participants_merged_correct_normalized.csv"
             elif dataset_processing == "pca":
-                df = pd.read_csv("../training/minirocket_classifiers/all_participants_merged_correct_principal.csv")
-                df_name = "all_participants_merged_correct_principal.csv"
+                df = pd.read_csv("all_participants_merged_correct_normalized_principal.csv")
+                df_name = "all_participants_merged_correct_normalized_principal.csv"
             else:
-                df = pd.read_csv("../training/minirocket_classifiers/all_participants_merged_correct.csv")
+                df = pd.read_csv("all_participants_merged_correct.csv")
                 df_name = "all_participants_merged_correct.csv"
         else:
             df = pd.read_csv(config.df_name)
@@ -1987,11 +1987,11 @@ def cross_validate_pretrained(val_fold_size, config, group, name):
 
 
         #transform participant ids to be in ascendent order from 0 to n_p
-        participants_uniques = df['participant_id'].unique()
+        participants_uniques = df['participant'].unique()
         dict_participant = {participants_uniques[i]: i for i in range(len(participants_uniques))}
         #print(dict_participant)
-        df['participant_id'] = df['participant_id'].map(dict_participant)
-        #print(df['participant_id'].unique())
+        df['participant'] = df['participant'].map(dict_participant)
+        #print(df['participant'].unique())
         #print('FINISHED CROSS_VALIDATION')
 
 
@@ -2179,13 +2179,13 @@ def cross_validate_pp(val_fold_size, config, group, name):
 
             dataset_processing = config.dataset_processing
             if dataset_processing == "norm":
-                df = pd.read_csv("../training/minirocket_classifiers/all_participants_merged_correct_normalized.csv")
+                df = pd.read_csv("all_participants_merged_correct_normalized.csv")
                 df_name = "all_participants_merged_correct_normalized.csv"
             elif dataset_processing == "pca":
-                df = pd.read_csv("../training/minirocket_classifiers/all_participants_merged_correct_principal.csv")
-                df_name = "all_participants_merged_correct_principal.csv"
+                df = pd.read_csv("all_participants_merged_correct_normalized_principal.csv")
+                df_name = "all_participants_merged_correct_normalized_principal.csv"
             else:
-                df = pd.read_csv("../training/minirocket_classifiers/all_participants_merged_correct.csv")
+                df = pd.read_csv("all_participants_merged_correct.csv")
                 df_name = "all_participants_merged_correct.csv"
         else:
             df = pd.read_csv(config.df_name)
@@ -2202,11 +2202,11 @@ def cross_validate_pp(val_fold_size, config, group, name):
         config.df_name = df_name
 
         #transform participant ids to be in ascendent order from 0 to n_p
-        participants_uniques = df['participant_id'].unique()
+        participants_uniques = df['participant'].unique()
         dict_participant = {participants_uniques[i]: i for i in range(len(participants_uniques))}
         #print(dict_participant)S
-        df['participant_id'] = df['participant_id'].map(dict_participant)
-        #print(df['participant_id'].unique())
+        df['participant'] = df['participant'].map(dict_participant)
+        #print(df['participant'].unique())
 
         # iterate over folds
         for i in range(len(participants_uniques)):
@@ -2555,15 +2555,15 @@ def read_in_data_pp(df_name, participant, participant_minimum, threshold, interv
     
     df = pd.read_csv(path)
     #transform participant ids to be in ascendent order from 0 to n_p
-    participants_uniques = df['participant_id'].unique()
+    participants_uniques = df['participant'].unique()
     dict_participant = {participants_uniques[i]: i for i in range(len(participants_uniques))}
     #print(dict_participant)
-    df['participant_id'] = df['participant_id'].map(dict_participant)
-    participants_uniques = df['participant_id'].unique()
+    df['participant'] = df['participant'].map(dict_participant)
+    participants_uniques = df['participant'].unique()
     #print(participants_uniques)
 
     #select only data for participant
-    df_p = df[df["participant_id"] == participant]
+    df_p = df[df["participant"] == participant]
     #shuffle the rows
     df_p = df_p.sample(frac=1).reset_index(drop=True)
    
