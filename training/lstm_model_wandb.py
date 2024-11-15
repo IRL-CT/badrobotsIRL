@@ -59,22 +59,30 @@ def train_early_fusion(df, config):
     sequence_length = config.sequence_length
     use_pca = config.use_pca
 
-    if use_pca == True:
-        splits = create_data_splits_pca(
-        df,
-        fold_no=0,
-        num_folds=5,
-        seed_value=42,
-        sequence_length=sequence_length
-        )
-    else:
-        splits = create_data_splits(
+    splits = create_data_splits(
             df,
             fold_no=0,
             num_folds=5,
             seed_value=42,
             sequence_length=sequence_length
         )
+
+    # if use_pca == True:
+    #     splits = create_data_splits_pca(
+    #     df,
+    #     fold_no=0,
+    #     num_folds=5,
+    #     seed_value=42,
+    #     sequence_length=sequence_length
+    #     )
+    # else:
+    #     splits = create_data_splits(
+    #         df,
+    #         fold_no=0,
+    #         num_folds=5,
+    #         seed_value=42,
+    #         sequence_length=sequence_length
+    #     )
 
     if splits is None:
         return
