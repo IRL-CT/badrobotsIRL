@@ -61,7 +61,13 @@ def create_data_splits(df, num_folds = 5, fold_no=0, seed_value=42, sequence_len
         torch.cuda.manual_seed_all(seed_value)
 
         features = df.iloc[:, 4:]
+
+        #for binary classification
         target = df.iloc[:, 2].values.astype('int')
+
+        #for multiclass classification
+        #target = df.iloc[:, 3].values.astype('int')
+
         sessions = df['participant'].values
         
         fold_sessions = df['participant'].unique()
@@ -157,7 +163,13 @@ def create_data_splits_ids(df, num_folds = 5, fold_no=0, seed_value=42, sequence
         torch.cuda.manual_seed_all(seed_value)
 
         features = df.iloc[:, 4:]
+
+        #for binary classification
         target = df.iloc[:, 2].values.astype('int')
+
+        #for multiclass classification
+        #target = df.iloc[:, 3].values.astype('int')
+
         sessions = df['participant'].values
         
         fold_sessions = df['participant'].unique()
