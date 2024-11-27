@@ -593,3 +593,5 @@ Epoch 275/500
 Epoch 276/500
 564/564 - 96s - loss: 0.5994 - accuracy: 0.7583 - precision: 0.7583 - recall: 0.7583 - auc: 0.8379 - val_loss: 0.7495 - val_accuracy: 0.6611 - val_precision: 0.6611 - val_recall: 0.6611 - val_auc: 0.7162 - 96s/epoch - 170ms/step
 Epoch 277/500
+564/564 - 95s - loss: 0.5976 - accuracy: 0.7602 - precision: 0.7602 - recall: 0.7602 - auc: 0.8393 - val_loss: 0.7470 - val_accuracy: 0.6639 - val_precision: 0.6639 - val_recall: 0.6639 - val_auc: 0.7186 - 95s/epoch - 169ms/step
+Epoch 278/500

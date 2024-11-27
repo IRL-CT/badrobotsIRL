@@ -580,3 +580,9 @@ Epoch 268/500
 Epoch 269/500
 579/579 - 52s - loss: 0.7030 - accuracy: 0.5197 - precision: 0.5197 - recall: 0.5197 - auc: 0.5238 - val_loss: 0.7049 - val_accuracy: 0.4971 - val_precision: 0.4971 - val_recall: 0.4971 - val_auc: 0.4971 - 52s/epoch - 90ms/step
 Epoch 270/500
+579/579 - 52s - loss: 0.7029 - accuracy: 0.5164 - precision: 0.5164 - recall: 0.5164 - auc: 0.5233 - val_loss: 0.7048 - val_accuracy: 0.4971 - val_precision: 0.4971 - val_recall: 0.4971 - val_auc: 0.4968 - 52s/epoch - 90ms/step
+Epoch 271/500
+579/579 - 52s - loss: 0.7033 - accuracy: 0.5162 - precision: 0.5162 - recall: 0.5162 - auc: 0.5194 - val_loss: 0.7047 - val_accuracy: 0.4971 - val_precision: 0.4971 - val_recall: 0.4971 - val_auc: 0.4933 - 52s/epoch - 90ms/step
+Epoch 272/500
+579/579 - 52s - loss: 0.7030 - accuracy: 0.5182 - precision: 0.5182 - recall: 0.5182 - auc: 0.5214 - val_loss: 0.7046 - val_accuracy: 0.4971 - val_precision: 0.4971 - val_recall: 0.4971 - val_auc: 0.4972 - 52s/epoch - 90ms/step
+Epoch 273/500

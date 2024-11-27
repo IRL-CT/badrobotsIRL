@@ -97,3 +97,5 @@ Epoch 24/500
 Epoch 25/500
 549/549 - 121s - loss: nan - accuracy: 0.4495 - precision: 0.0000e+00 - recall: 0.0000e+00 - auc: 0.5000 - val_loss: nan - val_accuracy: 0.4743 - val_precision: 0.0000e+00 - val_recall: 0.0000e+00 - val_auc: 0.5000 - 121s/epoch - 220ms/step
 Epoch 26/500
+549/549 - 121s - loss: nan - accuracy: 0.4495 - precision: 0.0000e+00 - recall: 0.0000e+00 - auc: 0.5000 - val_loss: nan - val_accuracy: 0.4743 - val_precision: 0.0000e+00 - val_recall: 0.0000e+00 - val_auc: 0.5000 - 121s/epoch - 220ms/step
+Epoch 27/500

@@ -724,3 +724,5 @@ Epoch 332/500
 Epoch 333/500
 275/275 - 137s - loss: nan - accuracy: 0.4495 - precision: 0.0000e+00 - recall: 0.0000e+00 - auc: 0.5000 - val_loss: nan - val_accuracy: 0.4743 - val_precision: 0.0000e+00 - val_recall: 0.0000e+00 - val_auc: 0.5000 - 137s/epoch - 499ms/step
 Epoch 334/500
+275/275 - 142s - loss: nan - accuracy: 0.4495 - precision: 0.0000e+00 - recall: 0.0000e+00 - auc: 0.5000 - val_loss: nan - val_accuracy: 0.4743 - val_precision: 0.0000e+00 - val_recall: 0.0000e+00 - val_auc: 0.5000 - 142s/epoch - 516ms/step
+Epoch 335/500

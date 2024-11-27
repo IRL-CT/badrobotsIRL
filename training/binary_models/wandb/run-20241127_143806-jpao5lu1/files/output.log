@@ -667,3 +667,19 @@ Epoch 314/500
 Epoch 315/500
 138/138 - 20s - loss: nan - accuracy: 0.4495 - precision: 0.0000e+00 - recall: 0.0000e+00 - auc: 0.5000 - val_loss: nan - val_accuracy: 0.4743 - val_precision: 0.0000e+00 - val_recall: 0.0000e+00 - val_auc: 0.5000 - 20s/epoch - 145ms/step
 Epoch 316/500
+138/138 - 20s - loss: nan - accuracy: 0.4495 - precision: 0.0000e+00 - recall: 0.0000e+00 - auc: 0.5000 - val_loss: nan - val_accuracy: 0.4743 - val_precision: 0.0000e+00 - val_recall: 0.0000e+00 - val_auc: 0.5000 - 20s/epoch - 146ms/step
+Epoch 317/500
+138/138 - 20s - loss: nan - accuracy: 0.4495 - precision: 0.0000e+00 - recall: 0.0000e+00 - auc: 0.5000 - val_loss: nan - val_accuracy: 0.4743 - val_precision: 0.0000e+00 - val_recall: 0.0000e+00 - val_auc: 0.5000 - 20s/epoch - 144ms/step
+Epoch 318/500
+138/138 - 20s - loss: nan - accuracy: 0.4495 - precision: 0.0000e+00 - recall: 0.0000e+00 - auc: 0.5000 - val_loss: nan - val_accuracy: 0.4743 - val_precision: 0.0000e+00 - val_recall: 0.0000e+00 - val_auc: 0.5000 - 20s/epoch - 144ms/step
+Epoch 319/500
+138/138 - 20s - loss: nan - accuracy: 0.4495 - precision: 0.0000e+00 - recall: 0.0000e+00 - auc: 0.5000 - val_loss: nan - val_accuracy: 0.4743 - val_precision: 0.0000e+00 - val_recall: 0.0000e+00 - val_auc: 0.5000 - 20s/epoch - 144ms/step
+Epoch 320/500
+138/138 - 20s - loss: nan - accuracy: 0.4495 - precision: 0.0000e+00 - recall: 0.0000e+00 - auc: 0.5000 - val_loss: nan - val_accuracy: 0.4743 - val_precision: 0.0000e+00 - val_recall: 0.0000e+00 - val_auc: 0.5000 - 20s/epoch - 144ms/step
+Epoch 321/500
+138/138 - 20s - loss: nan - accuracy: 0.4495 - precision: 0.0000e+00 - recall: 0.0000e+00 - auc: 0.5000 - val_loss: nan - val_accuracy: 0.4743 - val_precision: 0.0000e+00 - val_recall: 0.0000e+00 - val_auc: 0.5000 - 20s/epoch - 143ms/step
+Epoch 322/500
+138/138 - 20s - loss: nan - accuracy: 0.4495 - precision: 0.0000e+00 - recall: 0.0000e+00 - auc: 0.5000 - val_loss: nan - val_accuracy: 0.4743 - val_precision: 0.0000e+00 - val_recall: 0.0000e+00 - val_auc: 0.5000 - 20s/epoch - 144ms/step
+Epoch 323/500
+138/138 - 20s - loss: nan - accuracy: 0.4495 - precision: 0.0000e+00 - recall: 0.0000e+00 - auc: 0.5000 - val_loss: nan - val_accuracy: 0.4743 - val_precision: 0.0000e+00 - val_recall: 0.0000e+00 - val_auc: 0.5000 - 20s/epoch - 144ms/step
+Epoch 324/500

@@ -1,4 +1,4 @@
-training/wandb
+wandb
 training/__pycache__
 training/minirocket_classifiers/wandb
 training/minirocket_classifiers/__pycache__

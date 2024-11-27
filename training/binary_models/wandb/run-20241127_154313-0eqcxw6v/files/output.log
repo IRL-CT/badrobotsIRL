@@ -130,3 +130,7 @@ Epoch 47/500
 Epoch 48/500
 564/564 - 54s - loss: 0.6607 - accuracy: 0.6498 - precision: 0.6344 - recall: 0.8176 - auc: 0.6981 - val_loss: 0.6526 - val_accuracy: 0.6359 - val_precision: 0.5974 - val_recall: 0.8813 - val_auc: 0.7145 - 54s/epoch - 96ms/step
 Epoch 49/500
+564/564 - 54s - loss: 0.6542 - accuracy: 0.6518 - precision: 0.6369 - recall: 0.8146 - auc: 0.7017 - val_loss: 0.6870 - val_accuracy: 0.6280 - val_precision: 0.5802 - val_recall: 0.9847 - val_auc: 0.7227 - 54s/epoch - 96ms/step
+Epoch 50/500
+564/564 - 54s - loss: 0.6488 - accuracy: 0.6559 - precision: 0.6360 - recall: 0.8363 - auc: 0.7060 - val_loss: 0.8226 - val_accuracy: 0.6071 - val_precision: 0.7622 - val_recall: 0.3360 - val_auc: 0.6955 - 54s/epoch - 96ms/step
+Epoch 51/500
