@@ -1,0 +1,19 @@
+{"time":"2024-11-27T00:03:03.067403444-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T00:03:03.067430622-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_000303-u2tmdiui/logs/debug-core.log"}
+{"time":"2024-11-27T00:03:03.068034826-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T00:03:03.0680485-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_000303-u2tmdiui/logs/debug-core.log"}
+{"time":"2024-11-27T00:03:03.077960701-05:00","level":"INFO","msg":"created new stream","id":"u2tmdiui"}
+{"time":"2024-11-27T00:03:03.077982612-05:00","level":"INFO","msg":"stream: started","id":"u2tmdiui"}
+{"time":"2024-11-27T00:03:03.078002349-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"u2tmdiui"}}
+{"time":"2024-11-27T00:03:03.078088282-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"u2tmdiui"}}
+{"time":"2024-11-27T00:03:03.078211661-05:00","level":"INFO","msg":"sender: started","stream_id":{"value":"u2tmdiui"}}
+{"time":"2024-11-27T00:03:03.402179504-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-11-27T00:03:03.410323602-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-27T00:03:04.200933978-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-27T00:03:04.201071353-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-27T00:03:04.483064004-05:00","level":"INFO","msg":"stream: closing","id":"u2tmdiui"}
+{"time":"2024-11-27T00:03:04.505701532-05:00","level":"ERROR","msg":"sender: received Exit record more than once, ignoring"}
+{"time":"2024-11-27T00:03:04.707400992-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"u2tmdiui"}}
+{"time":"2024-11-27T00:03:04.707476162-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"u2tmdiui"}}
+{"time":"2024-11-27T00:03:04.707830683-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"u2tmdiui"}}
+{"time":"2024-11-27T00:03:04.70813442-05:00","level":"INFO","msg":"stream: closed","id":"u2tmdiui"}

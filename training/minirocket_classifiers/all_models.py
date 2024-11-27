@@ -44,7 +44,8 @@ param_grid_lstm = {'n_epoch': [200],
               'oversampling': [False],
               "batch_size": [128, 256],
               "batch_tfms": [None],
-              "dataset_processing": ["norm", "pca", "n.a."]
+              "dataset_processing": ["norm", "pca", "n.a."],
+              "use_stats" : [True, False]
               }
 
 
@@ -121,7 +122,8 @@ for i, grid_config in enumerate(param_grid):
                 undersampling=False,
                 verbose=True,
                 dataset = "neckface",
-                dataset_processing = grid_config["dataset_processing"]
+                dataset_processing = grid_config["dataset_processing"],
+                use_stats = grid_config["use_stats"]
             )
 
             cross_validate(val_fold_size=5, config=config,

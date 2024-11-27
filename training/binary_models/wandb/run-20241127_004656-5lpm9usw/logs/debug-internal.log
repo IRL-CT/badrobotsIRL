@@ -1,0 +1,20 @@
+{"time":"2024-11-27T00:46:56.615700035-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T00:46:56.615743129-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_004656-5lpm9usw/logs/debug-core.log"}
+{"time":"2024-11-27T00:46:56.616208132-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T00:46:56.616217374-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_004656-5lpm9usw/logs/debug-core.log"}
+{"time":"2024-11-27T00:46:56.624883003-05:00","level":"INFO","msg":"created new stream","id":"5lpm9usw"}
+{"time":"2024-11-27T00:46:56.624939257-05:00","level":"INFO","msg":"stream: started","id":"5lpm9usw"}
+{"time":"2024-11-27T00:46:56.624967473-05:00","level":"INFO","msg":"sender: started","stream_id":{"value":"5lpm9usw"}}
+{"time":"2024-11-27T00:46:56.624985501-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"5lpm9usw"}}
+{"time":"2024-11-27T00:46:56.624991005-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"5lpm9usw"}}
+{"time":"2024-11-27T00:46:56.901632232-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-11-27T00:46:56.907919497-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-27T11:01:42.646489032-05:00","level":"INFO","msg":"api: retrying HTTP request, no error or response"}
+{"time":"2024-11-27T13:29:14.878793866-05:00","level":"INFO","msg":"api: retrying HTTP error","status":502,"url":"https://api.wandb.ai/files/shannon-jliu/gru_all_v0/5lpm9usw/file_stream"}
+{"time":"2024-11-27T13:32:30.341541206-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-27T13:32:30.342342885-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-27T13:32:32.151593084-05:00","level":"INFO","msg":"stream: closing","id":"5lpm9usw"}
+{"time":"2024-11-27T13:32:32.151645762-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"5lpm9usw"}}
+{"time":"2024-11-27T13:32:32.151708045-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"5lpm9usw"}}
+{"time":"2024-11-27T13:32:32.151771396-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"5lpm9usw"}}
+{"time":"2024-11-27T13:32:32.154371901-05:00","level":"INFO","msg":"stream: closed","id":"5lpm9usw"}

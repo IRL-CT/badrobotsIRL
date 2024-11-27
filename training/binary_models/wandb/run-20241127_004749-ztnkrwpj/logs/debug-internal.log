@@ -1,0 +1,19 @@
+{"time":"2024-11-27T00:47:49.893429017-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T00:47:49.893440292-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_004749-ztnkrwpj/logs/debug-core.log"}
+{"time":"2024-11-27T00:47:49.893799483-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T00:47:49.893803399-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_004749-ztnkrwpj/logs/debug-core.log"}
+{"time":"2024-11-27T00:47:49.912028316-05:00","level":"INFO","msg":"created new stream","id":"ztnkrwpj"}
+{"time":"2024-11-27T00:47:49.912047987-05:00","level":"INFO","msg":"stream: started","id":"ztnkrwpj"}
+{"time":"2024-11-27T00:47:49.912063356-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"ztnkrwpj"}}
+{"time":"2024-11-27T00:47:49.912058151-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"ztnkrwpj"}}
+{"time":"2024-11-27T00:47:49.912068573-05:00","level":"INFO","msg":"sender: started","stream_id":{"value":"ztnkrwpj"}}
+{"time":"2024-11-27T00:47:50.145268793-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-11-27T00:47:50.154701372-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-27T05:54:56.150111036-05:00","level":"INFO","msg":"api: retrying HTTP error","status":502,"url":"https://api.wandb.ai/graphql"}
+{"time":"2024-11-27T07:03:16.969819351-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-27T07:03:16.970593316-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-27T07:03:18.786571389-05:00","level":"INFO","msg":"stream: closing","id":"ztnkrwpj"}
+{"time":"2024-11-27T07:03:18.786590045-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"ztnkrwpj"}}
+{"time":"2024-11-27T07:03:18.786615935-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"ztnkrwpj"}}
+{"time":"2024-11-27T07:03:18.786616319-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"ztnkrwpj"}}
+{"time":"2024-11-27T07:03:18.791845941-05:00","level":"INFO","msg":"stream: closed","id":"ztnkrwpj"}

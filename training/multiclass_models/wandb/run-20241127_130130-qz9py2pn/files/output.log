@@ -1,0 +1,40 @@
+{'activation_function': 'tanh', 'batch_size': 64, 'dense_units': 32, 'dropout_rate': 0.3, 'epochs': 500, 'fusion_type': 'late', 'gru_units': 256, 'learning_rate': 0.001, 'loss': 'categorical_crossentropy', 'modality': 'pose_audio', 'num_gru_layers': 1, 'optimizer': 'adam', 'recurrent_regularizer': 'l1', 'sequence_length': 90, 'use_bidirectional': False, 'use_norm': True, 'use_pca': False, 'use_stats': False}
+training model
+Train fold: ['p20nodbot' 'p29nodbot' 'p10nodbot' 'p4nodbot' 'p23nodbot' 'p21nodbot'
+ 'p26nodbot' 'p11nodbot' 'p7nodbot' 'p17nodbot' 'p12nodbot' 'p25nodbot'
+ 'p28nodbot' 'p14nodbot' 'p16nodbot' 'p8nodbot']
+Validation fold: ['p2nodbot' 'p6nodbot' 'p9nodbot' 'p19nodbot' 'p22nodbot']
+Test fold: ['p18nodbot' 'p27nodbot' 'p5nodbot']
+Train shapes: (18972, 49) (18972,)
+Validation shapes: (5653, 49) (5653,)
+Test shapes: (3986, 49) (3986,)
+Train sequences shape: (17548, 90, 49) (17548,)
+X_train_sequences shape: (17548, 90, 49)
+X_val_sequences shape: (5208, 90, 49)
+X_test_sequences shape: (3719, 90, 49)
+Num classes:  2
+Unique labels in y_train: [0 1 2 3 4 5]
+Unique labels in y_val: [0 1 2 3]
+Unique labels in y_test: [0 1 2 3]
+Model output classes: 2
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #
+=================================================================
+ gru (GRU)                   (None, 256)               235776
+
+ dropout (Dropout)           (None, 256)               0
+
+ batch_normalization (Batch  (None, 256)               1024
+ Normalization)
+
+ dense (Dense)               (None, 32)                8224
+
+ dense_1 (Dense)             (None, 2)                 66
+
+=================================================================
+Total params: 245090 (957.38 KB)
+Trainable params: 244578 (955.38 KB)
+Non-trainable params: 512 (2.00 KB)
+_________________________________________________________________
+Epoch 1/500

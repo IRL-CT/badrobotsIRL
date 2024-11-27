@@ -1,0 +1,38 @@
+wandb_version: 1
+
+activation_function:
+  value: tanh
+batch_size:
+  value: 32
+dense_units:
+  value: 128
+dropout_rate:
+  value: 0.8
+epochs:
+  value: 500
+fusion_type:
+  value: late
+gru_units:
+  value: 256
+learning_rate:
+  value: 0.005
+loss:
+  value: categorical_crossentropy
+modality:
+  value: pose_audio
+num_gru_layers:
+  value: 2
+optimizer:
+  value: adadelta
+recurrent_regularizer:
+  value: l2
+sequence_length:
+  value: 30
+use_bidirectional:
+  value: true
+use_norm:
+  value: true
+use_pca:
+  value: true
+use_stats:
+  value: true

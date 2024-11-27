@@ -1,0 +1,11 @@
+{"time":"2024-11-27T14:38:06.623326827-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T14:38:06.623359243-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_143806-jpao5lu1/logs/debug-core.log"}
+{"time":"2024-11-27T14:38:06.623824842-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T14:38:06.623835661-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_143806-jpao5lu1/logs/debug-core.log"}
+{"time":"2024-11-27T14:38:06.637306898-05:00","level":"INFO","msg":"created new stream","id":"jpao5lu1"}
+{"time":"2024-11-27T14:38:06.637365172-05:00","level":"INFO","msg":"stream: started","id":"jpao5lu1"}
+{"time":"2024-11-27T14:38:06.637409211-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"jpao5lu1"}}
+{"time":"2024-11-27T14:38:06.63744547-05:00","level":"INFO","msg":"sender: started","stream_id":{"value":"jpao5lu1"}}
+{"time":"2024-11-27T14:38:06.637457738-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"jpao5lu1"}}
+{"time":"2024-11-27T14:38:06.941992926-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-11-27T14:38:06.948836886-05:00","level":"INFO","msg":"Starting system monitor"}

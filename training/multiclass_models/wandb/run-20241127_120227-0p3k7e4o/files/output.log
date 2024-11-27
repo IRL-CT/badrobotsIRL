@@ -1,0 +1,42 @@
+{'activation_function': 'tanh', 'batch_size': 128, 'dense_units': 128, 'dropout_rate': 0.5, 'epochs': 500, 'fusion_type': 'early', 'gru_units': 128, 'learning_rate': 0.01, 'loss': 'categorical_crossentropy', 'modality': 'facial_audio', 'num_gru_layers': 2, 'optimizer': 'rmsprop', 'recurrent_regularizer': 'l1_l2', 'sequence_length': 60, 'use_bidirectional': False, 'use_norm': False, 'use_pca': False, 'use_stats': False}
+training model
+Train fold: ['p20nodbot' 'p29nodbot' 'p10nodbot' 'p4nodbot' 'p23nodbot' 'p21nodbot'
+ 'p26nodbot' 'p11nodbot' 'p7nodbot' 'p17nodbot' 'p12nodbot' 'p25nodbot'
+ 'p28nodbot' 'p14nodbot' 'p16nodbot' 'p8nodbot']
+Validation fold: ['p2nodbot' 'p6nodbot' 'p9nodbot' 'p19nodbot' 'p22nodbot']
+Test fold: ['p18nodbot' 'p27nodbot' 'p5nodbot']
+Train shapes: (18972, 60) (18972,)
+Validation shapes: (5653, 60) (5653,)
+Test shapes: (3986, 60) (3986,)
+Train sequences shape: (18028, 60, 60) (18028,)
+X_train_sequences shape: (18028, 60, 60)
+X_val_sequences shape: (5358, 60, 60)
+X_test_sequences shape: (3809, 60, 60)
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #
+=================================================================
+ gru (GRU)                   (None, 60, 128)           72960
+
+ dropout (Dropout)           (None, 60, 128)           0
+
+ batch_normalization (Batch  (None, 60, 128)           512
+ Normalization)
+
+ gru_1 (GRU)                 (None, 128)               99072
+
+ dropout_1 (Dropout)         (None, 128)               0
+
+ batch_normalization_1 (Bat  (None, 128)               512
+ chNormalization)
+
+ dense (Dense)               (None, 128)               16512
+
+ dense_1 (Dense)             (None, 2)                 258
+
+=================================================================
+Total params: 189826 (741.51 KB)
+Trainable params: 189314 (739.51 KB)
+Non-trainable params: 512 (2.00 KB)
+_________________________________________________________________
+Epoch 1/500

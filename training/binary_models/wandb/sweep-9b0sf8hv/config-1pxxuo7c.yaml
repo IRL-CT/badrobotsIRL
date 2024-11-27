@@ -1,0 +1,38 @@
+wandb_version: 1
+
+activation_function:
+  value: sigmoid
+batch_size:
+  value: 128
+dense_units:
+  value: 64
+dropout_rate:
+  value: 0.5
+epochs:
+  value: 500
+fusion_type:
+  value: early
+gru_units:
+  value: 128
+learning_rate:
+  value: 0.01
+loss:
+  value: categorical_crossentropy
+modality:
+  value: pose
+num_gru_layers:
+  value: 2
+optimizer:
+  value: sgd
+recurrent_regularizer:
+  value: l1_l2
+sequence_length:
+  value: 60
+use_bidirectional:
+  value: false
+use_norm:
+  value: true
+use_pca:
+  value: true
+use_stats:
+  value: true

@@ -1,0 +1,100 @@
+{
+  "os": "Linux-5.4.0-176-generic-x86_64-with-glibc2.31",
+  "python": "3.9.18",
+  "startedAt": "2024-11-27T18:13:55.508371Z",
+  "program": "/home/sjl356/badrobotsIRL/training/multiclass_models/gru_multiclass_model_wandb.py",
+  "codePath": "training/multiclass_models/gru_multiclass_model_wandb.py",
+  "git": {
+    "remote": "https://github.com/FAR-Lab/badrobotsIRL",
+    "commit": "283c53e816a932b8cfb0380a08334d1b12ab60b6"
+  },
+  "email": "sjl356@cornell.edu",
+  "root": "/home/sjl356/badrobotsIRL/training/multiclass_models",
+  "host": "sablab-gpu-04.ece.cornell.edu",
+  "username": "sjl356",
+  "executable": "/share/ju/conda_virtualenvs/baddata/bin/python3",
+  "codePathLocal": "gru_multiclass_model_wandb.py",
+  "cpu_count": 16,
+  "cpu_count_logical": 16,
+  "gpu": "[NVIDIA TITAN Xp]",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "85857402880",
+      "used": "56456220672"
+    }
+  },
+  "memory": {
+    "total": "135047585792"
+  },
+  "cpu": {
+    "count": 16,
+    "countLogical": 16
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA TITAN Xp",
+      "memoryTotal": "12884901888",
+      "cudaCores": 3840,
+      "architecture": "Pascal"
+    }
+  ],
+  "slurm": {
+    "cluster_name": "g2",
+    "conf": "/usr/local/slurm/slurm-22.05.8/etc/slurm.conf",
+    "cpu_bind": "quiet,mask_cpu:0x000001",
+    "cpu_bind_list": "0x000001",
+    "cpu_bind_type": "mask_cpu:",
+    "cpu_bind_verbose": "quiet",
+    "cpus_on_node": "4",
+    "distribution": "cyclic,pack",
+    "get_user_env": "1",
+    "gpus_on_node": "1",
+    "gtids": "0",
+    "job_account": "ju",
+    "job_cpus_per_node": "4",
+    "job_gid": "1723128",
+    "job_gpus": "1",
+    "job_id": "6021369",
+    "job_name": "gru_multiclass_all_v0",
+    "job_nodelist": "sablab-gpu-04",
+    "job_num_nodes": "1",
+    "job_partition": "gpu",
+    "job_qos": "normal",
+    "job_uid": "1684780",
+    "job_user": "sjl356",
+    "jobid": "6021369",
+    "launch_node_ipaddr": "128.84.100.12",
+    "localid": "0",
+    "mem_per_node": "32768",
+    "nnodes": "1",
+    "node_aliases": "(null)",
+    "nodeid": "0",
+    "nodelist": "sablab-gpu-04",
+    "nprocs": "4",
+    "ntasks": "4",
+    "prio_process": "0",
+    "procid": "0",
+    "pty_port": "61133",
+    "pty_win_col": "140",
+    "pty_win_row": "13",
+    "srun_comm_host": "128.84.100.12",
+    "srun_comm_port": "61134",
+    "step_gpus": "1",
+    "step_id": "0",
+    "step_launcher_port": "61134",
+    "step_nodelist": "coecis-compute-02",
+    "step_num_nodes": "1",
+    "step_num_tasks": "1",
+    "step_tasks_per_node": "1",
+    "stepid": "0",
+    "submit_dir": "/home/sjl356/badrobotsIRL/training/multiclass_models",
+    "submit_host": "coecis-compute-02.coecis.cornell.edu",
+    "task_pid": "324226",
+    "tasks_per_node": "4",
+    "topology_addr": "sablab-gpu-04",
+    "topology_addr_pattern": "node",
+    "working_cluster": "g2:slurmctld:6817:9728:109"
+  },
+  "cudaVersion": "12.1"
+}

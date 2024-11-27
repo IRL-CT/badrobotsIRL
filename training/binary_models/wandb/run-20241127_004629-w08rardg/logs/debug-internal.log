@@ -1,0 +1,11 @@
+{"time":"2024-11-27T00:46:29.220185951-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T00:46:29.220235832-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_004629-w08rardg/logs/debug-core.log"}
+{"time":"2024-11-27T00:46:29.22101469-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T00:46:29.221033949-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_004629-w08rardg/logs/debug-core.log"}
+{"time":"2024-11-27T00:46:29.230626865-05:00","level":"INFO","msg":"created new stream","id":"w08rardg"}
+{"time":"2024-11-27T00:46:29.230686694-05:00","level":"INFO","msg":"stream: started","id":"w08rardg"}
+{"time":"2024-11-27T00:46:29.23070674-05:00","level":"INFO","msg":"sender: started","stream_id":{"value":"w08rardg"}}
+{"time":"2024-11-27T00:46:29.231004091-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"w08rardg"}}
+{"time":"2024-11-27T00:46:29.230825416-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"w08rardg"}}
+{"time":"2024-11-27T00:46:29.50465291-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-11-27T00:46:29.51161982-05:00","level":"INFO","msg":"Starting system monitor"}

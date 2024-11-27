@@ -1,0 +1,38 @@
+2024-11-27 05:11:47,789 INFO    Thread-17 :600871 [wandb_setup.py:_flush():77] Current SDK version is 0.18.1
+2024-11-27 05:11:47,789 INFO    Thread-17 :600871 [wandb_setup.py:_flush():77] Configure stats pid to 600871
+2024-11-27 05:11:47,789 INFO    Thread-17 :600871 [wandb_setup.py:_flush():77] Loading settings from /home/sjl356/.config/wandb/settings
+2024-11-27 05:11:47,789 INFO    Thread-17 :600871 [wandb_setup.py:_flush():77] Loading settings from /home/sjl356/badrobotsIRL/training/multiclass_models/wandb/settings
+2024-11-27 05:11:47,789 INFO    Thread-17 :600871 [wandb_setup.py:_flush():77] Loading settings from environment variables: {'api_key': '***REDACTED***', 'project': 'gru_multiclass_all_v0', 'entity': 'shannon-jliu', 'root_dir': '/home/sjl356/badrobotsIRL/training/multiclass_models', 'run_id': 'uiisnthw', 'sweep_param_path': '/home/sjl356/badrobotsIRL/training/multiclass_models/wandb/sweep-v6s7a828/config-uiisnthw.yaml', 'sweep_id': 'v6s7a828'}
+2024-11-27 05:11:47,789 INFO    Thread-17 :600871 [wandb_setup.py:_flush():77] Applying setup settings: {'mode': None, '_disable_service': None}
+2024-11-27 05:11:47,789 INFO    Thread-17 :600871 [wandb_setup.py:_flush():77] Inferring run settings from compute environment: {'program_relpath': 'training/multiclass_models/gru_multiclass_model_wandb.py', 'program_abspath': '/home/sjl356/badrobotsIRL/training/multiclass_models/gru_multiclass_model_wandb.py', 'program': '/home/sjl356/badrobotsIRL/training/multiclass_models/gru_multiclass_model_wandb.py'}
+2024-11-27 05:11:47,789 INFO    Thread-17 :600871 [wandb_setup.py:_flush():77] Applying login settings: {}
+2024-11-27 05:11:47,789 INFO    Thread-17 :600871 [wandb_init.py:_log_setup():532] Logging user logs to /home/sjl356/badrobotsIRL/training/multiclass_models/wandb/run-20241127_051147-uiisnthw/logs/debug.log
+2024-11-27 05:11:47,789 INFO    Thread-17 :600871 [wandb_init.py:_log_setup():533] Logging internal logs to /home/sjl356/badrobotsIRL/training/multiclass_models/wandb/run-20241127_051147-uiisnthw/logs/debug-internal.log
+2024-11-27 05:11:47,790 INFO    Thread-17 :600871 [wandb_init.py:init():616] calling init triggers
+2024-11-27 05:11:47,790 INFO    Thread-17 :600871 [wandb_init.py:init():623] wandb.init called with sweep_config: {'activation_function': 'sigmoid', 'batch_size': 32, 'dense_units': 64, 'dropout_rate': 0.3, 'epochs': 500, 'fusion_type': 'early', 'gru_units': 256, 'learning_rate': 0.01, 'loss': 'categorical_crossentropy', 'modality': 'audio', 'num_gru_layers': 3, 'optimizer': 'adam', 'recurrent_regularizer': 'l1', 'sequence_length': 60, 'use_bidirectional': False, 'use_norm': True, 'use_pca': False, 'use_stats': False}
+config: {}
+2024-11-27 05:11:47,790 INFO    Thread-17 :600871 [wandb_init.py:init():666] starting backend
+2024-11-27 05:11:47,790 INFO    Thread-17 :600871 [wandb_init.py:init():670] setting up manager
+2024-11-27 05:11:47,795 INFO    Thread-17 :600871 [backend.py:_multiprocessing_setup():105] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2024-11-27 05:11:47,796 INFO    Thread-17 :600871 [wandb_init.py:init():678] backend started and connected
+2024-11-27 05:11:47,807 INFO    Thread-17 :600871 [wandb_run.py:_config_callback():1388] config_cb None None {'activation_function': 'sigmoid', 'batch_size': 32, 'dense_units': 64, 'dropout_rate': 0.3, 'epochs': 500, 'fusion_type': 'early', 'gru_units': 256, 'learning_rate': 0.01, 'loss': 'categorical_crossentropy', 'modality': 'audio', 'num_gru_layers': 3, 'optimizer': 'adam', 'recurrent_regularizer': 'l1', 'sequence_length': 60, 'use_bidirectional': False, 'use_norm': True, 'use_pca': False, 'use_stats': False}
+2024-11-27 05:11:47,814 INFO    Thread-17 :600871 [wandb_init.py:init():773] updated telemetry
+2024-11-27 05:11:48,041 INFO    Thread-17 :600871 [wandb_init.py:init():806] communicating run to backend with 90.0 second timeout
+2024-11-27 05:11:48,205 INFO    Thread-17 :600871 [wandb_init.py:init():857] starting run threads in backend
+2024-11-27 05:11:48,519 INFO    Thread-17 :600871 [wandb_run.py:_console_start():2459] atexit reg
+2024-11-27 05:11:48,519 INFO    Thread-17 :600871 [wandb_run.py:_redirect():2307] redirect: wrap_raw
+2024-11-27 05:11:48,519 INFO    Thread-17 :600871 [wandb_run.py:_redirect():2372] Wrapping output streams.
+2024-11-27 05:11:48,519 INFO    Thread-17 :600871 [wandb_run.py:_redirect():2397] Redirects installed.
+2024-11-27 05:11:48,520 INFO    Thread-17 :600871 [wandb_init.py:init():900] run started, returning control to user process
+2024-11-27 11:13:56,141 ERROR   Thread-1  :600871 [internal_api.py:execute():349] 502 response executing GraphQL.
+2024-11-27 11:13:56,141 ERROR   Thread-1  :600871 [internal_api.py:execute():350] 
+<html><head>
+<meta http-equiv="content-type" content="text/html;charset=utf-8">
+<title>502 Server Error</title>
+</head>
+<body text=#000000 bgcolor=#ffffff>
+<h1>Error: Server Error</h1>
+<h2>The server encountered a temporary error and could not complete your request.<p>Please try again in 30 seconds.</h2>
+<h2></h2>
+</body></html>
+

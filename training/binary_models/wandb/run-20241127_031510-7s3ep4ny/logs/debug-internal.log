@@ -1,0 +1,18 @@
+{"time":"2024-11-27T03:15:10.574225507-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T03:15:10.574238022-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_031510-7s3ep4ny/logs/debug-core.log"}
+{"time":"2024-11-27T03:15:10.574525386-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T03:15:10.574529105-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_031510-7s3ep4ny/logs/debug-core.log"}
+{"time":"2024-11-27T03:15:10.581958429-05:00","level":"INFO","msg":"created new stream","id":"7s3ep4ny"}
+{"time":"2024-11-27T03:15:10.581980499-05:00","level":"INFO","msg":"stream: started","id":"7s3ep4ny"}
+{"time":"2024-11-27T03:15:10.581997623-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"7s3ep4ny"}}
+{"time":"2024-11-27T03:15:10.582001834-05:00","level":"INFO","msg":"sender: started","stream_id":{"value":"7s3ep4ny"}}
+{"time":"2024-11-27T03:15:10.581989352-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"7s3ep4ny"}}
+{"time":"2024-11-27T03:15:11.078664541-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-11-27T03:15:11.083123663-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-27T04:26:43.620939168-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-27T04:26:43.62140501-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-27T04:26:45.306957388-05:00","level":"INFO","msg":"stream: closing","id":"7s3ep4ny"}
+{"time":"2024-11-27T04:26:45.3069759-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"7s3ep4ny"}}
+{"time":"2024-11-27T04:26:45.307007311-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"7s3ep4ny"}}
+{"time":"2024-11-27T04:26:45.307007302-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"7s3ep4ny"}}
+{"time":"2024-11-27T04:26:45.312053057-05:00","level":"INFO","msg":"stream: closed","id":"7s3ep4ny"}

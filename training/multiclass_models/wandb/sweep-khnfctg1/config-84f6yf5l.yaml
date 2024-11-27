@@ -1,0 +1,38 @@
+wandb_version: 1
+
+activation_function:
+  value: relu
+batch_size:
+  value: 128
+dense_units:
+  value: 64
+dropout_rate:
+  value: 0.5
+epochs:
+  value: 500
+fusion_type:
+  value: late
+learning_rate:
+  value: 0.005
+loss:
+  value: categorical_crossentropy
+lstm_units:
+  value: 256
+modality:
+  value: combined
+num_lstm_layers:
+  value: 2
+optimizer:
+  value: adam
+recurrent_regularizer:
+  value: l2
+sequence_length:
+  value: 30
+use_bidirectional:
+  value: true
+use_norm:
+  value: false
+use_pca:
+  value: true
+use_stats:
+  value: false

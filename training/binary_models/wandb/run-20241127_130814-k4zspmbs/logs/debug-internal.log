@@ -1,0 +1,18 @@
+{"time":"2024-11-27T13:08:14.450473975-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T13:08:14.450491475-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_130814-k4zspmbs/logs/debug-core.log"}
+{"time":"2024-11-27T13:08:14.450817057-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T13:08:14.450821752-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_130814-k4zspmbs/logs/debug-core.log"}
+{"time":"2024-11-27T13:08:14.457473746-05:00","level":"INFO","msg":"created new stream","id":"k4zspmbs"}
+{"time":"2024-11-27T13:08:14.457516886-05:00","level":"INFO","msg":"stream: started","id":"k4zspmbs"}
+{"time":"2024-11-27T13:08:14.457538692-05:00","level":"INFO","msg":"sender: started","stream_id":{"value":"k4zspmbs"}}
+{"time":"2024-11-27T13:08:14.457575294-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"k4zspmbs"}}
+{"time":"2024-11-27T13:08:14.457527231-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"k4zspmbs"}}
+{"time":"2024-11-27T13:08:14.906327812-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-11-27T13:08:14.909937433-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-27T13:27:08.764926031-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-27T13:27:08.76547303-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-27T13:27:10.490989984-05:00","level":"INFO","msg":"stream: closing","id":"k4zspmbs"}
+{"time":"2024-11-27T13:27:10.491012076-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"k4zspmbs"}}
+{"time":"2024-11-27T13:27:10.491041742-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"k4zspmbs"}}
+{"time":"2024-11-27T13:27:10.491064016-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"k4zspmbs"}}
+{"time":"2024-11-27T13:27:10.498421139-05:00","level":"INFO","msg":"stream: closed","id":"k4zspmbs"}

@@ -1,0 +1,34 @@
+{'activation_function': 'tanh', 'batch_size': 32, 'dense_units': 128, 'dropout_rate': 0, 'epochs': 500, 'fusion_type': 'intermediate', 'gru_units': 64, 'learning_rate': 0.01, 'loss': 'categorical_crossentropy', 'modality': 'combined', 'num_gru_layers': 1, 'optimizer': 'rmsprop', 'recurrent_regularizer': 'l1', 'sequence_length': 30, 'use_bidirectional': False, 'use_norm': False, 'use_pca': True, 'use_stats': True}
+Train fold: ['p20nodbot' 'p29nodbot' 'p10nodbot' 'p4nodbot' 'p23nodbot' 'p21nodbot'
+ 'p26nodbot' 'p11nodbot' 'p7nodbot' 'p17nodbot' 'p12nodbot' 'p25nodbot'
+ 'p28nodbot' 'p14nodbot' 'p16nodbot' 'p8nodbot']
+Validation fold: ['p2nodbot' 'p6nodbot' 'p9nodbot' 'p19nodbot' 'p22nodbot']
+Test fold: ['p18nodbot' 'p27nodbot' 'p5nodbot']
+Train shapes: (18972, 49) (18972,)
+Validation shapes: (5653, 49) (5653,)
+Test shapes: (3986, 49) (3986,)
+Train sequences shape: (18508, 30, 49) (18508,)
+X_train_sequences shape: (18508, 30, 49)
+X_val_sequences shape: (5508, 30, 49)
+X_test_sequences shape: (3899, 30, 49)
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #
+=================================================================
+ gru (GRU)                   (None, 64)                22080
+
+ dropout (Dropout)           (None, 64)                0
+
+ batch_normalization (Batch  (None, 64)                256
+ Normalization)
+
+ dense (Dense)               (None, 128)               8320
+
+ dense_1 (Dense)             (None, 2)                 258
+
+=================================================================
+Total params: 30914 (120.76 KB)
+Trainable params: 30786 (120.26 KB)
+Non-trainable params: 128 (512.00 Byte)
+_________________________________________________________________
+Epoch 1/500

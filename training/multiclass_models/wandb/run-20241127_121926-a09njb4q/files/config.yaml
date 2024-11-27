@@ -1,0 +1,66 @@
+_wandb:
+    value:
+        cli_version: 0.18.1
+        m: []
+        python_version: 3.9.18
+        t:
+            "1":
+                - 1
+                - 2
+                - 3
+                - 5
+                - 53
+                - 55
+            "2":
+                - 1
+                - 2
+                - 3
+                - 5
+                - 53
+                - 55
+            "3":
+                - 2
+                - 23
+                - 55
+            "4": 3.9.18
+            "5": 0.18.1
+            "8":
+                - 5
+            "12": 0.18.1
+            "13": linux-x86_64
+activation_function:
+    value: sigmoid
+batch_size:
+    value: 128
+dense_units:
+    value: 64
+dropout_rate:
+    value: 0
+epochs:
+    value: 500
+fusion_type:
+    value: late
+gru_units:
+    value: 256
+learning_rate:
+    value: 0.005
+loss:
+    value: categorical_crossentropy
+modality:
+    value: audio
+num_gru_layers:
+    value: 3
+optimizer:
+    value: adam
+recurrent_regularizer:
+    value: l1_l2
+sequence_length:
+    value: 60
+use_bidirectional:
+    value: true
+use_norm:
+    value: false
+use_pca:
+    value: false
+use_stats:
+    value: false

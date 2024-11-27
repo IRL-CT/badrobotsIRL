@@ -1,0 +1,20 @@
+{"time":"2024-11-27T08:57:20.283135525-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T08:57:20.283147106-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_085720-sgf9736k/logs/debug-core.log"}
+{"time":"2024-11-27T08:57:20.283425647-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T08:57:20.283429708-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_085720-sgf9736k/logs/debug-core.log"}
+{"time":"2024-11-27T08:57:20.290646455-05:00","level":"INFO","msg":"created new stream","id":"sgf9736k"}
+{"time":"2024-11-27T08:57:20.290668263-05:00","level":"INFO","msg":"stream: started","id":"sgf9736k"}
+{"time":"2024-11-27T08:57:20.290675624-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"sgf9736k"}}
+{"time":"2024-11-27T08:57:20.290685028-05:00","level":"INFO","msg":"sender: started","stream_id":{"value":"sgf9736k"}}
+{"time":"2024-11-27T08:57:20.290718366-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"sgf9736k"}}
+{"time":"2024-11-27T08:57:20.789003819-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-11-27T08:57:20.792089678-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-27T11:14:36.168302845-05:00","level":"INFO","msg":"api: retrying HTTP error","status":502,"url":"https://api.wandb.ai/files/shannon-jliu/gru_all_v0/sgf9736k/file_stream"}
+{"time":"2024-11-27T11:14:39.852184127-05:00","level":"INFO","msg":"api: retrying HTTP request, no error or response"}
+{"time":"2024-11-27T13:00:18.128368075-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-27T13:00:18.133144956-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-27T13:00:19.932450503-05:00","level":"INFO","msg":"stream: closing","id":"sgf9736k"}
+{"time":"2024-11-27T13:00:19.932476346-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"sgf9736k"}}
+{"time":"2024-11-27T13:00:19.932506132-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"sgf9736k"}}
+{"time":"2024-11-27T13:00:19.932564669-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"sgf9736k"}}
+{"time":"2024-11-27T13:00:19.943783512-05:00","level":"INFO","msg":"stream: closed","id":"sgf9736k"}

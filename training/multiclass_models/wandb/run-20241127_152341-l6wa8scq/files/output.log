@@ -1,0 +1,91 @@
+{'activation_function': 'sigmoid', 'batch_size': 32, 'dense_units': 64, 'dropout_rate': 0.3, 'epochs': 500, 'fusion_type': 'early', 'gru_units': 256, 'learning_rate': 0.005, 'loss': 'categorical_crossentropy', 'modality': 'pose_audio', 'num_gru_layers': 3, 'optimizer': 'sgd', 'recurrent_regularizer': 'l2', 'sequence_length': 60, 'use_bidirectional': True, 'use_norm': False, 'use_pca': True, 'use_stats': False}
+training model
+Train fold: ['p20nodbot' 'p29nodbot' 'p10nodbot' 'p4nodbot' 'p23nodbot' 'p21nodbot'
+ 'p26nodbot' 'p11nodbot' 'p7nodbot' 'p17nodbot' 'p12nodbot' 'p25nodbot'
+ 'p28nodbot' 'p14nodbot' 'p16nodbot' 'p8nodbot']
+Validation fold: ['p2nodbot' 'p6nodbot' 'p9nodbot' 'p19nodbot' 'p22nodbot']
+Test fold: ['p18nodbot' 'p27nodbot' 'p5nodbot']
+Train shapes: (18972, 49) (18972,)
+Validation shapes: (5653, 49) (5653,)
+Test shapes: (3986, 49) (3986,)
+Train sequences shape: (18028, 60, 49) (18028,)
+X_train_sequences shape: (18028, 60, 49)
+X_val_sequences shape: (5358, 60, 49)
+X_test_sequences shape: (3809, 60, 49)
+WARNING:tensorflow:Layer gru will not use cuDNN kernels since it doesn't meet the criteria. It will use a generic GPU kernel as fallback when running on GPU.
+WARNING:tensorflow:Layer gru will not use cuDNN kernels since it doesn't meet the criteria. It will use a generic GPU kernel as fallback when running on GPU.
+WARNING:tensorflow:Layer gru will not use cuDNN kernels since it doesn't meet the criteria. It will use a generic GPU kernel as fallback when running on GPU.
+WARNING:tensorflow:Layer gru_1 will not use cuDNN kernels since it doesn't meet the criteria. It will use a generic GPU kernel as fallback when running on GPU.
+WARNING:tensorflow:Layer gru_1 will not use cuDNN kernels since it doesn't meet the criteria. It will use a generic GPU kernel as fallback when running on GPU.
+WARNING:tensorflow:Layer gru_1 will not use cuDNN kernels since it doesn't meet the criteria. It will use a generic GPU kernel as fallback when running on GPU.
+WARNING:tensorflow:Layer gru_2 will not use cuDNN kernels since it doesn't meet the criteria. It will use a generic GPU kernel as fallback when running on GPU.
+WARNING:tensorflow:Layer gru_2 will not use cuDNN kernels since it doesn't meet the criteria. It will use a generic GPU kernel as fallback when running on GPU.
+WARNING:tensorflow:Layer gru_2 will not use cuDNN kernels since it doesn't meet the criteria. It will use a generic GPU kernel as fallback when running on GPU.
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #
+=================================================================
+ bidirectional (Bidirection  (None, 60, 512)           471552
+ al)
+
+ dropout (Dropout)           (None, 60, 512)           0
+
+ batch_normalization (Batch  (None, 60, 512)           2048
+ Normalization)
+
+ bidirectional_1 (Bidirecti  (None, 60, 512)           1182720
+ onal)
+
+ dropout_1 (Dropout)         (None, 60, 512)           0
+
+ batch_normalization_1 (Bat  (None, 60, 512)           2048
+ chNormalization)
+
+ bidirectional_2 (Bidirecti  (None, 512)               1182720
+ onal)
+
+ dropout_2 (Dropout)         (None, 512)               0
+
+ batch_normalization_2 (Bat  (None, 512)               2048
+ chNormalization)
+
+ dense (Dense)               (None, 64)                32832
+
+ dense_1 (Dense)             (None, 2)                 130
+
+=================================================================
+Total params: 2876098 (10.97 MB)
+Trainable params: 2873026 (10.96 MB)
+Non-trainable params: 3072 (12.00 KB)
+_________________________________________________________________
+Epoch 1/500
+564/564 - 244s - loss: 14.0647 - accuracy: 0.5329 - precision: 0.5329 - recall: 0.5329 - auc: 0.5521 - val_loss: 13.2680 - val_accuracy: 0.6292 - val_precision: 0.6292 - val_recall: 0.6292 - val_auc: 0.6902 - 244s/epoch - 432ms/step
+Epoch 2/500
+564/564 - 235s - loss: 12.6116 - accuracy: 0.5741 - precision: 0.5741 - recall: 0.5741 - auc: 0.6120 - val_loss: 11.9092 - val_accuracy: 0.6377 - val_precision: 0.6377 - val_recall: 0.6377 - val_auc: 0.7012 - 235s/epoch - 417ms/step
+Epoch 3/500
+564/564 - 238s - loss: 11.3260 - accuracy: 0.5938 - precision: 0.5938 - recall: 0.5938 - auc: 0.6389 - val_loss: 10.7032 - val_accuracy: 0.6379 - val_precision: 0.6379 - val_recall: 0.6379 - val_auc: 0.7022 - 238s/epoch - 421ms/step
+Epoch 4/500
+564/564 - 239s - loss: 10.1822 - accuracy: 0.6023 - precision: 0.6023 - recall: 0.6023 - auc: 0.6522 - val_loss: 9.6287 - val_accuracy: 0.6396 - val_precision: 0.6396 - val_recall: 0.6396 - val_auc: 0.7044 - 239s/epoch - 424ms/step
+Epoch 5/500
+564/564 - 243s - loss: 9.1657 - accuracy: 0.6059 - precision: 0.6059 - recall: 0.6059 - auc: 0.6547 - val_loss: 8.6700 - val_accuracy: 0.6422 - val_precision: 0.6422 - val_recall: 0.6422 - val_auc: 0.7073 - 243s/epoch - 431ms/step
+Epoch 6/500
+564/564 - 243s - loss: 8.2526 - accuracy: 0.6117 - precision: 0.6117 - recall: 0.6117 - auc: 0.6658 - val_loss: 7.8140 - val_accuracy: 0.6407 - val_precision: 0.6407 - val_recall: 0.6407 - val_auc: 0.7070 - 243s/epoch - 431ms/step
+Epoch 7/500
+564/564 - 238s - loss: 7.4400 - accuracy: 0.6140 - precision: 0.6140 - recall: 0.6140 - auc: 0.6695 - val_loss: 7.0500 - val_accuracy: 0.6400 - val_precision: 0.6400 - val_recall: 0.6400 - val_auc: 0.7071 - 238s/epoch - 421ms/step
+Epoch 8/500
+564/564 - 235s - loss: 6.7114 - accuracy: 0.6231 - precision: 0.6231 - recall: 0.6231 - auc: 0.6804 - val_loss: 6.3686 - val_accuracy: 0.6385 - val_precision: 0.6385 - val_recall: 0.6385 - val_auc: 0.7047 - 235s/epoch - 416ms/step
+Epoch 9/500
+564/564 - 235s - loss: 6.0639 - accuracy: 0.6230 - precision: 0.6230 - recall: 0.6230 - auc: 0.6810 - val_loss: 5.7608 - val_accuracy: 0.6450 - val_precision: 0.6450 - val_recall: 0.6450 - val_auc: 0.7063 - 235s/epoch - 417ms/step
+Epoch 10/500
+564/564 - 237s - loss: 5.4805 - accuracy: 0.6344 - precision: 0.6344 - recall: 0.6344 - auc: 0.6918 - val_loss: 5.2180 - val_accuracy: 0.6398 - val_precision: 0.6398 - val_recall: 0.6398 - val_auc: 0.7062 - 237s/epoch - 420ms/step
+Epoch 11/500
+564/564 - 239s - loss: 4.9644 - accuracy: 0.6320 - precision: 0.6320 - recall: 0.6320 - auc: 0.6919 - val_loss: 4.7321 - val_accuracy: 0.6396 - val_precision: 0.6396 - val_recall: 0.6396 - val_auc: 0.7051 - 239s/epoch - 424ms/step
+Epoch 12/500
+564/564 - 243s - loss: 4.4998 - accuracy: 0.6377 - precision: 0.6377 - recall: 0.6377 - auc: 0.6996 - val_loss: 4.2982 - val_accuracy: 0.6372 - val_precision: 0.6372 - val_recall: 0.6372 - val_auc: 0.7040 - 243s/epoch - 430ms/step
+Epoch 13/500
+564/564 - 243s - loss: 4.0881 - accuracy: 0.6363 - precision: 0.6363 - recall: 0.6363 - auc: 0.6995 - val_loss: 3.9136 - val_accuracy: 0.6474 - val_precision: 0.6474 - val_recall: 0.6474 - val_auc: 0.7042 - 243s/epoch - 431ms/step
+Epoch 14/500
+564/564 - 240s - loss: 3.7177 - accuracy: 0.6410 - precision: 0.6410 - recall: 0.6410 - auc: 0.7035 - val_loss: 3.5681 - val_accuracy: 0.6366 - val_precision: 0.6366 - val_recall: 0.6366 - val_auc: 0.7011 - 240s/epoch - 426ms/step
+Epoch 15/500
+564/564 - 235s - loss: 3.3875 - accuracy: 0.6411 - precision: 0.6411 - recall: 0.6411 - auc: 0.7073 - val_loss: 3.2612 - val_accuracy: 0.6512 - val_precision: 0.6512 - val_recall: 0.6512 - val_auc: 0.7033 - 235s/epoch - 417ms/step
+Epoch 16/500

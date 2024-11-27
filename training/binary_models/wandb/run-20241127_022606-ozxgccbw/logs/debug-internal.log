@@ -1,0 +1,18 @@
+{"time":"2024-11-27T02:26:06.939520701-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T02:26:06.939556188-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_022606-ozxgccbw/logs/debug-core.log"}
+{"time":"2024-11-27T02:26:06.940398299-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T02:26:06.940420506-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_022606-ozxgccbw/logs/debug-core.log"}
+{"time":"2024-11-27T02:26:06.951062487-05:00","level":"INFO","msg":"created new stream","id":"ozxgccbw"}
+{"time":"2024-11-27T02:26:06.951107318-05:00","level":"INFO","msg":"stream: started","id":"ozxgccbw"}
+{"time":"2024-11-27T02:26:06.951138029-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"ozxgccbw"}}
+{"time":"2024-11-27T02:26:06.951181858-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"ozxgccbw"}}
+{"time":"2024-11-27T02:26:06.95117345-05:00","level":"INFO","msg":"sender: started","stream_id":{"value":"ozxgccbw"}}
+{"time":"2024-11-27T02:26:07.386506962-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-11-27T02:26:07.391845051-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-27T02:39:40.942124104-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-27T02:39:40.94317706-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-27T02:39:42.726985573-05:00","level":"INFO","msg":"stream: closing","id":"ozxgccbw"}
+{"time":"2024-11-27T02:39:42.727029583-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"ozxgccbw"}}
+{"time":"2024-11-27T02:39:42.727072567-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"ozxgccbw"}}
+{"time":"2024-11-27T02:39:42.727080087-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"ozxgccbw"}}
+{"time":"2024-11-27T02:39:42.733107093-05:00","level":"INFO","msg":"stream: closed","id":"ozxgccbw"}

@@ -1,0 +1,18 @@
+{"time":"2024-11-27T03:43:04.010822768-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T03:43:04.01083772-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/multiclass_models/wandb/run-20241127_034303-il2ajwre/logs/debug-core.log"}
+{"time":"2024-11-27T03:43:04.011119001-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T03:43:04.011123341-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/multiclass_models/wandb/run-20241127_034303-il2ajwre/logs/debug-core.log"}
+{"time":"2024-11-27T03:43:04.017284737-05:00","level":"INFO","msg":"created new stream","id":"il2ajwre"}
+{"time":"2024-11-27T03:43:04.017311027-05:00","level":"INFO","msg":"stream: started","id":"il2ajwre"}
+{"time":"2024-11-27T03:43:04.017329565-05:00","level":"INFO","msg":"sender: started","stream_id":{"value":"il2ajwre"}}
+{"time":"2024-11-27T03:43:04.017368708-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"il2ajwre"}}
+{"time":"2024-11-27T03:43:04.017322943-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"il2ajwre"}}
+{"time":"2024-11-27T03:43:04.372130374-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-11-27T03:43:04.376132367-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-27T04:21:30.425762283-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-27T04:21:30.426137577-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-27T04:21:32.122945358-05:00","level":"INFO","msg":"stream: closing","id":"il2ajwre"}
+{"time":"2024-11-27T04:21:32.122964102-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"il2ajwre"}}
+{"time":"2024-11-27T04:21:32.122989566-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"il2ajwre"}}
+{"time":"2024-11-27T04:21:32.1230019-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"il2ajwre"}}
+{"time":"2024-11-27T04:21:32.123397658-05:00","level":"INFO","msg":"stream: closed","id":"il2ajwre"}

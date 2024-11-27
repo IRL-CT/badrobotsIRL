@@ -1,0 +1,12 @@
+{"time":"2024-11-27T05:11:47.799409314-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T05:11:47.799422244-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/multiclass_models/wandb/run-20241127_051147-uiisnthw/logs/debug-core.log"}
+{"time":"2024-11-27T05:11:47.799691148-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T05:11:47.79969509-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/multiclass_models/wandb/run-20241127_051147-uiisnthw/logs/debug-core.log"}
+{"time":"2024-11-27T05:11:47.805279588-05:00","level":"INFO","msg":"created new stream","id":"uiisnthw"}
+{"time":"2024-11-27T05:11:47.805313666-05:00","level":"INFO","msg":"stream: started","id":"uiisnthw"}
+{"time":"2024-11-27T05:11:47.805321355-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"uiisnthw"}}
+{"time":"2024-11-27T05:11:47.805335414-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"uiisnthw"}}
+{"time":"2024-11-27T05:11:47.805369035-05:00","level":"INFO","msg":"sender: started","stream_id":{"value":"uiisnthw"}}
+{"time":"2024-11-27T05:11:48.220826108-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-11-27T05:11:48.234570895-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-27T13:29:48.719595356-05:00","level":"INFO","msg":"api: retrying HTTP request, no error or response"}

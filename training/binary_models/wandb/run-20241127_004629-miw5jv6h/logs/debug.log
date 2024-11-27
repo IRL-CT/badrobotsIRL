@@ -1,0 +1,33 @@
+2024-11-27 00:46:29,059 INFO    Thread-5  :312128 [wandb_setup.py:_flush():77] Current SDK version is 0.18.1
+2024-11-27 00:46:29,060 INFO    Thread-5  :312128 [wandb_setup.py:_flush():77] Configure stats pid to 312128
+2024-11-27 00:46:29,060 INFO    Thread-5  :312128 [wandb_setup.py:_flush():77] Loading settings from /home/sjl356/.config/wandb/settings
+2024-11-27 00:46:29,060 INFO    Thread-5  :312128 [wandb_setup.py:_flush():77] Loading settings from /home/sjl356/badrobotsIRL/training/binary_models/wandb/settings
+2024-11-27 00:46:29,060 INFO    Thread-5  :312128 [wandb_setup.py:_flush():77] Loading settings from environment variables: {'api_key': '***REDACTED***', 'project': 'gru_all_v0', 'entity': 'shannon-jliu', 'root_dir': '/home/sjl356/badrobotsIRL/training/binary_models', 'run_id': 'miw5jv6h', 'sweep_param_path': '/home/sjl356/badrobotsIRL/training/binary_models/wandb/sweep-9b0sf8hv/config-miw5jv6h.yaml', 'sweep_id': '9b0sf8hv'}
+2024-11-27 00:46:29,060 INFO    Thread-5  :312128 [wandb_setup.py:_flush():77] Applying setup settings: {'mode': None, '_disable_service': None}
+2024-11-27 00:46:29,060 INFO    Thread-5  :312128 [wandb_setup.py:_flush():77] Inferring run settings from compute environment: {'program_relpath': 'training/binary_models/gru_model_wandb.py', 'program_abspath': '/home/sjl356/badrobotsIRL/training/binary_models/gru_model_wandb.py', 'program': '/home/sjl356/badrobotsIRL/training/binary_models/gru_model_wandb.py'}
+2024-11-27 00:46:29,060 INFO    Thread-5  :312128 [wandb_setup.py:_flush():77] Applying login settings: {}
+2024-11-27 00:46:29,060 INFO    Thread-5  :312128 [wandb_init.py:_log_setup():532] Logging user logs to /home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_004629-miw5jv6h/logs/debug.log
+2024-11-27 00:46:29,060 INFO    Thread-5  :312128 [wandb_init.py:_log_setup():533] Logging internal logs to /home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_004629-miw5jv6h/logs/debug-internal.log
+2024-11-27 00:46:29,060 INFO    Thread-5  :312128 [wandb_init.py:init():616] calling init triggers
+2024-11-27 00:46:29,060 INFO    Thread-5  :312128 [wandb_init.py:init():623] wandb.init called with sweep_config: {'activation_function': 'sigmoid', 'batch_size': 128, 'dense_units': 64, 'dropout_rate': 0.5, 'epochs': 500, 'fusion_type': 'intermediate', 'gru_units': 256, 'learning_rate': 0.001, 'loss': 'categorical_crossentropy', 'modality': 'combined', 'num_gru_layers': 2, 'optimizer': 'sgd', 'recurrent_regularizer': 'l1_l2', 'sequence_length': 30, 'use_bidirectional': False, 'use_norm': True, 'use_pca': True, 'use_stats': True}
+config: {}
+2024-11-27 00:46:29,060 INFO    Thread-5  :312128 [wandb_init.py:init():666] starting backend
+2024-11-27 00:46:29,060 INFO    Thread-5  :312128 [wandb_init.py:init():670] setting up manager
+2024-11-27 00:46:29,079 INFO    Thread-5  :312128 [backend.py:_multiprocessing_setup():105] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2024-11-27 00:46:29,080 INFO    Thread-5  :312128 [wandb_init.py:init():678] backend started and connected
+2024-11-27 00:46:29,112 INFO    Thread-5  :312128 [wandb_run.py:_config_callback():1388] config_cb None None {'activation_function': 'sigmoid', 'batch_size': 128, 'dense_units': 64, 'dropout_rate': 0.5, 'epochs': 500, 'fusion_type': 'intermediate', 'gru_units': 256, 'learning_rate': 0.001, 'loss': 'categorical_crossentropy', 'modality': 'combined', 'num_gru_layers': 2, 'optimizer': 'sgd', 'recurrent_regularizer': 'l1_l2', 'sequence_length': 30, 'use_bidirectional': False, 'use_norm': True, 'use_pca': True, 'use_stats': True}
+2024-11-27 00:46:29,116 INFO    Thread-5  :312128 [wandb_init.py:init():773] updated telemetry
+2024-11-27 00:46:29,238 INFO    Thread-5  :312128 [wandb_init.py:init():806] communicating run to backend with 90.0 second timeout
+2024-11-27 00:46:29,443 INFO    Thread-5  :312128 [wandb_init.py:init():857] starting run threads in backend
+2024-11-27 00:46:29,972 INFO    Thread-5  :312128 [wandb_run.py:_console_start():2459] atexit reg
+2024-11-27 00:46:29,972 INFO    Thread-5  :312128 [wandb_run.py:_redirect():2307] redirect: wrap_raw
+2024-11-27 00:46:29,973 INFO    Thread-5  :312128 [wandb_run.py:_redirect():2372] Wrapping output streams.
+2024-11-27 00:46:29,973 INFO    Thread-5  :312128 [wandb_run.py:_redirect():2397] Redirects installed.
+2024-11-27 00:46:29,974 INFO    Thread-5  :312128 [wandb_init.py:init():900] run started, returning control to user process
+2024-11-27 02:26:00,262 INFO    Thread-5  :312128 [wandb_run.py:_finish():2158] finishing run shannon-jliu/gru_all_v0/miw5jv6h
+2024-11-27 02:26:00,263 INFO    Thread-5  :312128 [wandb_run.py:_atexit_cleanup():2422] got exitcode: 0
+2024-11-27 02:26:00,263 INFO    Thread-5  :312128 [wandb_run.py:_restore():2404] restore
+2024-11-27 02:26:00,264 INFO    Thread-5  :312128 [wandb_run.py:_restore():2410] restore done
+2024-11-27 02:26:01,825 INFO    Thread-5  :312128 [wandb_run.py:_footer_history_summary_info():4037] rendering history
+2024-11-27 02:26:01,827 INFO    Thread-5  :312128 [wandb_run.py:_footer_history_summary_info():4069] rendering summary
+2024-11-27 02:26:01,845 INFO    Thread-5  :312128 [wandb_run.py:_footer_sync_info():3996] logging synced files

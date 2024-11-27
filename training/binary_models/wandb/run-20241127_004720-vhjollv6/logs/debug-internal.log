@@ -1,0 +1,18 @@
+{"time":"2024-11-27T00:47:20.280057663-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T00:47:20.28009741-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_004720-vhjollv6/logs/debug-core.log"}
+{"time":"2024-11-27T00:47:20.280571646-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T00:47:20.280582824-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_004720-vhjollv6/logs/debug-core.log"}
+{"time":"2024-11-27T00:47:20.299766933-05:00","level":"INFO","msg":"created new stream","id":"vhjollv6"}
+{"time":"2024-11-27T00:47:20.299807925-05:00","level":"INFO","msg":"stream: started","id":"vhjollv6"}
+{"time":"2024-11-27T00:47:20.299834621-05:00","level":"INFO","msg":"sender: started","stream_id":{"value":"vhjollv6"}}
+{"time":"2024-11-27T00:47:20.299872265-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"vhjollv6"}}
+{"time":"2024-11-27T00:47:20.299876544-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"vhjollv6"}}
+{"time":"2024-11-27T00:47:20.521478881-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-11-27T00:47:20.530782985-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-27T03:05:14.336133121-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-27T03:05:14.336684631-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-27T03:05:16.110112671-05:00","level":"INFO","msg":"stream: closing","id":"vhjollv6"}
+{"time":"2024-11-27T03:05:16.110146221-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"vhjollv6"}}
+{"time":"2024-11-27T03:05:16.110193869-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"vhjollv6"}}
+{"time":"2024-11-27T03:05:16.110242576-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"vhjollv6"}}
+{"time":"2024-11-27T03:05:16.115616155-05:00","level":"INFO","msg":"stream: closed","id":"vhjollv6"}

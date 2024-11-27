@@ -1,0 +1,18 @@
+{"time":"2024-11-27T12:19:48.831541212-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T12:19:48.831561751-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/multiclass_models/wandb/run-20241127_121948-k4vubbci/logs/debug-core.log"}
+{"time":"2024-11-27T12:19:48.831966376-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T12:19:48.831974237-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/multiclass_models/wandb/run-20241127_121948-k4vubbci/logs/debug-core.log"}
+{"time":"2024-11-27T12:19:48.838283025-05:00","level":"INFO","msg":"created new stream","id":"k4vubbci"}
+{"time":"2024-11-27T12:19:48.838301875-05:00","level":"INFO","msg":"stream: started","id":"k4vubbci"}
+{"time":"2024-11-27T12:19:48.838327877-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"k4vubbci"}}
+{"time":"2024-11-27T12:19:48.83840868-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"k4vubbci"}}
+{"time":"2024-11-27T12:19:48.838527883-05:00","level":"INFO","msg":"sender: started","stream_id":{"value":"k4vubbci"}}
+{"time":"2024-11-27T12:19:49.22016707-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-11-27T12:19:49.222992664-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-27T12:19:57.520515889-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-27T12:19:57.520895188-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-27T12:19:59.052615036-05:00","level":"INFO","msg":"stream: closing","id":"k4vubbci"}
+{"time":"2024-11-27T12:19:59.052634796-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"k4vubbci"}}
+{"time":"2024-11-27T12:19:59.052670577-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"k4vubbci"}}
+{"time":"2024-11-27T12:19:59.05284597-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"k4vubbci"}}
+{"time":"2024-11-27T12:19:59.053203258-05:00","level":"INFO","msg":"stream: closed","id":"k4vubbci"}

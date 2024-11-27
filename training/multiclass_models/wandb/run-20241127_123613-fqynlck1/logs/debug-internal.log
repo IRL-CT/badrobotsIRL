@@ -1,0 +1,18 @@
+{"time":"2024-11-27T12:36:13.071351059-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T12:36:13.071395505-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/multiclass_models/wandb/run-20241127_123613-fqynlck1/logs/debug-core.log"}
+{"time":"2024-11-27T12:36:13.071924151-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T12:36:13.07194071-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/multiclass_models/wandb/run-20241127_123613-fqynlck1/logs/debug-core.log"}
+{"time":"2024-11-27T12:36:13.07810705-05:00","level":"INFO","msg":"created new stream","id":"fqynlck1"}
+{"time":"2024-11-27T12:36:13.07812724-05:00","level":"INFO","msg":"stream: started","id":"fqynlck1"}
+{"time":"2024-11-27T12:36:13.078153834-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"fqynlck1"}}
+{"time":"2024-11-27T12:36:13.078231283-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"fqynlck1"}}
+{"time":"2024-11-27T12:36:13.0783535-05:00","level":"INFO","msg":"sender: started","stream_id":{"value":"fqynlck1"}}
+{"time":"2024-11-27T12:36:13.506011286-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-11-27T12:36:13.51338515-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-27T12:36:14.803649194-05:00","level":"INFO","msg":"stream: closing","id":"fqynlck1"}
+{"time":"2024-11-27T12:36:14.803675999-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-27T12:36:14.803898511-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-27T12:36:15.371313381-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"fqynlck1"}}
+{"time":"2024-11-27T12:36:15.371343913-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"fqynlck1"}}
+{"time":"2024-11-27T12:36:15.371497653-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"fqynlck1"}}
+{"time":"2024-11-27T12:36:15.371982753-05:00","level":"INFO","msg":"stream: closed","id":"fqynlck1"}

@@ -1,0 +1,18 @@
+{"time":"2024-11-27T11:57:23.236425463-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T11:57:23.236448725-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/multiclass_models/wandb/run-20241127_115723-of41miya/logs/debug-core.log"}
+{"time":"2024-11-27T11:57:23.237160383-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T11:57:23.237170757-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/multiclass_models/wandb/run-20241127_115723-of41miya/logs/debug-core.log"}
+{"time":"2024-11-27T11:57:23.250175568-05:00","level":"INFO","msg":"created new stream","id":"of41miya"}
+{"time":"2024-11-27T11:57:23.250192604-05:00","level":"INFO","msg":"stream: started","id":"of41miya"}
+{"time":"2024-11-27T11:57:23.250212226-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"of41miya"}}
+{"time":"2024-11-27T11:57:23.250285524-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"of41miya"}}
+{"time":"2024-11-27T11:57:23.250402225-05:00","level":"INFO","msg":"sender: started","stream_id":{"value":"of41miya"}}
+{"time":"2024-11-27T11:57:23.603481724-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-11-27T11:57:23.608164661-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-27T11:57:29.81045079-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-27T11:57:29.810841446-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-27T11:57:31.333907616-05:00","level":"INFO","msg":"stream: closing","id":"of41miya"}
+{"time":"2024-11-27T11:57:31.333945672-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"of41miya"}}
+{"time":"2024-11-27T11:57:31.333973274-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"of41miya"}}
+{"time":"2024-11-27T11:57:31.334119624-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"of41miya"}}
+{"time":"2024-11-27T11:57:31.334367305-05:00","level":"INFO","msg":"stream: closed","id":"of41miya"}

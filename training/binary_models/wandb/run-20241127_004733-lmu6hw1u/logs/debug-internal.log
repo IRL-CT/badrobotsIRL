@@ -1,0 +1,18 @@
+{"time":"2024-11-27T00:47:33.864775969-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T00:47:33.86481169-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_004733-lmu6hw1u/logs/debug-core.log"}
+{"time":"2024-11-27T00:47:33.865270722-05:00","level":"INFO","msg":"using version","core version":"0.18.1"}
+{"time":"2024-11-27T00:47:33.865281874-05:00","level":"INFO","msg":"created symlink","path":"/home/sjl356/badrobotsIRL/training/binary_models/wandb/run-20241127_004733-lmu6hw1u/logs/debug-core.log"}
+{"time":"2024-11-27T00:47:33.879615143-05:00","level":"INFO","msg":"created new stream","id":"lmu6hw1u"}
+{"time":"2024-11-27T00:47:33.87965791-05:00","level":"INFO","msg":"stream: started","id":"lmu6hw1u"}
+{"time":"2024-11-27T00:47:33.879705424-05:00","level":"INFO","msg":"sender: started","stream_id":{"value":"lmu6hw1u"}}
+{"time":"2024-11-27T00:47:33.879687361-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"lmu6hw1u"}}
+{"time":"2024-11-27T00:47:33.879677667-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"lmu6hw1u"}}
+{"time":"2024-11-27T00:47:34.141757944-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2024-11-27T00:47:34.147025775-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-27T03:01:21.668292661-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-27T03:01:21.669081753-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-27T03:01:24.348997185-05:00","level":"INFO","msg":"stream: closing","id":"lmu6hw1u"}
+{"time":"2024-11-27T03:01:24.349027501-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"lmu6hw1u"}}
+{"time":"2024-11-27T03:01:24.349084538-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"lmu6hw1u"}}
+{"time":"2024-11-27T03:01:24.349124062-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"lmu6hw1u"}}
+{"time":"2024-11-27T03:01:24.354943912-05:00","level":"INFO","msg":"stream: closed","id":"lmu6hw1u"}

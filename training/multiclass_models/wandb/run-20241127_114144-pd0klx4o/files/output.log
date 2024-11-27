@@ -1,0 +1,49 @@
+{'activation_function': 'sigmoid', 'batch_size': 64, 'dense_units': 128, 'dropout_rate': 0.8, 'epochs': 500, 'fusion_type': 'late', 'gru_units': 256, 'learning_rate': 0.001, 'loss': 'categorical_crossentropy', 'modality': 'combined', 'num_gru_layers': 2, 'optimizer': 'sgd', 'recurrent_regularizer': 'l1_l2', 'sequence_length': 90, 'use_bidirectional': True, 'use_norm': True, 'use_pca': False, 'use_stats': True}
+Train fold: ['p20nodbot' 'p29nodbot' 'p10nodbot' 'p4nodbot' 'p23nodbot' 'p21nodbot'
+ 'p26nodbot' 'p11nodbot' 'p7nodbot' 'p17nodbot' 'p12nodbot' 'p25nodbot'
+ 'p28nodbot' 'p14nodbot' 'p16nodbot' 'p8nodbot']
+Validation fold: ['p2nodbot' 'p6nodbot' 'p9nodbot' 'p19nodbot' 'p22nodbot']
+Test fold: ['p18nodbot' 'p27nodbot' 'p5nodbot']
+Train shapes: (18972, 49) (18972,)
+Validation shapes: (5653, 49) (5653,)
+Test shapes: (3986, 49) (3986,)
+Train sequences shape: (17548, 90, 49) (17548,)
+X_train_sequences shape: (17548, 90, 49)
+X_val_sequences shape: (5208, 90, 49)
+X_test_sequences shape: (3719, 90, 49)
+WARNING:tensorflow:Layer gru will not use cuDNN kernels since it doesn't meet the criteria. It will use a generic GPU kernel as fallback when running on GPU.
+WARNING:tensorflow:Layer gru will not use cuDNN kernels since it doesn't meet the criteria. It will use a generic GPU kernel as fallback when running on GPU.
+WARNING:tensorflow:Layer gru will not use cuDNN kernels since it doesn't meet the criteria. It will use a generic GPU kernel as fallback when running on GPU.
+WARNING:tensorflow:Layer gru_1 will not use cuDNN kernels since it doesn't meet the criteria. It will use a generic GPU kernel as fallback when running on GPU.
+WARNING:tensorflow:Layer gru_1 will not use cuDNN kernels since it doesn't meet the criteria. It will use a generic GPU kernel as fallback when running on GPU.
+WARNING:tensorflow:Layer gru_1 will not use cuDNN kernels since it doesn't meet the criteria. It will use a generic GPU kernel as fallback when running on GPU.
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #
+=================================================================
+ bidirectional (Bidirection  (None, 90, 512)           471552
+ al)
+
+ dropout (Dropout)           (None, 90, 512)           0
+
+ batch_normalization (Batch  (None, 90, 512)           2048
+ Normalization)
+
+ bidirectional_1 (Bidirecti  (None, 512)               1182720
+ onal)
+
+ dropout_1 (Dropout)         (None, 512)               0
+
+ batch_normalization_1 (Bat  (None, 512)               2048
+ chNormalization)
+
+ dense (Dense)               (None, 128)               65664
+
+ dense_1 (Dense)             (None, 2)                 258
+
+=================================================================
+Total params: 1724290 (6.58 MB)
+Trainable params: 1722242 (6.57 MB)
+Non-trainable params: 2048 (8.00 KB)
+_________________________________________________________________
+Epoch 1/500
