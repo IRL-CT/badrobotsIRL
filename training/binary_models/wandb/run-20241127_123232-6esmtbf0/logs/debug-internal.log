@@ -10,3 +10,10 @@
 {"time":"2024-11-27T12:32:32.377458426-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
 {"time":"2024-11-27T12:32:32.38257249-05:00","level":"INFO","msg":"Starting system monitor"}
 {"time":"2024-11-27T13:28:48.000888388-05:00","level":"INFO","msg":"api: retrying HTTP request, no error or response"}
+{"time":"2024-11-27T19:47:05.890641989-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-27T19:47:05.893826802-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-27T19:47:07.548837451-05:00","level":"INFO","msg":"stream: closing","id":"6esmtbf0"}
+{"time":"2024-11-27T19:47:07.548897618-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"6esmtbf0"}}
+{"time":"2024-11-27T19:47:07.548939923-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"6esmtbf0"}}
+{"time":"2024-11-27T19:47:07.54897593-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"6esmtbf0"}}
+{"time":"2024-11-27T19:47:07.560170342-05:00","level":"INFO","msg":"stream: closed","id":"6esmtbf0"}

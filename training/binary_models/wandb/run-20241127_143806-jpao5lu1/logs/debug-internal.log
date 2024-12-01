@@ -9,3 +9,10 @@
 {"time":"2024-11-27T14:38:06.637457738-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"jpao5lu1"}}
 {"time":"2024-11-27T14:38:06.941992926-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
 {"time":"2024-11-27T14:38:06.948836886-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-27T17:28:09.20732974-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-27T17:28:09.207964463-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-27T17:28:10.803103178-05:00","level":"INFO","msg":"stream: closing","id":"jpao5lu1"}
+{"time":"2024-11-27T17:28:10.803136446-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"jpao5lu1"}}
+{"time":"2024-11-27T17:28:10.803183981-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"jpao5lu1"}}
+{"time":"2024-11-27T17:28:10.803230912-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"jpao5lu1"}}
+{"time":"2024-11-27T17:28:10.805056631-05:00","level":"INFO","msg":"stream: closed","id":"jpao5lu1"}

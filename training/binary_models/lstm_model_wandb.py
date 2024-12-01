@@ -588,7 +588,7 @@ def main():
         'method': 'random',
         'name': 'lstm_all_v0',
         'parameters': {
-            'use_stats' : {'values' : [True, False]},
+            'feature_set' : {'values' : [True, False]},
             'use_pca': {'values': [True, False]},
             'use_norm' : {'values' : [True, False]},
             'use_bidirectional': {'values': [True, False]},

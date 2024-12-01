@@ -10,3 +10,11 @@
 {"time":"2024-11-27T05:11:48.220826108-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
 {"time":"2024-11-27T05:11:48.234570895-05:00","level":"INFO","msg":"Starting system monitor"}
 {"time":"2024-11-27T13:29:48.719595356-05:00","level":"INFO","msg":"api: retrying HTTP request, no error or response"}
+{"time":"2024-11-27T17:35:48.817900843-05:00","level":"INFO","msg":"api: retrying HTTP request, no error or response"}
+{"time":"2024-11-27T17:49:24.049857246-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-27T17:49:24.051010416-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-27T17:49:25.664738901-05:00","level":"INFO","msg":"stream: closing","id":"uiisnthw"}
+{"time":"2024-11-27T17:49:25.664760384-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"uiisnthw"}}
+{"time":"2024-11-27T17:49:25.664783482-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"uiisnthw"}}
+{"time":"2024-11-27T17:49:25.664834568-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"uiisnthw"}}
+{"time":"2024-11-27T17:49:25.670948455-05:00","level":"INFO","msg":"stream: closed","id":"uiisnthw"}

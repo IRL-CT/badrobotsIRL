@@ -9,3 +9,12 @@
 {"time":"2024-11-27T15:34:21.68047565-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"4ptlygkz"}}
 {"time":"2024-11-27T15:34:22.050235241-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
 {"time":"2024-11-27T15:34:22.0541786-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-28T05:19:22.554055822-05:00","level":"INFO","msg":"api: retrying HTTP request, no error or response"}
+{"time":"2024-11-28T05:43:52.563670004-05:00","level":"INFO","msg":"api: retrying HTTP request, no error or response"}
+{"time":"2024-11-28T08:27:30.495157438-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-28T08:27:30.495686277-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-28T08:27:32.258317937-05:00","level":"INFO","msg":"stream: closing","id":"4ptlygkz"}
+{"time":"2024-11-28T08:27:32.258336382-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"4ptlygkz"}}
+{"time":"2024-11-28T08:27:32.258355692-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"4ptlygkz"}}
+{"time":"2024-11-28T08:27:32.258352657-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"4ptlygkz"}}
+{"time":"2024-11-28T08:27:32.264244143-05:00","level":"INFO","msg":"stream: closed","id":"4ptlygkz"}

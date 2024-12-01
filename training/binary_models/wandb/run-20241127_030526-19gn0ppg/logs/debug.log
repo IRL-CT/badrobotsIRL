@@ -36,3 +36,10 @@ config: {}
 <h2></h2>
 </body></html>
 
+2024-11-27 23:05:11,219 INFO    Thread-5  :1646290 [wandb_run.py:_finish():2158] finishing run shannon-jliu/lstm_all_v0/19gn0ppg
+2024-11-27 23:05:11,220 INFO    Thread-5  :1646290 [wandb_run.py:_atexit_cleanup():2422] got exitcode: 0
+2024-11-27 23:05:11,220 INFO    Thread-5  :1646290 [wandb_run.py:_restore():2404] restore
+2024-11-27 23:05:11,220 INFO    Thread-5  :1646290 [wandb_run.py:_restore():2410] restore done
+2024-11-27 23:05:12,966 INFO    Thread-5  :1646290 [wandb_run.py:_footer_history_summary_info():4037] rendering history
+2024-11-27 23:05:12,968 INFO    Thread-5  :1646290 [wandb_run.py:_footer_history_summary_info():4069] rendering summary
+2024-11-27 23:05:12,987 INFO    Thread-5  :1646290 [wandb_run.py:_footer_sync_info():3996] logging synced files

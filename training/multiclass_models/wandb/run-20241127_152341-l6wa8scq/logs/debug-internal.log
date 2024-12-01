@@ -9,3 +9,11 @@
 {"time":"2024-11-27T15:23:41.255729274-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"l6wa8scq"}}
 {"time":"2024-11-27T15:23:41.667897575-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
 {"time":"2024-11-27T15:23:41.717903027-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-28T11:15:12.088516668-05:00","level":"INFO","msg":"api: retrying HTTP error","status":502,"url":"https://api.wandb.ai/files/shannon-jliu/gru_multiclass_all_v0/l6wa8scq/file_stream"}
+{"time":"2024-11-29T01:57:52.226449651-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-29T01:57:52.251575857-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-29T01:57:53.944881008-05:00","level":"INFO","msg":"stream: closing","id":"l6wa8scq"}
+{"time":"2024-11-29T01:57:53.944920058-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"l6wa8scq"}}
+{"time":"2024-11-29T01:57:53.944973704-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"l6wa8scq"}}
+{"time":"2024-11-29T01:57:53.944974563-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"l6wa8scq"}}
+{"time":"2024-11-29T01:57:53.966987078-05:00","level":"INFO","msg":"stream: closed","id":"l6wa8scq"}

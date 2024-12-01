@@ -9,3 +9,11 @@
 {"time":"2024-11-27T15:50:50.557484298-05:00","level":"INFO","msg":"handler: started","stream_id":{"value":"7dn0cbon"}}
 {"time":"2024-11-27T15:50:50.933686233-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
 {"time":"2024-11-27T15:50:50.938186676-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-27T22:59:26.654185351-05:00","level":"INFO","msg":"api: retrying HTTP error","status":500,"url":"https://api.wandb.ai/files/shannon-jliu/gru_multiclass_all_v0/7dn0cbon/file_stream"}
+{"time":"2024-11-27T23:24:28.679172049-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-27T23:24:28.680644082-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-27T23:24:30.488198777-05:00","level":"INFO","msg":"stream: closing","id":"7dn0cbon"}
+{"time":"2024-11-27T23:24:30.488245459-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"7dn0cbon"}}
+{"time":"2024-11-27T23:24:30.488310876-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"7dn0cbon"}}
+{"time":"2024-11-27T23:24:30.488551233-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"7dn0cbon"}}
+{"time":"2024-11-27T23:24:30.491798251-05:00","level":"INFO","msg":"stream: closed","id":"7dn0cbon"}

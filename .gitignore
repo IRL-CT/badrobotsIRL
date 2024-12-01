@@ -4,4 +4,11 @@ training/minirocket_classifiers/wandb
 training/minirocket_classifiers/__pycache__
 training_outputs
 best_model.keras
+training/__pycache__
+training/binary_models/__pycache__
+training/binary_models/training_outputs
+training/binary_models/wandb
+training/multiclass_models/__pycache__
+training/multiclass_models/training_outputs
+training/multiclass_models/wandb
 get-pip.py

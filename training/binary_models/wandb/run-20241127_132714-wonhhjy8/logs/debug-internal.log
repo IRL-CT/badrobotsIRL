@@ -9,3 +9,10 @@
 {"time":"2024-11-27T13:27:14.051925941-05:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"wonhhjy8"}}
 {"time":"2024-11-27T13:27:14.514514964-05:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
 {"time":"2024-11-27T13:27:14.528342134-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-28T00:37:50.02184894-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-28T00:37:50.022348838-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-28T00:37:51.863988734-05:00","level":"INFO","msg":"stream: closing","id":"wonhhjy8"}
+{"time":"2024-11-28T00:37:51.864009329-05:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"wonhhjy8"}}
+{"time":"2024-11-28T00:37:51.864029034-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"wonhhjy8"}}
+{"time":"2024-11-28T00:37:51.864083197-05:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"wonhhjy8"}}
+{"time":"2024-11-28T00:37:51.906530425-05:00","level":"INFO","msg":"stream: closed","id":"wonhhjy8"}

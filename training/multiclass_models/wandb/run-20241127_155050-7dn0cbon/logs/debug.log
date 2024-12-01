@@ -24,3 +24,10 @@ config: {}
 2024-11-27 15:50:51,284 INFO    Thread-14 :733969 [wandb_run.py:_redirect():2372] Wrapping output streams.
 2024-11-27 15:50:51,285 INFO    Thread-14 :733969 [wandb_run.py:_redirect():2397] Redirects installed.
 2024-11-27 15:50:51,285 INFO    Thread-14 :733969 [wandb_init.py:init():900] run started, returning control to user process
+2024-11-27 23:24:28,676 INFO    Thread-14 :733969 [wandb_run.py:_finish():2158] finishing run shannon-jliu/gru_multiclass_all_v0/7dn0cbon
+2024-11-27 23:24:28,677 INFO    Thread-14 :733969 [wandb_run.py:_atexit_cleanup():2422] got exitcode: 0
+2024-11-27 23:24:28,678 INFO    Thread-14 :733969 [wandb_run.py:_restore():2404] restore
+2024-11-27 23:24:28,678 INFO    Thread-14 :733969 [wandb_run.py:_restore():2410] restore done
+2024-11-27 23:24:30,464 INFO    Thread-14 :733969 [wandb_run.py:_footer_history_summary_info():4037] rendering history
+2024-11-27 23:24:30,468 INFO    Thread-14 :733969 [wandb_run.py:_footer_history_summary_info():4069] rendering summary
+2024-11-27 23:24:30,485 INFO    Thread-14 :733969 [wandb_run.py:_footer_sync_info():3996] logging synced files

@@ -24,3 +24,10 @@ config: {}
 2024-11-27 14:38:07,486 INFO    Thread-11 :1646358 [wandb_run.py:_redirect():2372] Wrapping output streams.
 2024-11-27 14:38:07,486 INFO    Thread-11 :1646358 [wandb_run.py:_redirect():2397] Redirects installed.
 2024-11-27 14:38:07,488 INFO    Thread-11 :1646358 [wandb_init.py:init():900] run started, returning control to user process
+2024-11-27 17:28:09,205 INFO    Thread-11 :1646358 [wandb_run.py:_finish():2158] finishing run shannon-jliu/lstm_all_v0/jpao5lu1
+2024-11-27 17:28:09,206 INFO    Thread-11 :1646358 [wandb_run.py:_atexit_cleanup():2422] got exitcode: 0
+2024-11-27 17:28:09,206 INFO    Thread-11 :1646358 [wandb_run.py:_restore():2404] restore
+2024-11-27 17:28:09,206 INFO    Thread-11 :1646358 [wandb_run.py:_restore():2410] restore done
+2024-11-27 17:28:10,768 INFO    Thread-11 :1646358 [wandb_run.py:_footer_history_summary_info():4037] rendering history
+2024-11-27 17:28:10,770 INFO    Thread-11 :1646358 [wandb_run.py:_footer_history_summary_info():4069] rendering summary
+2024-11-27 17:28:10,800 INFO    Thread-11 :1646358 [wandb_run.py:_footer_sync_info():3996] logging synced files
