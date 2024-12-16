@@ -1,0 +1,40 @@
+feature,p_value,dunn_1_2,dunn_1_3,dunn_2_3
+ AU01_r,0.0,***,***,N.S.
+ AU02_r,0.0,**,*,***
+ AU04_r,0.0,N.S.,***,***
+ AU05_r,0.0,**,N.S.,***
+ AU06_r,0.0,N.S.,***,***
+ AU07_r,0.0,N.S.,***,***
+ AU09_r,0.0,*,***,***
+ AU10_r,0.0,***,***,**
+ AU12_r,0.0,***,***,**
+ AU14_r,0.0,N.S.,***,***
+ AU15_r,0.0,N.S.,***,***
+ AU17_r,0.0,***,***,N.S.
+ AU20_r,0.0,***,N.S.,***
+ AU23_r,0.0,N.S.,***,***
+ AU25_r,0.0,***,N.S.,***
+ AU26_r,0.0,***,***,N.S.
+ AU45_r,0.0,***,***,***
+Loudness_sma3,0.0,***,***,***
+alphaRatio_sma3,0.0,***,***,***
+hammarbergIndex_sma3,0.0,***,***,***
+slope500-1500_sma3,0.0,***,***,***
+spectralFlux_sma3,0.0,***,***,***
+mfcc1_sma3,0.0,***,***,***
+mfcc3_sma3,0.0,***,***,***
+F0semitoneFrom27.5Hz_sma3nz,0.0,**,***,***
+jitterLocal_sma3nz,0.0,*,***,***
+shimmerLocaldB_sma3nz,0.0,**,***,***
+HNRdBACF_sma3nz,0.0,N.S.,***,***
+logRelF0-H1-H2_sma3nz,0.034,N.S.,***,N.S.
+logRelF0-H1-A3_sma3nz,0.0,**,***,***
+F1frequency_sma3nz,0.0,***,***,***
+F1bandwidth_sma3nz,0.0,***,***,***
+F1amplitudeLogRelF0_sma3nz,0.0,***,***,***
+F2frequency_sma3nz,0.0,***,***,***
+F2bandwidth_sma3nz,0.0,***,***,***
+F2amplitudeLogRelF0_sma3nz,0.0,***,***,***
+F3frequency_sma3nz,0.0,***,***,***
+F3bandwidth_sma3nz,0.0,***,***,***
+F3amplitudeLogRelF0_sma3nz,0.0,***,***,***
