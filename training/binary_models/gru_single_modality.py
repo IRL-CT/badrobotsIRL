@@ -14,7 +14,7 @@ from get_metrics import get_test_metrics
 
 def train_single_modality_model(df, config):
 
-    print("training model")
+    print("training single modality model")
 
     num_gru_layers = config.num_gru_layers
     gru_units = config.gru_units
@@ -29,24 +29,39 @@ def train_single_modality_model(df, config):
     kernel_regularizer = config.recurrent_regularizer
     loss = config.loss
     sequence_length = config.sequence_length
+    data = config.data
 
-    splits = create_data_splits(
-    df,
-    fold_no=0,
-    num_folds=5,
-    seed_value=42,
-    sequence_length=sequence_length
-    )
+    splits = None
+
+    if data == "reg" or data == "norm":
+        splits = create_data_splits(
+            df, "binary",
+            fold_no=0,
+            num_folds=5,
+            seed_value=42,
+            sequence_length=sequence_length)
+        if splits is None:
+            return
+
+    elif data == "pca":
+        splits = create_data_splits_pca(
+            df, "binary",
+            fold_no=0,
+            num_folds=5,
+            seed_value=42,
+            sequence_length=sequence_length)
+        if splits is None:
+            return
 
     if splits is None:
-        return
+        raise ValueError(f"Failed to create data splits for data type '{data}'.")
 
     X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length = splits
 
     if loss == "categorical_crossentropy":
-        y_train_sequences = to_categorical(y_train_sequences)
-        y_val_sequences = to_categorical(y_val_sequences)
-        y_test_sequences = to_categorical(y_test_sequences)
+        y_train_sequences = to_categorical(y_train_sequences, num_classes=2)
+        y_val_sequences = to_categorical(y_val_sequences, num_classes=2)
+        y_test_sequences = to_categorical(y_test_sequences, num_classes=2)
 
     print("X_train_sequences shape:", X_train_sequences.shape)
     print("X_val_sequences shape:", X_val_sequences.shape)
@@ -158,63 +173,3 @@ def train_single_modality_model(df, config):
     test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
     wandb.log(test_metrics)
     print(test_metrics)
-
-# def train():
-
-#     wandb.init()
-#     config = wandb.config
-#     print(config)
-
-#     seed_value = 42
-#     np.random.seed(seed_value)
-#     random.seed(seed_value)
-#     tf.random.set_seed(seed_value)
-
-#     use_pca = config.use_pca
-#     use_norm = config.use_norm
-
-#     df = pd.read_csv("../preprocessing/individual_features/all_participants_pose_features.csv")
-#     df_norm = pd.read_csv("../preprocessing/individual_features/all_participants_pose_features_norm.csv")
-#     df_norm_pca = pd.read_csv("../preprocessing/individual_features/all_participants_pose_features_norm_pca.csv")
-
-#     if use_norm:
-#         if use_pca:
-#             train_single_modality_model(df_norm_pca, config)
-#         else:
-#             train_single_modality_model(df_norm, config)
-#     else:
-#         train_single_modality_model(df, config)
-
-# def main():
-#     sweep_config = {
-#         'method': 'random',
-#         'name': 'pose_features_gru_v2',
-#         'parameters': {
-#             'use_pca': {'values': [True, False]},
-#             'use_norm': {'values': [True, False]},
-#             'use_bidirectional': {'values': [True, False]},
-#             'num_gru_layers': {'values': [1, 2, 3]},
-#             'gru_units': {'values': [64, 128, 256]},
-#             'dropout_rate': {'values': [0.0, 0.3, 0.5, 0.8]},
-#             'dense_units': {'values': [32, 64, 128]},
-#             'activation_function': {'values': ['tanh', 'relu', 'sigmoid']},
-#             'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'rmsprop']},
-#             'learning_rate': {'values': [0.001, 0.01, 0.005]},
-#             'batch_size': {'values': [32, 64, 128]},
-#             'epochs': {'value': 500},
-#             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
-#             'loss' : {'values' : ["binary_crossentropy", "categorical_crossentropy"]},
-#             'sequence_length' : {'values' : [30, 60, 90]},
-#         }
-#     }
-
-#     print(sweep_config)
-
-#     def train_wrapper():
-#         train()
-
-#     sweep_id = wandb.sweep(sweep=sweep_config, project="pose_features_gru_v2")
-#     wandb.agent(sweep_id, function=train_wrapper)
-
-# if __name__ == '__main__':
-#     main()

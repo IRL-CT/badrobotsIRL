@@ -7,7 +7,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
-df = pd.read_csv("../preprocessing/stats_features/all_participants_merged_correct_normalized_stats.csv")
+df = pd.read_csv("../preprocessing/all_participants_stats_0_3_norm.csv")
 
 participant_frames_labels = df.iloc[:, :4]
 
@@ -25,4 +25,5 @@ principal_df = pd.DataFrame(data=principal_components, columns=['principal compo
 principal_df = pd.concat([participant_frames_labels, principal_df], axis=1)
 
 df = principal_df
-df.to_csv("../preprocessing/stats_features/all_participants_merged_correct_normalized_principal_stats.csv", index=False)
+print(df)
+df.to_csv("../preprocessing/all_participants_stats_0_3_norm_pca.csv", index=False)

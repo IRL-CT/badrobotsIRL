@@ -649,28 +649,30 @@ def cross_validate(val_fold_size, config, group, name):
         if hasattr(config, 'dataset_processing'):
 
             dataset_processing = config.dataset_processing
-            use_stats = config.use_stats
-            if dataset_processing == "norm":
-                if use_stats:
-                    df = pd.read_csv("all_participants_merged_correct_normalized_stats.csv")
-                    df_name = "all_participants_merged_correct_normalized_stats.csv"
+            feature_set = config.feature_set
+
+            if feature_set == "full":
+                if dataset_processing == "norm":
+                    df = pd.read_csv("all_participants_0_3_norm.csv")
+                    df_name = "all_participants_0_3_norm.csv"
+                elif dataset_processing == "pca":
+                    df = pd.read_csv("all_participants_0_3_norm_pca.csv")
+                    df_name = "all_participants_0_3_norm_pca.csv"
                 else:
-                    df = pd.read_csv("all_participants_merged_correct_normalized.csv")
-                    df_name = "all_participants_merged_correct_normalized.csv"
-            elif dataset_processing == "pca":
-                if use_stats:
-                    df = pd.read_csv("all_participants_merged_correct_normalized_principal_stats.csv")
-                    df_name = "all_participants_merged_correct_normalized_principal_stats.csv"
+                    df = pd.read_csv("all_participants_0_3.csv")
+                    df_name = "all_participants_0_3.csv"
+            
+            elif feature_set == "stats":
+                if dataset_processing == "norm":
+                    df = pd.read_csv("all_participants_stats_0_3_norm.csv")
+                    df_name = "all_participants_stats_0_3_norm.csv"
+                elif dataset_processing == "pca":
+                    df = pd.read_csv("all_participants_stats_0_3_norm_pca.csv")
+                    df_name = "all_participants_stats_0_3_norm_pca.csv"
                 else:
-                    df = pd.read_csv("all_participants_merged_correct_normalized_principal.csv")
-                    df_name = "all_participants_merged_correct_normalized_principal.csv"
-            else:
-                if use_stats:
-                    df = pd.read_csv("all_participants_merged_correct_stats.csv")
-                    df_name = "all_participants_merged_correct_stats.csv"
-                else:
-                    df = pd.read_csv("all_participants_merged_correct.csv")
-                    df_name = "all_participants_merged_correct.csv"
+                    df = pd.read_csv("all_participants_stats_0_3.csv")
+                    df_name = "all_participants_stats_0_3.csv"
+            
         else:
             df = pd.read_csv(config.df_name)
 
@@ -694,7 +696,7 @@ def cross_validate(val_fold_size, config, group, name):
         #print('FINISHED CROSS_VALIDATION')
 
 
-        train_folds, val_folds, test_folds = create_data_splits_ids(df)
+        train_folds, val_folds, test_folds = create_data_splits_ids(df, config.class_model)
         #print("Train Folds:", train_folds)
         #print("Val Folds:", val_folds)
         #print("Test Folds:", test_folds)
@@ -725,7 +727,7 @@ def cross_validate(val_fold_size, config, group, name):
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         # , settings=wandb.Settings(start_method="fork")):
         dataset = config.dataset
-        with wandb.init(project="minirocket_br_irl", config=config, group="summary-"+group, name=now+"_"+group):
+        with wandb.init(project="minirocket_br_irl_binary", config=config, group="summary-"+group, name=now+"_"+group):
 
             for i in range(len(train_metrics_all)):
                 #get metrics all for fold 0
@@ -796,7 +798,7 @@ def cross_validate(val_fold_size, config, group, name):
     except Exception as e:
         dataset = config.dataset
         print(e)
-        with wandb.init(project="minirocket_br_irl", config=config, group="error-"+group, name=group):
+        with wandb.init(project="minirocket_br_irl_binary", config=config, group="error-"+group, name=group):
 
             wandb.log({"Error": str(e)})
             for key in config.keys():
@@ -833,28 +835,30 @@ def cross_validate_bestepoch(val_fold_size, config, group, name):
         if hasattr(config, 'dataset_processing'):
 
             dataset_processing = config.dataset_processing
-            use_stats = config.use_stats
-            if dataset_processing == "norm":
-                if use_stats:
-                    df = pd.read_csv("all_participants_merged_correct_normalized_stats.csv")
-                    df_name = "all_participants_merged_correct_normalized_stats.csv"
+            feature_set = config.feature_set
+
+            if feature_set == "full":
+                if dataset_processing == "norm":
+                    df = pd.read_csv("all_participants_0_3_norm.csv")
+                    df_name = "all_participants_0_3_norm.csv"
+                elif dataset_processing == "pca":
+                    df = pd.read_csv("all_participants_0_3_norm_pca.csv")
+                    df_name = "all_participants_0_3_norm_pca.csv"
                 else:
-                    df = pd.read_csv("all_participants_merged_correct_normalized.csv")
-                    df_name = "all_participants_merged_correct_normalized.csv"
-            elif dataset_processing == "pca":
-                if use_stats:
-                    df = pd.read_csv("all_participants_merged_correct_normalized_principal_stats.csv")
-                    df_name = "all_participants_merged_correct_normalized_principal_stats.csv"
+                    df = pd.read_csv("all_participants_0_3.csv")
+                    df_name = "all_participants_0_3.csv"
+            
+            elif feature_set == "stats":
+                if dataset_processing == "norm":
+                    df = pd.read_csv("all_participants_stats_0_3_norm.csv")
+                    df_name = "all_participants_stats_0_3_norm.csv"
+                elif dataset_processing == "pca":
+                    df = pd.read_csv("all_participants_stats_0_3_norm_pca.csv")
+                    df_name = "all_participants_stats_0_3_norm_pca.csv"
                 else:
-                    df = pd.read_csv("all_participants_merged_correct_normalized_principal.csv")
-                    df_name = "all_participants_merged_correct_normalized_principal.csv"
-            else:
-                if use_stats:
-                    df = pd.read_csv("all_participants_merged_correct_stats.csv")
-                    df_name = "all_participants_merged_correct_stats.csv"
-                else:
-                    df = pd.read_csv("all_participants_merged_correct.csv")
-                    df_name = "all_participants_merged_correct.csv"
+                    df = pd.read_csv("all_participants_stats_0_3.csv")
+                    df_name = "all_participants_stats_0_3.csv"
+            
         else:
             df = pd.read_csv(config.df_name)
 
@@ -877,7 +881,7 @@ def cross_validate_bestepoch(val_fold_size, config, group, name):
         #print('FINISHED CROSS_VALIDATION')
 
 
-        train_folds, val_folds, test_folds = create_data_splits_ids(df)
+        train_folds, val_folds, test_folds = create_data_splits_ids(df, config.class_model)
         #print("Train Folds:", train_folds)
         #print("Val Folds:", val_folds)
         #print("Test Folds:", test_folds)
@@ -1061,28 +1065,30 @@ def cross_validate_bestmodel(val_fold_size, config, group, name):
         if hasattr(config, 'dataset_processing'):
 
             dataset_processing = config.dataset_processing
-            use_stats = config.use_stats
-            if dataset_processing == "norm":
-                if use_stats:
-                    df = pd.read_csv("all_participants_merged_correct_normalized_stats.csv")
-                    df_name = "all_participants_merged_correct_normalized_stats.csv"
+            feature_set = config.feature_set
+
+            if feature_set == "full":
+                if dataset_processing == "norm":
+                    df = pd.read_csv("all_participants_0_3_norm.csv")
+                    df_name = "all_participants_0_3_norm.csv"
+                elif dataset_processing == "pca":
+                    df = pd.read_csv("all_participants_0_3_norm_pca.csv")
+                    df_name = "all_participants_0_3_norm_pca.csv"
                 else:
-                    df = pd.read_csv("all_participants_merged_correct_normalized.csv")
-                    df_name = "all_participants_merged_correct_normalized.csv"
-            elif dataset_processing == "pca":
-                if use_stats:
-                    df = pd.read_csv("all_participants_merged_correct_normalized_principal_stats.csv")
-                    df_name = "all_participants_merged_correct_normalized_principal_stats.csv"
+                    df = pd.read_csv("all_participants_0_3.csv")
+                    df_name = "all_participants_0_3.csv"
+            
+            elif feature_set == "stats":
+                if dataset_processing == "norm":
+                    df = pd.read_csv("all_participants_stats_0_3_norm.csv")
+                    df_name = "all_participants_stats_0_3_norm.csv"
+                elif dataset_processing == "pca":
+                    df = pd.read_csv("all_participants_stats_0_3_norm_pca.csv")
+                    df_name = "all_participants_stats_0_3_norm_pca.csv"
                 else:
-                    df = pd.read_csv("all_participants_merged_correct_normalized_principal.csv")
-                    df_name = "all_participants_merged_correct_normalized_principal.csv"
-            else:
-                if use_stats:
-                    df = pd.read_csv("all_participants_merged_correct_stats.csv")
-                    df_name = "all_participants_merged_correct_stats.csv"
-                else:
-                    df = pd.read_csv("all_participants_merged_correct.csv")
-                    df_name = "all_participants_merged_correct.csv"
+                    df = pd.read_csv("all_participants_stats_0_3.csv")
+                    df_name = "all_participants_stats_0_3.csv"
+            
         else:
             df = pd.read_csv(config.df_name)
 
@@ -1106,7 +1112,7 @@ def cross_validate_bestmodel(val_fold_size, config, group, name):
         #print('FINISHED CROSS_VALIDATION')
 
 
-        train_folds, val_folds, test_folds = create_data_splits_ids(df)
+        train_folds, val_folds, test_folds = create_data_splits_ids(df, config.class_model)
 
 
         # iterate over folds
@@ -2003,28 +2009,30 @@ def cross_validate_pretrained(val_fold_size, config, group, name):
         if hasattr(config, 'dataset_processing'):
 
             dataset_processing = config.dataset_processing
-            use_stats = config.use_stats
-            if dataset_processing == "norm":
-                if use_stats:
-                    df = pd.read_csv("all_participants_merged_correct_normalized_stats.csv")
-                    df_name = "all_participants_merged_correct_normalized_stats.csv"
+            feature_set = config.feature_set
+
+            if feature_set == "full":
+                if dataset_processing == "norm":
+                    df = pd.read_csv("all_participants_0_3_norm.csv")
+                    df_name = "all_participants_0_3_norm.csv"
+                elif dataset_processing == "pca":
+                    df = pd.read_csv("all_participants_0_3_norm_pca.csv")
+                    df_name = "all_participants_0_3_norm_pca.csv"
                 else:
-                    df = pd.read_csv("all_participants_merged_correct_normalized.csv")
-                    df_name = "all_participants_merged_correct_normalized.csv"
-            elif dataset_processing == "pca":
-                if use_stats:
-                    df = pd.read_csv("all_participants_merged_correct_normalized_principal_stats.csv")
-                    df_name = "all_participants_merged_correct_normalized_principal_stats.csv"
+                    df = pd.read_csv("all_participants_0_3.csv")
+                    df_name = "all_participants_0_3.csv"
+            
+            elif feature_set == "stats":
+                if dataset_processing == "norm":
+                    df = pd.read_csv("all_participants_stats_0_3_norm.csv")
+                    df_name = "all_participants_stats_0_3_norm.csv"
+                elif dataset_processing == "pca":
+                    df = pd.read_csv("all_participants_stats_0_3_norm_pca.csv")
+                    df_name = "all_participants_stats_0_3_norm_pca.csv"
                 else:
-                    df = pd.read_csv("all_participants_merged_correct_normalized_principal.csv")
-                    df_name = "all_participants_merged_correct_normalized_principal.csv"
-            else:
-                if use_stats:
-                    df = pd.read_csv("all_participants_merged_correct_stats.csv")
-                    df_name = "all_participants_merged_correct_stats.csv"
-                else:
-                    df = pd.read_csv("all_participants_merged_correct.csv")
-                    df_name = "all_participants_merged_correct.csv"
+                    df = pd.read_csv("all_participants_stats_0_3.csv")
+                    df_name = "all_participants_stats_0_3.csv"
+            
         else:
             df = pd.read_csv(config.df_name)
 
@@ -2047,7 +2055,7 @@ def cross_validate_pretrained(val_fold_size, config, group, name):
         #print('FINISHED CROSS_VALIDATION')
 
 
-        train_folds, val_folds, test_folds = create_data_splits_ids(df)
+        train_folds, val_folds, test_folds = create_data_splits_ids(df, config.class_model)
         #print("Train Folds:", train_folds)
         #print("Val Folds:", val_folds)
         #print("Test Folds:", test_folds)
@@ -2230,28 +2238,30 @@ def cross_validate_pp(val_fold_size, config, group, name):
         if hasattr(config, 'dataset_processing'):
 
             dataset_processing = config.dataset_processing
-            use_stats = config.use_stats
-            if dataset_processing == "norm":
-                if use_stats:
-                    df = pd.read_csv("all_participants_merged_correct_normalized_stats.csv")
-                    df_name = "all_participants_merged_correct_normalized_stats.csv"
+            feature_set = config.feature_set
+
+            if feature_set == "full":
+                if dataset_processing == "norm":
+                    df = pd.read_csv("all_participants_0_3_norm.csv")
+                    df_name = "all_participants_0_3_norm.csv"
+                elif dataset_processing == "pca":
+                    df = pd.read_csv("all_participants_0_3_norm_pca.csv")
+                    df_name = "all_participants_0_3_norm_pca.csv"
                 else:
-                    df = pd.read_csv("all_participants_merged_correct_normalized.csv")
-                    df_name = "all_participants_merged_correct_normalized.csv"
-            elif dataset_processing == "pca":
-                if use_stats:
-                    df = pd.read_csv("all_participants_merged_correct_normalized_principal_stats.csv")
-                    df_name = "all_participants_merged_correct_normalized_principal_stats.csv"
+                    df = pd.read_csv("all_participants_0_3.csv")
+                    df_name = "all_participants_0_3.csv"
+            
+            elif feature_set == "stats":
+                if dataset_processing == "norm":
+                    df = pd.read_csv("all_participants_stats_0_3_norm.csv")
+                    df_name = "all_participants_stats_0_3_norm.csv"
+                elif dataset_processing == "pca":
+                    df = pd.read_csv("all_participants_stats_0_3_norm_pca.csv")
+                    df_name = "all_participants_stats_0_3_norm_pca.csv"
                 else:
-                    df = pd.read_csv("all_participants_merged_correct_normalized_principal.csv")
-                    df_name = "all_participants_merged_correct_normalized_principal.csv"
-            else:
-                if use_stats:
-                    df = pd.read_csv("all_participants_merged_correct_stats.csv")
-                    df_name = "all_participants_merged_correct_stats.csv"
-                else:
-                    df = pd.read_csv("all_participants_merged_correct.csv")
-                    df_name = "all_participants_merged_correct.csv"
+                    df = pd.read_csv("all_participants_stats_0_3.csv")
+                    df_name = "all_participants_stats_0_3.csv"
+            
         else:
             df = pd.read_csv(config.df_name)
 

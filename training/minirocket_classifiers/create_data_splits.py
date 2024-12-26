@@ -52,7 +52,7 @@ Creates and returns:
 - y_train_sequences: an array of corresponding target values
 - sequence_length: the length of the sequences returned
 '''
-def create_data_splits(df, num_folds = 5, fold_no=0, seed_value=42, sequence_length=1):
+def create_data_splits(df, model, num_folds = 5, fold_no=0, seed_value=42, sequence_length=1):
     
     try:
         random.seed(seed_value)
@@ -62,11 +62,10 @@ def create_data_splits(df, num_folds = 5, fold_no=0, seed_value=42, sequence_len
 
         features = df.iloc[:, 4:]
 
-        #for binary classification
-        target = df.iloc[:, 2].values.astype('int')
-
-        #for multiclass classification
-        #target = df.iloc[:, 3].values.astype('int')
+        if model == "binary":
+            target = df.iloc[:, 2].values.astype('int')
+        elif model == "multiclass":
+            target = df.iloc[:, 3].values.astype('int')
 
         sessions = df['participant'].values
         
@@ -154,7 +153,7 @@ def create_data_splits(df, num_folds = 5, fold_no=0, seed_value=42, sequence_len
         return None
 
 
-def create_data_splits_ids(df, num_folds = 5, fold_no=0, seed_value=42, sequence_length=1):
+def create_data_splits_ids(df, model, num_folds = 5, fold_no=0, seed_value=42, sequence_length=1):
     
     try:
         random.seed(seed_value)
@@ -164,11 +163,10 @@ def create_data_splits_ids(df, num_folds = 5, fold_no=0, seed_value=42, sequence
 
         features = df.iloc[:, 4:]
 
-        #for binary classification
-        target = df.iloc[:, 2].values.astype('int')
-
-        #for multiclass classification
-        #target = df.iloc[:, 3].values.astype('int')
+        if model == "binary":
+            target = df.iloc[:, 2].values.astype('int')
+        elif model == "multiclass":
+            target = df.iloc[:, 3].values.astype('int')
 
         sessions = df['participant'].values
         

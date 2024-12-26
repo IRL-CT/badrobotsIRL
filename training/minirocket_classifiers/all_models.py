@@ -45,7 +45,8 @@ param_grid_lstm = {'n_epoch': [200],
               "batch_size": [128, 256],
               "batch_tfms": [None],
               "dataset_processing": ["norm", "pca", "n.a."],
-              "use_stats" : [True, False]
+              "feature_set" : ["full", "stats"],
+              "class_model" : ["binary"]
               }
 
 
@@ -61,7 +62,7 @@ print("\n -----------------------\n Number of interations",
       len(param_grid), "x 5", "\n -----------------------")
 
 
-df_name = "all_participants_merged_correct.csv"
+df_name = "all_participants_0_3.csv"
 #df_full = pd.read_csv('../../data/' + df_name)
 #features = df_full.columns[4:]
 #print('FEATURES', features)
@@ -123,7 +124,8 @@ for i, grid_config in enumerate(param_grid):
                 verbose=True,
                 dataset = "neckface",
                 dataset_processing = grid_config["dataset_processing"],
-                use_stats = grid_config["use_stats"]
+                feature_set = grid_config["feature_set"],
+                class_model = grid_config["class_model"]
             )
 
             cross_validate(val_fold_size=5, config=config,

@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH -J lstm_multiclass_all_v0                         # Job name
-#SBATCH -o training_outputs/lstm_multiclass_all_v0%j.out                  # output file (%j expands to jobID)
-#SBATCH -e training_outputs/lstm_multiclass_all_v0%j.err                  # error log file (%j expands to jobID)
+#SBATCH -J lstm_multiclass_all_v1                         # Job name
+#SBATCH -o training_outputs/lstm_multiclass_all_v1%j.out                  # output file (%j expands to jobID)
+#SBATCH -e training_outputs/lstm_multiclass_all_v1%j.err                  # error log file (%j expands to jobID)
 #SBATCH --mail-type=ALL                      # Request status by email 
 #SBATCH --mail-user=sjl356@cornell.edu        # Email address to send results to.
 #SBATCH -N 1                                 # Total number of nodes requested

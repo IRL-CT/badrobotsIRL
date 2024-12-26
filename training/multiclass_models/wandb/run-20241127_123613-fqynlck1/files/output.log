@@ -1,2 +1,0 @@
-{'activation_function': 'relu', 'batch_size': 64, 'dense_units': 32, 'dropout_rate': 0.5, 'epochs': 500, 'fusion_type': 'intermediate', 'gru_units': 128, 'learning_rate': 0.005, 'loss': 'categorical_crossentropy', 'modality': 'combined', 'num_gru_layers': 1, 'optimizer': 'rmsprop', 'recurrent_regularizer': 'l1_l2', 'sequence_length': 30, 'use_bidirectional': True, 'use_norm': False, 'use_pca': False, 'use_stats': True}
-[34m[1mwandb[0m: Ctrl + C detected. Stopping sweep.
