@@ -18,8 +18,8 @@ def train():
     print(config)
     seed_value = 42
 
-    df = pd.read_csv("../preprocessing/merged_features/all_participants_0_3.csv")
-    df_stats = pd.read_csv("../preprocessing/stats_features/all_participants_merged_correct_stats_0_3.csv")
+    df = pd.read_csv("../../preprocessing/merged_features/all_participants_0_3.csv")
+    df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_merged_correct_stats_0_3.csv")
 
     info = df.iloc[:, :4]
     df_pose_index = df.iloc[:, 4:28]
