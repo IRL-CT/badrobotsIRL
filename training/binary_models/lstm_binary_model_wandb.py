@@ -610,8 +610,10 @@ def main():
         'method': 'random',
         'name': 'lstm_all_v1',
         'parameters': {
-            'feature_set' : {'values': ["full", "stats"]},
+            'feature_set' : {'values': ["full"]},
+            #'feature_set' : {'values': ["stats"]},
             'modality' : {'values': ['combined', 'pose', 'facial', 'audio', 'pose_facial', 'pose_audio', 'facial_audio']},
+            #'modality' : {'values': ['combined', 'facial', 'audio', 'facial_audio']},
             'data' : {'values' : ["reg", "norm", "pca"]},
             'fusion_type': {'values': ['early', 'intermediate', 'late']},
             'use_bidirectional': {'values': [True, False]},
