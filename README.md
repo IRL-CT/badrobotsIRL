@@ -10,10 +10,15 @@ The robot failure was verbalized as "Sorry, I do not understand" and occurred at
 
 ## Table of Contents
 
-1. [Feature Extraction](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#feature-extraction)
-2. [Labels](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#labels)
-3. [Participant Exclusion](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#participant-exclusion)
-4. [Principal Component Analysis](https://github.com/FAR-Lab/badrobotsIRL/tree/main?tab=readme-ov-file#principal-component-analysis-pca)
+1. [Analysis of Human Reactions to Robot Failure](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#analysis-of-human-reactions-to-robot-failure)
+2. [Feature Extraction](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#feature-extraction)
+3. [Labels](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#labels)
+4. [Participant Exclusion](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#participant-exclusion)
+5. [Principal Component Analysis](https://github.com/FAR-Lab/badrobotsIRL/tree/main?tab=readme-ov-file#principal-component-analysis-pca)
+
+## Analysis of Human Reactions to Robot Failure
+
+See [README of annotations subdirectory](https://github.com/FAR-Lab/badrobotsIRL/edit/main/annotations/README.md)
 
 ## Feature Extraction
 
