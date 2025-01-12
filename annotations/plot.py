@@ -13,7 +13,7 @@ annotation_list = [
 
 annotation_name = "Emotion"
 
-data = pd.read_csv('sorted_nodbot_annotations_revised.csv')
+data = pd.read_csv('../data/sorted_nodbot_annotations_revised.csv')
 
 data['labels'] = data['labels'].str.split(", ").apply(lambda x: [label for label in x if label in annotation_list])
 
