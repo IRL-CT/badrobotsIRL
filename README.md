@@ -18,7 +18,7 @@ The robot failure was verbalized as "Sorry, I do not understand" and occurred at
 
 ## Analysis of Human Reactions to Robot Failure
 
-See [README of annotations subdirectory](https://github.com/FAR-Lab/badrobotsIRL/tree/main/annotations)
+See [HRI25_LBR](https://github.com/FAR-Lab/badrobotsIRL/tree/main/HRI25_LBR) for more details on the study and findings.
 
 ## Feature Extraction
 
