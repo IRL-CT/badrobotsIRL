@@ -10,7 +10,7 @@ This repository contains the code and data for a study exploring human responses
 
 Our study investigates these responses through a user study involving 26 participants, where we examine the behavioral and emotional shifts that occur when users interact with a robot named HelperBot that was wizarded to make successive conversational errors.
 
-When analyzing the human reactions to robot failures, a codebook was created to classify verbal and nonverbal reactions, and a statistical analysis was conducted to learn more about the relationship between facial, audio, and body pose features and HelperBot's successive error. More details elaborating on the codebook and statistical analysis can be found in [supplemental material](https://github.com/FAR-Lab/badrobotsIRL/blob/main/annotations/HRI25_LBR_BadRobotsIRL_supp.pdf) or below.
+When analyzing the human reactions to robot failures, a codebook was created to classify verbal and nonverbal reactions, and a statistical analysis was conducted to learn more about the relationship between facial, audio, and body pose features and HelperBot's successive error. More details elaborating on the [codebook](https://github.com/FAR-Lab/badrobotsIRL/tree/main/HRI25_LBR#codebook) and [statistical analysis](https://github.com/FAR-Lab/badrobotsIRL/tree/main/HRI25_LBR#statistical-analysis) can be found in [supplemental material](https://github.com/FAR-Lab/badrobotsIRL/blob/main/annotations/HRI25_LBR_BadRobotsIRL_supp.pdf) or below.
 
 This work contributes valuable insights into improving human-robot communication, particularly in scenarios where robots make repeated errors, and has potential applications for building more resilient and adaptive robotic systems.
 
