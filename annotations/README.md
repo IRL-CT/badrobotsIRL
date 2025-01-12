@@ -14,4 +14,4 @@ The plots created are found in the [plots subdirectory](https://github.com/FAR-L
 
 A statistical analysis of the video dataset of interactions between the participant and the robot during the robot's successive errors is found on page 3 of [supplemental material](https://github.com/FAR-Lab/badrobotsIRL/blob/main/annotations/HRI25_LBR_BadRobotsIRL_supp.pdf)
 
-The code used is found at []().
+The code used is found at [full_statsanalysis.ipynb](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/stats/full_statsanalysis.ipynb).
