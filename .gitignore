@@ -1,5 +1,10 @@
 wandb
 preprocessing/final_features
+preprocessing/individual_features
+preprocessing/merged_features
+preprocessing/semi_merged_features
+preprocessing/gaze_features.csv
+training/multiclass_models/gru.py
 training/__pycache__
 training/minirocket_classifiers/wandb
 training/minirocket_classifiers/__pycache__

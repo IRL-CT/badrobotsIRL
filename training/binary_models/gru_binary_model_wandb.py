@@ -624,7 +624,7 @@ def train():
 
     df = pd.read_csv("../../preprocessing/merged_features/all_participants_0_3.csv")
     df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_merged_correct_stats_0_3.csv")
-    df_rf = pd.read_csv("")
+    # df_rf = pd.read_csv("")
 
     info = df.iloc[:, :4]
     df_pose_index = df.iloc[:, 4:28]
@@ -634,8 +634,8 @@ def train():
     df_facial_index_stats = df_stats.iloc[:, 4:30]
     df_audio_index_stats = df_stats.iloc[:, 30:53]
 
-    df_pose_index_rf = df_rf.iloc[:, 4:4] # NEED TO CHANGE TO ACTUAL INDICES
-    df_audio_index_rf = df_rf.iloc[:, 4:4] # NEED TO CHANGE TO ACTUAL INDICES, 4:4 is just a placeholder
+    #df_pose_index_rf = df_rf.iloc[:, 4:4] # NEED TO CHANGE TO ACTUAL INDICES
+    #df_audio_index_rf = df_rf.iloc[:, 4:4] # NEED TO CHANGE TO ACTUAL INDICES, 4:4 is just a placeholder
 
     if feature_set == "full":
         modality = modality_full
@@ -662,11 +662,11 @@ def train():
         "combined": pd.concat([info, df_facial_index_stats, df_audio_index_stats], axis=1),
     }
 
-    modality_mapping_rf = {
-        "pose": pd.concat([info, df_pose_index_rf], axis=1),
-        "audio": pd.concat([info, df_audio_index_rf], axis=1),
-        "combined": pd.concat([info, df_pose_index_rf, df_audio_index_stats], axis=1),
-    }
+    # modality_mapping_rf = {
+    #     "pose": pd.concat([info, df_pose_index_rf], axis=1),
+    #     "audio": pd.concat([info, df_audio_index_rf], axis=1),
+    #     "combined": pd.concat([info, df_pose_index_rf, df_audio_index_stats], axis=1),
+    # }
 
     def create_normalized_df(df):
         if df.empty:
@@ -692,8 +692,8 @@ def train():
         elif feature_set == "stats":
             df = modality_mapping_stats.get(modality)
         
-        elif feature_set == "rf":
-            df = modality_mapping_rf.get(modality)
+        # elif feature_set == "rf":
+        #     df = modality_mapping_rf.get(modality)
 
         if data != "reg":
             df = create_normalized_df(df)

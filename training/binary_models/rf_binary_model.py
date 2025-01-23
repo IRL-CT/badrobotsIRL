@@ -24,18 +24,19 @@ def train():
     info = df.iloc[:, :4]
     df_pose_index = df.iloc[:, 4:28]
     df_facial_index = df.iloc[:, 28:63]
-    df_audio_index = df.iloc[:, 63:]
+    df_audio_index = df.iloc[:, 63:89]
+    df_gaze_index = df.iloc[:, 89:]
 
     df_facial_index_stats = df_stats.iloc[:, 4:30]
     df_audio_index_stats = df_stats.iloc[:, 30:53]
 
     modality_mapping = {
         "pose": pd.concat([info, df_pose_index], axis=1),
-        "facial": pd.concat([info, df_facial_index], axis=1),
+        "facial": pd.concat([info, df_facial_index, df_gaze_index], axis=1),
         "audio": pd.concat([info, df_audio_index], axis=1),
-        "pose_facial": pd.concat([info, df_pose_index, df_facial_index], axis=1),
+        "pose_facial": pd.concat([info, df_pose_index, df_facial_index, df_gaze_index], axis=1),
         "pose_audio": pd.concat([info, df_pose_index, df_audio_index], axis=1),
-        "facial_audio": pd.concat([info, df_facial_index, df_audio_index], axis=1),
+        "facial_audio": pd.concat([info, df_facial_index, df_gaze_index, df_audio_index], axis=1),
         "combined": pd.concat([info, df_pose_index, df_facial_index, df_audio_index], axis=1),
     }
 

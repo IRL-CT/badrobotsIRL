@@ -2,7 +2,7 @@ import sklearn
 from sklearn.preprocessing import StandardScaler
 import pandas
 
-file = "../preprocessing/stats_features/all_participants_merged_correct_stats_0_3.csv"
+file = "../preprocessing/all_participants_rf_0_3.csv"
 
 df = pandas.read_csv(file)
 
@@ -14,6 +14,6 @@ features = df_norm.columns[4:]
 
 df_norm[features] = scaler.fit_transform(df_norm[features])
 
-df_norm.to_csv("../preprocessing/all_participants_stats_0_3_norm.csv", index=False)
+df_norm.to_csv("../preprocessing/all_participants_rf_0_3_norm.csv", index=False)
 
 print(df_norm)

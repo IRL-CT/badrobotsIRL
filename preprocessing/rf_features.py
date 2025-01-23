@@ -11,26 +11,33 @@ import matplotlib.pyplot as plt
 # plt.show()
 # fig.savefig(f"feature_importances.png")
 
-# cutoff at 0.004 --> keep if imp > 0.004, remove if imp < 0.004
+# cutoff at 30% drop --> if feature drop % from previous is over 30%, cut off that feature and all features with lesser importance
 
 raw_data = '../preprocessing/merged_features/all_participants_0_3.csv'
-
 data = pd.read_csv(raw_data)
 features_rf = pd.read_csv('../preprocessing/feature_importances.csv')
 
-cutoff = 0.004
-features_to_keep = features_rf[features_rf['importance'] > cutoff]['feature'].tolist()
+features_rf['importance_drop'] = features_rf['importance'].pct_change(periods=-1).abs()
+features_rf.to_csv("feature_importance_percentage_drop.csv")
+
+print(features_rf)
+cutoff_index = features_rf[features_rf['importance_drop'] > 0.3].index.min()
+
+if pd.notna(cutoff_index):
+    cutoff_feature = features_rf.iloc[cutoff_index]['feature']
+    print(f"cutoff feature > 0.3 : {cutoff_feature}")
+    features_to_keep = features_rf.iloc[:cutoff_index]['feature'].tolist()
+else:
+    features_to_keep = features_rf['feature'].tolist()
 
 columns_in_data = data.columns.tolist()
 non_feature_columns = ['frame', 'participant', 'binary_label', 'multiclass_label']
-
 feature_columns_in_data = [col for col in columns_in_data if col not in non_feature_columns]
-
 columns_to_select = non_feature_columns + [feature for feature in feature_columns_in_data if feature in features_to_keep]
 
 filtered_df = data[columns_to_select]
 
+print(features_to_keep)
 print(filtered_df)
 
-#filtered_df.to_csv('../preprocessing/all_participants_0_3_rf.csv', index=False)
-
+filtered_df.to_csv('../preprocessing/all_participants_rf_0_3.csv', index=False)
