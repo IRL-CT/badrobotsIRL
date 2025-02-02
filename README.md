@@ -13,8 +13,9 @@ The robot failure was verbalized as "Sorry, I do not understand" and occurred at
 1. [Analysis of Human Reactions to Robot Failure](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#analysis-of-human-reactions-to-robot-failure)
 2. [Features](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#feature-extraction)
 3. [Labels](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#labels)
-4. [Participant Exclusion](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#participant-exclusion)
-5. [Principal Component Analysis](https://github.com/FAR-Lab/badrobotsIRL/tree/main?tab=readme-ov-file#principal-component-analysis-pca)
+4. [Training](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#training)
+5. [Participant Exclusion](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#participant-exclusion)
+6. [Principal Component Analysis](https://github.com/FAR-Lab/badrobotsIRL/tree/main?tab=readme-ov-file#principal-component-analysis-pca)
 
 ## Analysis of Human Reactions to Robot Failure
 
@@ -250,6 +251,10 @@ Participant 29's interaction consisted of 5 errors. Therefore, it contained 2 ad
 - Average percentage of additional labels: 2.2%
 
 The Python script that assisted with the label analysis is found here: [label_analysis.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/label_analysis.py)
+
+## Training
+
+LSTM, GRU, Minirocket models
 
 ## Participant Exclusion
 
