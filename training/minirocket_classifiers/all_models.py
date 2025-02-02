@@ -26,7 +26,11 @@ from create_data_splits import create_data_splits, create_data_splits_ids
 import datetime
 from sklearn.model_selection import ParameterGrid
 from TimeSeries_Helpers import *
+from itertools import product
 
+# Generate all combinations of 4 modalities in Boolean
+modalities_combinations = list(product([True, False], repeat=3)) # ['audio', 'face', 'talk']
+modalities_combinations = [comb for comb in modalities_combinations if any(comb)] # remove all False combination
 
 
 param_grid_models = {'model': ['LSTM_FCN',"GRU_FCN", "InceptionTime","InceptionTimePlus","MiniRocket", "gMLP"]}
@@ -34,26 +38,32 @@ param_grid_models = {'model': ['LSTM_FCN',"GRU_FCN", "InceptionTime","InceptionT
 param_grid_lstm = {'n_epoch': [200],
               'dropout_LSTM_FCN': [0,0.8,0.2,0.5],
               'fc_dropout_LSTM_FCN': [0, 0.2,0.5,0.8],
-              'n_estimators': [40,20,80],
+              'n_estimators': [50,20,100],
               'stride_train': [1,5, 10, 30,80],
               'stride_eval': [1,5, 10, 30,80],
               'lr': [2e-4,0.01,0.001],
               'focal_loss': [False, True],
-              "interval_length": [1,5, 12, 25, 40, 80],
+              "interval_length": [1,5, 12, 25,40,80],
               "context_length": [0],
               'oversampling': [False],
-              "batch_size": [128, 256],
+              "batch_size": [256],
               "batch_tfms": [None],
-              "dataset_processing": ["norm", "pca", "n.a."],
-              "feature_set" : ["full", "stats"],
-              "class_model" : ["binary"]
+              "dataset_processing": ["pca", "norm", "clean"],
+              "feature_set_tag": ["Full","Stat","RF"],
+              "balanced": [True,False],
+              "modalities_combination": modalities_combinations,
+              #"part_fusion": ['early','intermediate','late'],
+              #"groundtruth": ['sign', 'multi'],
+
               }
+
 
 
 #merge both
 param_grid = {**param_grid_models, **param_grid_lstm}
 
 print(param_grid)
+
 
 param_grid = list(ParameterGrid(param_grid))
 
@@ -62,7 +72,7 @@ print("\n -----------------------\n Number of interations",
       len(param_grid), "x 5", "\n -----------------------")
 
 
-df_name = "all_participants_0_3.csv"
+df_name = 'all_participants_0_3.csv'
 #df_full = pd.read_csv('../../data/' + df_name)
 #features = df_full.columns[4:]
 #print('FEATURES', features)
@@ -70,6 +80,13 @@ df_name = "all_participants_0_3.csv"
 #remove configs were stride is bigger than the interval length
 new_param_grid = []
 for i,grid_config in enumerate(param_grid):
+    # if not (grid_config["stride_train"] > grid_config["interval_length"] or grid_config["stride_eval"] > grid_config["interval_length"]):
+    #     if grid_config["groundtruth"]== 'sign':
+    #         if not (grid_config["interval_length"]>5 or grid_config["stride_train"]>5 or grid_config["stride_eval"]>5):
+    #             new_param_grid.append(grid_config)
+    #     else:
+    #         new_param_grid.append(grid_config)
+    
     if grid_config["stride_train"] > grid_config["interval_length"] or grid_config["stride_eval"] > grid_config["interval_length"]:
         #print("Removed config: ", grid_config)
         #param_grid.remove(grid_config)
@@ -122,17 +139,15 @@ for i, grid_config in enumerate(param_grid):
                 oversampling=grid_config["oversampling"],
                 undersampling=False,
                 verbose=True,
-                dataset = "neckface",
+                dataset = "openface",
                 dataset_processing = grid_config["dataset_processing"],
-                feature_set = grid_config["feature_set"],
-                class_model = grid_config["class_model"]
+                feature_set_tag=grid_config["feature_set_tag"],
+                modalities_combination = grid_config["modalities_combination"],
+                balanced = grid_config["balanced"],
+                #part_fusion = grid_config["part_fusion"],
+                #groundtruth = grid_config["groundtruth"],
+                
             )
 
             cross_validate(val_fold_size=5, config=config,
                         group="all", name=str(grid_config))
-
-
-
-
-
-

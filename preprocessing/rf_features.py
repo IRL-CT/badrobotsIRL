@@ -21,11 +21,11 @@ features_rf['importance_drop'] = features_rf['importance'].pct_change(periods=-1
 features_rf.to_csv("feature_importance_percentage_drop.csv")
 
 print(features_rf)
-cutoff_index = features_rf[features_rf['importance_drop'] > 0.3].index.min()
+cutoff_index = features_rf[features_rf['importance_drop'] > 0.4].index.min()
 
 if pd.notna(cutoff_index):
     cutoff_feature = features_rf.iloc[cutoff_index]['feature']
-    print(f"cutoff feature > 0.3 : {cutoff_feature}")
+    print(f"cutoff feature > 0.4 : {cutoff_feature}")
     features_to_keep = features_rf.iloc[:cutoff_index]['feature'].tolist()
 else:
     features_to_keep = features_rf['feature'].tolist()
@@ -40,4 +40,4 @@ filtered_df = data[columns_to_select]
 print(features_to_keep)
 print(filtered_df)
 
-filtered_df.to_csv('../preprocessing/all_participants_rf_0_3.csv', index=False)
+filtered_df.to_csv('../preprocessing/all_participants_rf_0_3_40.csv', index=False)

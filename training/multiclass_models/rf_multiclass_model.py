@@ -24,8 +24,8 @@ def train():
     info = df.iloc[:, :4]
     df_pose_index = df.iloc[:, 4:28]
     df_facial_index = df.iloc[:, 28:63]
-    df_audio_index = df.iloc[:, 63:89]
-    df_gaze_index = df.iloc[:, 89:]
+    df_audio_index = df.iloc[:, 63:88]
+    df_gaze_index = df.iloc[:, 88:]
 
     df_facial_index_stats = df_stats.iloc[:, 4:30]
     df_audio_index_stats = df_stats.iloc[:, 30:53]
