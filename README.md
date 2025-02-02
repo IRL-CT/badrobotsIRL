@@ -130,7 +130,7 @@ Once the timestamps for each speaker were extracted, audio features correspondin
 
 The CSV files of features achieved from openSMILE used start and end timestamps in the format "0 days 00:00:00.00", and each row included audio features for 0.02 seconds (between the start and end timestamps). However, this study is interested in utilizing frames instead of timestamps. Therefore, start timestamps were converted into frames. For multiple rows with the same frame number, the average feature value was calculated and used as the frame's feature value for each feature. The Python script used to convert timestamps to frames and process features is found here: [audio_features_frames.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/audio_features_frames.py). Required inputs to obtain frames included a directory of all participant CSV files of filtered audio features and a CSV file path for each participant to store the new output CSV.
 
-## Feature Merge
+### Feature Merge
 
 After facial, pose, and audio features were processed to include relevant features per frame per participant, all features were merged into one CSV file representing the features per frame of a single participant. The Python script for merging features for each participant is found here: [feature_merge.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/feature_merge.py)
 
@@ -138,19 +138,19 @@ All participant's features were merged into a collective CSV file containing all
 
 Features were checked for NaN and inf values and then normalized for model training. The Python script for checking feature values is found here: [check_features.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/check_features.py) and for normalizing features is found here [normalization.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/normalization.py)
 
-## Feature Selection
+### Feature Selection
 
 There were three feature sets used when training our model. 
 
-### Full Feature Set
+#### Full Feature Set
 
 The full feature set contains all final facial, pose, and audio features listed previously.
 
-### Stats Feature Set
+#### Stats Feature Set
 
 Features kept: [stats_features](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/stats/stats_features_ttest_full.csv)
 
-### Random Forest (RF) Feature Set
+#### Random Forest (RF) Feature Set
 
 Selected features if feature drop > 40%
 
