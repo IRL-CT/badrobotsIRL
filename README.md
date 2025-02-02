@@ -20,29 +20,32 @@ The robot failure was verbalized as "Sorry, I do not understand" and occurred at
 
 See [HRI25_LBR](https://github.com/FAR-Lab/badrobotsIRL/tree/main/HRI25_LBR) for more details on the study and findings.
 
-## Feature Extraction
+## Features
 
 Feature extraction was performed on the participant to understand and analyze facial expressions, body movements, and speech that might convey underlying emotions during the human-robot interaction. After each feature extraction tool was applied to the sample's videos, resulting outputs were processed into readable forms which were then merged into one collective CSV file documenting all feature data per frame per participant.
 
-### Facial Features
+### Feature Extraction
+
+#### Facial Features
 
 The OpenFace toolkit was used to detect facial landmarks and action units and required a video file path as input. The output consisted of a CSV file containing feature data per frame for the video.
 
 The OpenFace toolkit can be found here: https://github.com/TadasBaltrusaitis/OpenFace
 
-#### Feature Exclusion
+##### Feature Exclusion
 
 Irrelevant features were excluded from the OpenFace output and this process was completed while merging all feature data. Facial feature exclusion is found in this Python script: [feature_merge.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/feature_merge.py). For the facial feature exclusion portion of the script, the CSV file path of the facial features for each participant and final facial feature list were required as input.
 
 Final facial feature list (mainly action units):
 ```
-facial_features = ['AU01_r', 'AU02_r', 'AU04_r', 'AU05_r', 'AU06_r', 'AU07_r', 'AU09_r', 'AU10_r', 'AU12_r',
-'AU14_r', 'AU15_r', 'AU17_r', 'AU20_r', 'AU23_r', 'AU25_r', 'AU26_r',  'AU45_r', 'AU01_c', 'AU02_c', 'AU04_c',
-'AU05_c', 'AU06_c', 'AU07_c', 'AU09_c', 'AU10_c', 'AU12_c', 'AU14_c', 'AU15_c', 'AU17_c', 'AU20_c', 'AU23_c',
-'AU25_c', 'AU26_c', 'AU28_c', 'AU45_c']
+facial_features = ['AU01_r', 'AU02_r', 'AU04_r', 'AU05_r', 'AU06_r', 'AU07_r', 'AU09_r', 'AU10_r',
+'AU12_r', 'AU14_r', 'AU15_r', 'AU17_r', 'AU20_r', 'AU23_r', 'AU25_r', 'AU26_r',  'AU45_r', 'AU01_c',
+'AU02_c', 'AU04_c', 'AU05_c', 'AU06_c', 'AU07_c', 'AU09_c', 'AU10_c', 'AU12_c', 'AU14_c', 'AU15_c',
+'AU17_c', 'AU20_c', 'AU23_c', 'AU25_c', 'AU26_c', 'AU28_c', 'AU45_c', 'gaze_0_x', 'gaze_0_y',
+'gaze_0_z', 'gaze_1_x', 'gaze_1_y', 'gaze_1_z', 'gaze_angle_x', 'gaze_angle_y']
 ```
-
-### Pose Features & Estimation
+ 
+#### Pose Features & Estimation
 
 The OpenPose toolkit and the BODY_25 model were used to obtain keypoints of the participant's body features and required video file path as input and a JSON file path to store the output. The JSON files were parsed and converted into CSV files listing pose features per frame for each video file with this script: [parse_openpose.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/parse_openpose.py). 
 
@@ -51,7 +54,7 @@ The following was executed in the command line interface to return a JSON file o
 bin\OpenPoseDemo.exe --video {input_video_file_path} --write_video {output_file_path} --write_json {output_file_path} 
 ```
 
-#### Feature Exclusion
+##### Feature Exclusion
 
 Only upper body keypoints were relevant to the video dataset so the lower body keypoints (mid hip, right hip, left hip, right knee, left knee, right ankle, left ankle, right big toe, left big toe, right small toe, left small toe, right heel, left heel) were removed during preprocessing. The Python script used to exclude lower body features is found here: [feature_exclusion.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/feature_exclusion.py). Required input for the script includes the directory path to the directory holding all participant CSV files and a CSV file path for each participant to store output.
 
@@ -65,11 +68,11 @@ pose_features = ['nose_x', 'nose_y', 'neck_x', 'neck_y', 'rightshoulder_x', 'rig
 
 The OpenPose toolkit can be found here: https://github.com/CMU-Perceptual-Computing-Lab/openpose
 
-#### Body Keypoint Delta Calculations
+##### Body Keypoint Delta Calculations
 
 In addition to the original features produced with OpenPose, another column titled "[original feature name]_delta" was appended and included the change in value from the previous frame's original feature value to the current frame's original feature value. The Python script used for updating the CSV with delta values is found here: [features_delta_calculations.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/features_delta_calculations.py). Required input to obtain delta calculations for each participant includes the CSV file path of pose features for the participant and a CSV file path to store the output or additional delta columns and values.
 
-### Audio Features
+#### Audio Features
 
 The openSMILE toolkit and the eGeMAPSv02 configuration were used to obtain audio features from the interaction between the participant and the robot and required an audio file path as input and a CSV file path as output. The following Python code was executed to return a CSV file of audio features:
 ```python
@@ -98,7 +101,7 @@ Only audio segments (partitioned via speaker diarization) spoken by the particip
 
 The openSMILE toolkit can be found here: https://audeering.github.io/opensmile/about.html or https://github.com/audeering/opensmile/
 
-#### Speaker Diarization
+##### Speaker Diarization
 
 Speaker diarization was used to identify timestamps indicating when the participant and the robot were speaking.
 
@@ -122,7 +125,7 @@ pyannote speaker diarization toolkit can be found here: https://huggingface.co/p
 
 Once the timestamps for each speaker were extracted, audio features corresponding to the participant's speech were retained, while those corresponding to other speakers' speech were removed. The Python script used to achieve this is found here: [filter_audio_features.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/filter_audio_features.py). Required inputs for the script to filter features for a single participant include the CSV file of openSMILE audio extracted features, the CSV file of timestamps produced from speaker diarization, and a CSV file path to store the output.
 
-#### Timestamp to Frame Conversion
+##### Timestamp to Frame Conversion
 
 The CSV files of features achieved from openSMILE used start and end timestamps in the format "0 days 00:00:00.00", and each row included audio features for 0.02 seconds (between the start and end timestamps). However, this study is interested in utilizing frames instead of timestamps. Therefore, start timestamps were converted into frames. For multiple rows with the same frame number, the average feature value was calculated and used as the frame's feature value for each feature. The Python script used to convert timestamps to frames and process features is found here: [audio_features_frames.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/audio_features_frames.py). Required inputs to obtain frames included a directory of all participant CSV files of filtered audio features and a CSV file path for each participant to store the new output CSV.
 
@@ -133,6 +136,24 @@ After facial, pose, and audio features were processed to include relevant featur
 All participant's features were merged into a collective CSV file containing all rows from each participant's merged features data. The Python script for merging all participant feature data is found here: [feature_all_participants.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/feature_all_participants.py).
 
 Features were checked for NaN and inf values and then normalized for model training. The Python script for checking feature values is found here: [check_features.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/check_features.py) and for normalizing features is found here [normalization.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/normalization.py)
+
+### Feature Selection
+
+There were three feature sets used when training our model. 
+
+#### Full Feature Set
+
+The full feature set contains all final facial, pose, and audio features listed previously.
+
+#### Stats Feature Set
+
+Features kept: [stats_features](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/stats/stats_features_ttest_full.csv)
+
+#### Random Forest (RF) Feature Set
+
+Selected features if feature drop > 40%
+
+Features kept: [rf_features](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/rf/rf_features_selected_40.csv)
 
 ## Labels
 
