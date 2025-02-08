@@ -71,6 +71,15 @@ def train_early_fusion(df, config):
         "test_f1_tolerant": []
     }
 
+    if optimizer == 'adam':
+        optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
+    elif optimizer == 'sgd':
+        optimizer = tf.keras.optimizers.legacy.SGD(learning_rate=learning_rate)
+    elif optimizer == 'adadelta':
+        optimizer = tf.keras.optimizers.legacy.Adadelta(learning_rate=learning_rate)
+    elif optimizer == 'rmsprop':
+        optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
+
     for fold in range(5):
 
         print("Fold ", fold)
@@ -132,15 +141,6 @@ def train_early_fusion(df, config):
         model.add(Dense(dense_units, activation=activation))
         model.add(Dense(num_classes, activation="softmax"))
 
-        if optimizer == 'adam':
-            optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
-        elif optimizer == 'sgd':
-            optimizer = tf.keras.optimizers.legacy.SGD(learning_rate=learning_rate)
-        elif optimizer == 'adadelta':
-            optimizer = tf.keras.optimizers.legacy.Adadelta(learning_rate=learning_rate)
-        elif optimizer == 'rmsprop':
-            optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
-
         model.summary()
         
         model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
@@ -188,11 +188,14 @@ def train_early_fusion(df, config):
         y_test_sequences = np.argmax(y_test_sequences, axis=1)
 
         test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
+        for key in test_metrics_list.keys():
+            test_metrics_list[key].append(test_metrics[key])
+
         wandb.log({f"fold_{fold}_metrics": test_metrics})
         print(f"Fold {fold} Test Metrics:", test_metrics)
     
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
-    wandb.log(avg_test_metrics)
+    wandb.run.summary.update(avg_test_metrics)
     print("Average Test Metrics Across All Folds:", avg_test_metrics)
 
 
@@ -235,6 +238,15 @@ def train_intermediate_fusion(df_pose, df_facial, df_audio, config):
         "test_recall_tolerant": [],
         "test_f1_tolerant": []
     }
+
+    if optimizer == 'adam':
+        optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
+    elif optimizer == 'sgd':
+        optimizer = tf.keras.optimizers.legacy.SGD(learning_rate=learning_rate)
+    elif optimizer == 'adadelta':
+        optimizer = tf.keras.optimizers.legacy.Adadelta(learning_rate=learning_rate)
+    elif optimizer == 'rmsprop':
+        optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
 
     for fold in range(5):
 
@@ -326,15 +338,6 @@ def train_intermediate_fusion(df_pose, df_facial, df_audio, config):
         x = Dense(num_classes, activation="softmax")(x)
 
         model = Model(inputs=feature_inputs, outputs=x)
-
-        if optimizer == 'adam':
-            optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
-        elif optimizer == 'sgd':
-            optimizer = tf.keras.optimizers.legacy.SGD(learning_rate=learning_rate)
-        elif optimizer == 'adadelta':
-            optimizer = tf.keras.optimizers.legacy.Adadelta(learning_rate=learning_rate)
-        elif optimizer == 'rmsprop':
-            optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
 
         model.summary()
         
@@ -438,11 +441,14 @@ def train_intermediate_fusion(df_pose, df_facial, df_audio, config):
         y_test_sequences = np.argmax(y_test_sequences, axis=1)
 
         test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
+        for key in test_metrics_list.keys():
+            test_metrics_list[key].append(test_metrics[key])
+            
         wandb.log({f"fold_{fold}_metrics": test_metrics})
         print(f"Fold {fold} Test Metrics:", test_metrics)
     
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
-    wandb.log(avg_test_metrics)
+    wandb.run.summary.update(avg_test_metrics)
     print("Average Test Metrics Across All Folds:", avg_test_metrics)
 
 
@@ -485,6 +491,15 @@ def train_late_fusion(df_pose, df_facial, df_audio, config):
         "test_f1_tolerant": []
     }
 
+    if optimizer == 'adam':
+        optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
+    elif optimizer == 'sgd':
+        optimizer = tf.keras.optimizers.legacy.SGD(learning_rate=learning_rate)
+    elif optimizer == 'adadelta':
+        optimizer = tf.keras.optimizers.legacy.Adadelta(learning_rate=learning_rate)
+    elif optimizer == 'rmsprop':
+        optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
+    
     for fold in range(5):
         print("Fold ", fold)
 
@@ -587,15 +602,6 @@ def train_late_fusion(df_pose, df_facial, df_audio, config):
             model = Model(inputs=input, outputs=output)
         elif feature_set == "stats":
             model = Model(inputs=[facial_input, audio_input], outputs=output)
-
-        if optimizer == 'adam':
-            optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
-        elif optimizer == 'sgd':
-            optimizer = tf.keras.optimizers.legacy.SGD(learning_rate=learning_rate)
-        elif optimizer == 'adadelta':
-            optimizer = tf.keras.optimizers.legacy.Adadelta(learning_rate=learning_rate)
-        elif optimizer == 'rmsprop':
-            optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
         
         model.summary()
 
@@ -700,11 +706,14 @@ def train_late_fusion(df_pose, df_facial, df_audio, config):
         y_test_sequences = np.argmax(y_test_sequences, axis=1)
 
         test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
+        for key in test_metrics_list.keys():
+            test_metrics_list[key].append(test_metrics[key])
+
         wandb.log({f"fold_{fold}_metrics": test_metrics})
         print(f"Fold {fold} Test Metrics:", test_metrics)
     
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
-    wandb.log(avg_test_metrics)
+    wandb.run.summary.update(avg_test_metrics)
     print("Average Test Metrics Across All Folds:", avg_test_metrics)
 
 
@@ -998,7 +1007,7 @@ def main():
     
     sweep_config = {
         'method': 'random',
-        'name': 'gru_binary_all_v1',
+        'name': 'gru_binary_all_v2',
         'parameters': {
             'feature_set' : {'values': ["full", "stats", "rf"]},
             'modality_full' : {'values': ['combined', 'pose', 'facial', 'audio', 'pose_facial', 'pose_audio', 'facial_audio']},
@@ -1028,7 +1037,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_binary_all_v1")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_binary_all_v2")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':
