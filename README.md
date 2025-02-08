@@ -11,18 +11,21 @@ The robot failure was verbalized as "Sorry, I do not understand" and occurred at
 ## Table of Contents
 
 1. [Analysis of Human Reactions to Robot Failure](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#analysis-of-human-reactions-to-robot-failure)
-2. [Feature Extraction](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#feature-extraction)
+2. [Features](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#feature-extraction)
 3. [Labels](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#labels)
-4. [Participant Exclusion](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#participant-exclusion)
-5. [Principal Component Analysis](https://github.com/FAR-Lab/badrobotsIRL/tree/main?tab=readme-ov-file#principal-component-analysis-pca)
+4. [Training](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#training)
+5. [Participant Exclusion](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#participant-exclusion)
+6. [Principal Component Analysis](https://github.com/FAR-Lab/badrobotsIRL/tree/main?tab=readme-ov-file#principal-component-analysis-pca)
 
 ## Analysis of Human Reactions to Robot Failure
 
 See [HRI25_LBR](https://github.com/FAR-Lab/badrobotsIRL/tree/main/HRI25_LBR) for more details on the study and findings.
 
-## Feature Extraction
+## Features
 
 Feature extraction was performed on the participant to understand and analyze facial expressions, body movements, and speech that might convey underlying emotions during the human-robot interaction. After each feature extraction tool was applied to the sample's videos, resulting outputs were processed into readable forms which were then merged into one collective CSV file documenting all feature data per frame per participant.
+
+### Feature Extraction
 
 ### Facial Features
 
@@ -36,12 +39,13 @@ Irrelevant features were excluded from the OpenFace output and this process was 
 
 Final facial feature list (mainly action units):
 ```
-facial_features = ['AU01_r', 'AU02_r', 'AU04_r', 'AU05_r', 'AU06_r', 'AU07_r', 'AU09_r', 'AU10_r', 'AU12_r',
-'AU14_r', 'AU15_r', 'AU17_r', 'AU20_r', 'AU23_r', 'AU25_r', 'AU26_r',  'AU45_r', 'AU01_c', 'AU02_c', 'AU04_c',
-'AU05_c', 'AU06_c', 'AU07_c', 'AU09_c', 'AU10_c', 'AU12_c', 'AU14_c', 'AU15_c', 'AU17_c', 'AU20_c', 'AU23_c',
-'AU25_c', 'AU26_c', 'AU28_c', 'AU45_c']
+facial_features = ['AU01_r', 'AU02_r', 'AU04_r', 'AU05_r', 'AU06_r', 'AU07_r', 'AU09_r', 'AU10_r',
+'AU12_r', 'AU14_r', 'AU15_r', 'AU17_r', 'AU20_r', 'AU23_r', 'AU25_r', 'AU26_r',  'AU45_r', 'AU01_c',
+'AU02_c', 'AU04_c', 'AU05_c', 'AU06_c', 'AU07_c', 'AU09_c', 'AU10_c', 'AU12_c', 'AU14_c', 'AU15_c',
+'AU17_c', 'AU20_c', 'AU23_c', 'AU25_c', 'AU26_c', 'AU28_c', 'AU45_c', 'gaze_0_x', 'gaze_0_y',
+'gaze_0_z', 'gaze_1_x', 'gaze_1_y', 'gaze_1_z', 'gaze_angle_x', 'gaze_angle_y']
 ```
-
+ 
 ### Pose Features & Estimation
 
 The OpenPose toolkit and the BODY_25 model were used to obtain keypoints of the participant's body features and required video file path as input and a JSON file path to store the output. The JSON files were parsed and converted into CSV files listing pose features per frame for each video file with this script: [parse_openpose.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/parse_openpose.py). 
@@ -133,6 +137,24 @@ After facial, pose, and audio features were processed to include relevant featur
 All participant's features were merged into a collective CSV file containing all rows from each participant's merged features data. The Python script for merging all participant feature data is found here: [feature_all_participants.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/feature_all_participants.py).
 
 Features were checked for NaN and inf values and then normalized for model training. The Python script for checking feature values is found here: [check_features.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/check_features.py) and for normalizing features is found here [normalization.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/normalization.py)
+
+### Feature Selection
+
+There were three feature sets used when training our model. 
+
+#### Full Feature Set
+
+The full feature set contains all final facial, pose, and audio features listed previously.
+
+#### Stats Feature Set
+
+Features kept: [stats_features](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/stats/stats_features_ttest_full.csv)
+
+#### Random Forest (RF) Feature Set
+
+Selected features if feature drop > 40%
+
+Features kept: [rf_features](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/rf/rf_features_selected_40.csv)
 
 ## Labels
 
@@ -229,6 +251,10 @@ Participant 29's interaction consisted of 5 errors. Therefore, it contained 2 ad
 - Average percentage of additional labels: 2.2%
 
 The Python script that assisted with the label analysis is found here: [label_analysis.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/label_analysis.py)
+
+## Training
+
+LSTM, GRU, Minirocket models
 
 ## Participant Exclusion
 
