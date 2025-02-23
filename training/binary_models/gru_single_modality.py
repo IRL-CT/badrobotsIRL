@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import random
 from sklearn.model_selection import KFold
+from sklearn.preprocessing import StandardScaler
 from keras.models import Sequential, Model
 from keras.layers import GRU, Dense, Dropout, BatchNormalization, Input, Bidirectional, concatenate
 from keras.callbacks import ModelCheckpoint
@@ -191,3 +192,126 @@ def train_single_modality_model(df, config):
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
     wandb.log(avg_test_metrics)
     print("Average Test Metrics Across All Folds:", avg_test_metrics)
+
+def train():
+
+    wandb.init()
+    config = wandb.config
+    print(config)
+
+    seed_value = 42
+    np.random.seed(seed_value)
+    random.seed(seed_value)
+    tf.random.set_seed(seed_value)
+    
+    modality = config.modality
+    feature_set = config.feature_set
+    data = config.data
+
+    df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
+    df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_stats_0_3.csv")
+    df_rf = pd.read_csv("../../preprocessing/rf_features/all_participants_rf_0_3_40.csv")
+
+    info = df.iloc[:, :4]
+    df_pose_index = df.iloc[:, 4:28]
+    df_facial_index = pd.concat([df.iloc[:, 28:63], df.iloc[:, 88:]], axis=1)
+    df_audio_index = df.iloc[:, 63:88]
+
+    df_facial_index_stats = df_stats.iloc[:, 4:30]
+    df_audio_index_stats = df_stats.iloc[:, 30:53]
+
+    df_facial_index_rf = df_rf.iloc[:, 38:]
+    df_pose_index_rf = df_rf.iloc[:, 4:28]
+    df_audio_index_rf = df_rf.iloc[:, 28:38]
+
+    modality_mapping = {
+        "pose": pd.concat([info, df_pose_index], axis=1),
+        "facial": pd.concat([info, df_facial_index], axis=1),
+        "audio": pd.concat([info, df_audio_index], axis=1)
+    }
+
+    modality_mapping_stats = {
+        "facial": pd.concat([info, df_facial_index_stats], axis=1),
+        "audio": pd.concat([info, df_audio_index_stats], axis=1)
+    }
+
+    modality_mapping_rf = {
+        "pose": pd.concat([info, df_pose_index_rf], axis=1),
+        "facial": pd.concat([info, df_facial_index_rf], axis=1),
+        "audio": pd.concat([info, df_audio_index_rf], axis=1)
+    }
+
+    def create_normalized_df(df):
+        if df.empty:
+            raise ValueError("create_normalized_df: Input DataFrame is empty.")
+        participant_frames_labels = df.iloc[:, :4]
+        
+        features = df.columns[4:]
+        norm_df = df.copy()
+        
+        scaler = StandardScaler()
+        norm_df[features] = scaler.fit_transform(norm_df[features])
+        
+        norm_df = pd.concat([participant_frames_labels, norm_df[features]], axis=1)
+
+        return norm_df
+
+    def get_modality_data(modality, data):
+        df = pd.DataFrame()
+
+        if feature_set == "full":
+            df = modality_mapping.get(modality)
+
+        elif feature_set == "stats":
+            df = modality_mapping_stats.get(modality)
+
+        elif feature_set == "rf":
+            df = modality_mapping_rf.get(modality)
+
+        if data != "reg":
+            df = create_normalized_df(df)
+
+        return df
+
+    train_single_modality_model(get_modality_data(modality, data), config)
+
+def main():
+
+    modality = "audio"
+    
+    sweep_config = {
+        'method': 'random',
+        'name': f'gru_binary_{modality}',
+        'parameters': {
+            'modality' : {'value': modality},
+
+            'feature_set' : {'values': ["full", "stats", "rf"]},
+            'data' : {'values' : ["reg", "norm", "pca"]},
+
+            'use_bidirectional': {'values': [True, False]},
+            'num_gru_layers': {'values': [1, 2, 3]},
+            'gru_units': {'values': [64, 128, 256]},
+            'dropout_rate': {'values': [0.0, 0.3, 0.5, 0.8]},
+            'dense_units': {'values': [32, 64, 128]},
+            'activation_function': {'values': ['tanh', 'relu', 'sigmoid']},
+            'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'rmsprop']},
+            'learning_rate': {'values': [0.001, 0.01, 0.005]},
+            'batch_size': {'values': [32, 64, 128]},
+            'epochs': {'value': 500},
+            'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
+            'loss' : {'values' : ["binary_crossentropy", "categorical_crossentropy"]},
+            'sequence_length' : {'values' : [30, 60, 90]}
+        }
+        # feature set (full, stats, rf) -> modality selection (combined, pose, facial, etc.) -> (reg, norm, pca) -> fusion
+    }
+
+    print(sweep_config)
+
+    def train_wrapper():
+        train()
+
+    sweep_id = wandb.sweep(sweep=sweep_config, project=f"gru_binary_{modality}")
+    wandb.agent(sweep_id, function=train_wrapper)
+
+if __name__ == '__main__':
+    main()

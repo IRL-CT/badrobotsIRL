@@ -18,7 +18,7 @@ from get_metrics import get_test_metrics
 class TransformerModel(nn.Module):
     def __init__(self, input_dim, num_heads, hidden_dim, num_layers, num_classes, dropout, activation, loss_type):
         super(TransformerModel, self).__init__()
-        
+
         encoder_layers = nn.TransformerEncoderLayer(
             d_model=input_dim, 
             nhead=num_heads, 
@@ -30,22 +30,110 @@ class TransformerModel(nn.Module):
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers, num_layers=num_layers)
         self.fc = nn.Linear(input_dim, num_classes)
 
+        self.loss_type = loss_type
         if loss_type == "binary_crossentropy":
             self.output_activation = nn.Sigmoid()
-        elif loss_type == "categorical_crossentropy":
-            self.output_activation = nn.Softmax(dim=1)
         else:
-            raise ValueError(f"Unsupported loss function: {loss_type}")
+            self.output_activation = None
         
+        self.activation_function = activation
+
     def forward(self, x):
         x = self.transformer_encoder(x)
         x = x.mean(dim=1)
+
+        if self.activation_function:
+            x = self.activation_function(x)
+
         x = self.fc(x)
-        x = self.output_activation(x)
+
+        if self.loss_type == "binary_crossentropy":
+            x = torch.sigmoid(x)
+
         return x
 
+def transformer_model(feature_name, X_train_sequences, X_val_sequences, y_train, y_train_sequences, X_test_sequences, y_val, y_test, y_val_sequences, config):
+    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-def lstm_model(X_train_sequences, X_val_sequences, y_train, y_train_sequences, X_test_sequences, y_val, y_test, y_val_sequences, config):
+    input_dim = X_train_sequences.shape[2]
+    num_classes = len(np.unique(y_train_sequences))
+
+    num_heads = max(2, config.transformer_num_heads // 2 * 2)
+
+    kfold = KFold(n_splits=5, shuffle=True, random_state=42)
+    
+    fold_metrics = []
+    
+    for fold, (train_idx, val_idx) in enumerate(kfold.split(X_train_sequences)):
+        print(f"Training fold {fold + 1}/5...")
+
+        X_train, X_val = X_train_sequences[train_idx], X_val_sequences[val_idx]
+        y_train, y_val = y_train_sequences[train_idx], y_val_sequences[val_idx]
+        
+        model = TransformerModel(
+            input_dim=input_dim, 
+            num_heads=num_heads, 
+            hidden_dim=config.transformer_hidden_dim, 
+            num_layers=config.transformer_num_layers, 
+            num_classes=num_classes, 
+            dropout=config.dropout, 
+            activation=config.activation_function, 
+            loss_type=config.loss
+        ).to(device)
+
+        if config.loss == "categorical_crossentropy":
+            criterion = nn.CrossEntropyLoss()
+        elif config.loss == "binary_crossentropy":
+            criterion = nn.BCEWithLogitsLoss() 
+        else:
+            raise ValueError("Unsupported loss function")
+
+        optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
+
+        X_train_tensor = torch.tensor(X_train, dtype=torch.float32).to(device)
+        y_train_tensor = torch.tensor(y_train, dtype=torch.float32 if config.loss == "binary_crossentropy" else torch.long).to(device)
+        X_val_tensor = torch.tensor(X_val, dtype=torch.float32).to(device)
+        y_val_tensor = torch.tensor(y_val, dtype=torch.float32 if config.loss == "binary_crossentropy" else torch.long).to(device)
+
+        for epoch in range(config.epochs):
+            model.train()
+            optimizer.zero_grad()
+            outputs = model(X_train_tensor)
+
+            loss = criterion(outputs, y_train_tensor)
+            loss.backward()
+            optimizer.step()
+            
+            model.eval()
+            with torch.no_grad():
+                val_outputs = model(X_val_tensor)
+                val_loss = criterion(val_outputs, y_val_tensor)
+            
+            metrics = {
+                'epoch': epoch,
+                'feature': feature_name,
+                'fold': fold,
+                'train_loss': loss.item(),
+                'val_loss': val_loss.item()
+            }
+            wandb.log(metrics)
+        
+        model.eval()
+        with torch.no_grad():
+            predictions = model(X_val_tensor).cpu().numpy()
+
+        fold_metrics.append({
+            'feature': feature_name,
+            "fold": fold,
+            "train_loss": loss.item(),
+            "val_loss": val_loss.item(),
+            "predictions": predictions
+        })
+    
+    return predictions
+
+def lstm_model(feature_name, X_train_sequences, X_val_sequences, y_train, y_train_sequences, X_test_sequences, y_val, y_test, y_val_sequences, config):
     
     input_shape = X_train_sequences.shape[2]
 
@@ -90,10 +178,47 @@ def lstm_model(X_train_sequences, X_val_sequences, y_train, y_train_sequences, X
     
     model.fit(X_train_sequences, y_train_sequences, epochs=config.epochs, batch_size=config.batch_size, validation_data=(X_val_sequences, y_val_sequences), verbose=2)
     
+    for epoch in range(len(model_history.history['loss'])):
+
+        metrics = {
+            'fold': fold,
+            'feature': feature_name,
+            'epoch': epoch,
+            'loss': model_history.history['loss'][epoch],
+            'val_loss': model_history.history['val_loss'][epoch]
+        }
+
+        if 'loss' in model_history.history:
+            metrics['total_train_loss'] = model_history.history['loss'][epoch]
+        if 'val_loss' in model_history.history:
+            metrics['total_val_loss'] = model_history.history['val_loss'][epoch]
+
+        if 'accuracy' in model_history.history:
+            metrics['train_accuracy'] = model_history.history['accuracy'][epoch]
+        if 'val_accuracy' in model_history.history:
+            metrics['val_accuracy'] = model_history.history['val_accuracy'][epoch]
+        
+        if 'precision' in model_history.history:
+            metrics['train_precision'] = model_history.history['precision'][epoch]
+        if 'val_precision' in model_history.history:
+            metrics['val_precision'] = model_history.history['val_precision'][epoch]
+        
+        if 'recall' in model_history.history:
+            metrics['train_recall'] = model_history.history['recall'][epoch]
+        if 'val_recall' in model_history.history:
+            metrics['val_recall'] = model_history.history['val_recall'][epoch]
+        
+        if 'auc' in model_history.history:
+            metrics['train_auc'] = model_history.history['auc'][epoch]
+        if 'val_auc' in model_history.history:
+            metrics['val_auc'] = model_history.history['val_auc'][epoch]
+
+        wandb.log(metrics)
+
     return model.predict(X_test_sequences)
 
 
-def gru_model(X_train_sequences, X_val_sequences, y_train, y_train_sequences, X_test_sequences, y_val, y_test, y_val_sequences, config):
+def gru_model(feature_name, X_train_sequences, X_val_sequences, y_train, y_train_sequences, X_test_sequences, y_val, y_test, y_val_sequences, config):
 
     input_shape = X_train_sequences.shape[2]
 
@@ -138,74 +263,44 @@ def gru_model(X_train_sequences, X_val_sequences, y_train, y_train_sequences, X_
     
     model.fit(X_train_sequences, y_train_sequences, epochs=config.epochs, batch_size=config.batch_size, validation_data=(X_val_sequences, y_val_sequences), verbose=2)
     
-    return model.predict(X_test_sequences)
+    for epoch in range(len(model_history.history['loss'])):
 
-
-def transformer_model(X_train_sequences, X_val_sequences, y_train, y_train_sequences, X_test_sequences, y_val, y_test, y_val_sequences, config):
-    
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    input_dim = X_train_sequences.shape[2]
-    output_dim = 1
-    num_classes = len(np.unique(y_train))
-
-    if input_dim % config.transformer_num_heads != 0:
-        num_heads = 1
-        config.num_heads = 1
-    
-    model = TransformerModel(
-        input_dim=input_dim, 
-        num_heads=config.transformer_num_heads, 
-        hidden_dim=config.transformer_hidden_dim, 
-        num_layers=config.transformer_num_layers, 
-        num_classes=num_classes, 
-        dropout=config.dropout, 
-        activation=config.activation, 
-        loss_type=config.loss
-    ).to(device)
-
-    criterion = nn.CrossEntropyLoss()
-
-    if config.optimizer == "adam":
-        optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
-    elif config.optimizer == "sgd":
-        optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate)
-    elif config.optimizer == "adadelta":
-        optimizer = torch.optim.Adadelta(model.parameters(), lr=config.learning_rate)
-    elif config.optimizer == "RMSprop":
-        optimizer = torch.optim.RMSprop(model.parameters(), lr=config.learning_rate)
-
-    X_train = torch.tensor(X_train_sequences, dtype=torch.float32).to(device)
-    y_train = torch.tensor(y_train_sequences, dtype=torch.long).to(device)
-    X_val = torch.tensor(X_val_sequences, dtype=torch.float32).to(device)
-    y_val = torch.tensor(y_val_sequences, dtype=torch.long).to(device)
-
-    for epoch in range(config.epochs):
-        model.train()
-        optimizer.zero_grad()
-        outputs = model(X_train)
-        loss = criterion(outputs, y_train)
-        loss.backward()
-        optimizer.step()
-        
-        model.eval()
-        with torch.no_grad():
-            val_outputs = model(X_val)
-            val_loss = criterion(val_outputs, y_val)
-        
         metrics = {
+            'fold': fold,
+            'feature': feature_name,
             'epoch': epoch,
-            'train_loss': loss.item(),
-            'val_loss': val_loss.item()
+            'loss': model_history.history['loss'][epoch],
+            'val_loss': model_history.history['val_loss'][epoch]
         }
+
+        if 'loss' in model_history.history:
+            metrics['total_train_loss'] = model_history.history['loss'][epoch]
+        if 'val_loss' in model_history.history:
+            metrics['total_val_loss'] = model_history.history['val_loss'][epoch]
+
+        if 'accuracy' in model_history.history:
+            metrics['train_accuracy'] = model_history.history['accuracy'][epoch]
+        if 'val_accuracy' in model_history.history:
+            metrics['val_accuracy'] = model_history.history['val_accuracy'][epoch]
+        
+        if 'precision' in model_history.history:
+            metrics['train_precision'] = model_history.history['precision'][epoch]
+        if 'val_precision' in model_history.history:
+            metrics['val_precision'] = model_history.history['val_precision'][epoch]
+        
+        if 'recall' in model_history.history:
+            metrics['train_recall'] = model_history.history['recall'][epoch]
+        if 'val_recall' in model_history.history:
+            metrics['val_recall'] = model_history.history['val_recall'][epoch]
+        
+        if 'auc' in model_history.history:
+            metrics['train_auc'] = model_history.history['auc'][epoch]
+        if 'val_auc' in model_history.history:
+            metrics['val_auc'] = model_history.history['val_auc'][epoch]
+
         wandb.log(metrics)
     
-    X_test = torch.tensor(X_test_sequences, dtype=torch.float32).to(device)
-    model.eval()
-    with torch.no_grad():
-        predictions = model(X_test).cpu().numpy()
-    
-    return predictions
+    return model.predict(X_test_sequences)
 
 
 def ast_model(X_train_sequences, X_val_sequences, y_train, y_train_sequences, X_test_sequences, y_val, y_test, y_val_sequences, config):
@@ -251,17 +346,17 @@ def train():
         
         X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length = splits
 
-        X_train_pose = X_train[:, 4:28]
-        X_train_facial = np.concatenate([X_train[:, 28:63], X_train[:, 88:]], axis=1)
-        X_train_audio = X_train[:, 63:88]
+        X_train_pose = X_train.iloc[:, 4:28]
+        X_train_facial = np.concatenate([X_train.iloc[:, 28:63], X_train.iloc[:, 88:]], axis=1)
+        X_train_audio = X_train.iloc[:, 63:88]
 
-        X_val_pose = X_val[:, 4:28]
-        X_val_facial = np.concatenate([X_val[:, 28:63], X_val[:, 88:]], axis=1)
-        X_val_audio = X_val[:, 63:88]
+        X_val_pose = X_val.iloc[:, 4:28]
+        X_val_facial = np.concatenate([X_val.iloc[:, 28:63], X_val.iloc[:, 88:]], axis=1)
+        X_val_audio = X_val.iloc[:, 63:88]
 
-        X_test_pose = X_test[:, 4:28]
-        X_test_facial = np.concatenate([X_test[:, 28:63], X_test[:, 88:]], axis=1)
-        X_test_audio = X_test[:, 63:88]
+        X_test_pose = X_test.iloc[:, 4:28]
+        X_test_facial = np.concatenate([X_test.iloc[:, 28:63], X_test.iloc[:, 88:]], axis=1)
+        X_test_audio = X_test.iloc[:, 63:88]
 
         X_train_sequences_pose = X_train_sequences[:, :, 4:28]
         X_train_sequences_facial = np.concatenate([X_train_sequences[:, :, 28:63], X_train_sequences[:, :, 88:]], axis=2)
@@ -279,12 +374,15 @@ def train():
         y_val_sequences = to_categorical(y_val_sequences, num_classes=4)
         y_test_sequences = to_categorical(y_test_sequences, num_classes=4)
 
+        prediction_probs = []
         model_map = {"LSTM": lstm_model, "GRU": gru_model, "Transformer": transformer_model, "AST": ast_model}
-        audio_res = model_map[config.audio_model](X_train_sequences_audio, config)
-        facial_res = model_map[config.facial_model](X_train_sequences_facial, config)
-        pose_res = model_map[config.pose_model](X_train_sequences_pose, config)
+        audio_res = model_map[config.audio_model]("audio", X_train_sequences_audio, X_val_sequences_audio, y_train, y_train_sequences, X_test_sequences_audio, y_val, y_test, y_val_sequences, config)
+        facial_res = model_map[config.facial_model]("facial", X_train_sequences_facial, X_val_sequences_facial, y_train, y_train_sequences, X_test_sequences_facial, y_val, y_test, y_val_sequences, config)
+        pose_res = model_map[config.pose_model]("pose", X_train_sequences_pose, X_val_sequences_pose, y_train, y_train_sequences, X_test_sequences_pose, y_val, y_test, y_val_sequences, config)
+
+        prediction_probs.extend([audio_res, facial_res, pose_res])  # prediction probability vectors
         
-        final_prediction = np.mean([audio_res, facial_res, pose_res], axis=0)
+        final_prediction = np.mean(prediction_probs, axis=0)
         y_pred = np.argmax(final_prediction, axis=1)
         
         y_test_sequences = np.argmax(y_test_sequences, axis=1)
@@ -309,9 +407,9 @@ def main():
         'method': 'random',
         'name': 'model_v0_TEST',
         'parameters': {
-            'audio_model': {'values': ['LSTM', 'GRU', 'Transformer']}, # need to do AST
-            'facial_model': {'values': ['LSTM', 'GRU', 'Transformer']},
-            'pose_model': {'values': ['LSTM', 'GRU', 'Transformer']},
+            'audio_model': {'values': ['Transformer']}, #['LSTM', 'GRU', 'Transformer', 'AST']},
+            'facial_model': {'values': ['Transformer']}, #['LSTM', 'GRU', 'Transformer']},
+            'pose_model': {'values': ['Transformer']}, #['LSTM', 'GRU', 'Transformer']},
 
             'use_pca': {'values': [True, False]},
 
@@ -323,24 +421,24 @@ def main():
             'lstm_num_layers': {'values': [1, 2, 3]},
             'lstm_units': {'values': [64, 128, 256]},
 
-            'transformer_num_heads': {'values': [2, 4, 8, 16, 32, 100]},
-            'transformer_num_layers': {'values': [2, 3]},
+            'transformer_num_heads': {'values': [4, 8, 16]},
+            'transformer_num_layers': {'values': [2, 4, 6]},
             'transformer_hidden_dim': {'values': [64, 128, 256]},
 
             'ast_num_heads': {'values': [2, 4, 8, 16, 32, 100]},
             'ast_num_layers': {'values': [2, 3]},
             'ast_hidden_dim': {'values': [64, 128, 256]},
 
-            'dropout_rate': {'values': [0.0, 0.3, 0.5, 0.8]},
+            'dropout': {'values': [0.0, 0.3, 0.5, 0.8]},
+            'dense_units': {'values': [32, 64, 128]},
             'activation_function': {'values': ['tanh', 'relu', 'sigmoid', 'softmax']},
             'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'RMSprop']},
-            'learning_rate': {'values': [0.001, 0.01, 0.005]},
-            'batch_size': {'values': [32, 64, 128, 256]},
+            'learning_rate': {'values': [0.001, 0.01, 0.005, 0.0005]},
+            'batch_size': {'values': [32, 64, 128]},
             'epochs': {'value': 5},
-            'loss': {'values': ["binary_crossentropy", "categorical_crossentropy"]},
+            'loss': {'values': ["categorical_crossentropy"]},
             'reg': {'values': ['l1', 'l2', 'l1_l2']},
             'sequence_length': {'values': [30, 60, 90]},
-            #'fusion_type' : {'values' : ['early', 'intermediate', 'late']} # fusing at the end the average of the predictions
         }
     }
 
@@ -349,7 +447,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_multiclass_all_v2")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="model_v0_TEST")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':
