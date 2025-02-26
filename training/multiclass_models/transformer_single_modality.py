@@ -179,12 +179,16 @@ def transformer_model(df, config):
                     if train:
                         loss.backward()
                         optimizer.step()
+                
+                probs = torch.softmax(output, dim=1).detach().cpu().numpy()
 
                 y_true.extend(target.cpu().numpy())
                 y_pred.extend(torch.sigmoid(output).detach().cpu().numpy())
+                y_pred.extend(np.argmax(probs, axis=1))
 
             y_true = np.array(y_true)
             y_pred = np.array(y_pred)
+            y_probs = np.array(y_probs)
 
             y_pred = (y_pred > 0.5).astype(int)
 
@@ -205,6 +209,7 @@ def transformer_model(df, config):
                 'Train Precision': train_metrics['precision'],
                 'Train Recall': train_metrics['recall'],
                 'Train F1-score': train_metrics['f1'],
+                'Train Probabilities': wandb.Histogram(train_probs),
                 'Epoch': epoch + 1
             })
 
@@ -218,6 +223,7 @@ def transformer_model(df, config):
                 'Val Precision': val_metrics['precision'],
                 'Val Recall': val_metrics['recall'],
                 'Val F1-score': val_metrics['f1'],
+                'Val Probabilities': wandb.Histogram(val_probs),
                 'Epoch': epoch + 1
             })
 
@@ -228,6 +234,7 @@ def transformer_model(df, config):
             'Test Precision': test_metrics['precision'],
             'Test Recall': test_metrics['recall'],
             'Test F1-score': test_metrics['f1'],
+            'Test Probabilities': wandb.Histogram(test_probs),
             'Epoch': epoch + 1
         })
 

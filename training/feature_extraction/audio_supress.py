@@ -95,6 +95,6 @@ def process_directory(wav_dir, csv_dir):
 
 if __name__ == "__main__":
     # Example usage for a directory
-    wav_directory = "../../data/wav"
-    csv_directory = "../../data/speaker_csv"
+    wav_directory = "../nodbot_wav_files_silenced"
+    csv_directory = "../speaker_diarization_csv"
     process_directory(wav_directory, csv_directory)

@@ -183,20 +183,24 @@ def transformer_model(df, config):
                         loss.backward()
                         optimizer.step()
 
+                probs = torch.sigmoid(output).detach().cpu().numpy()
+
                 y_true.extend(target.cpu().numpy())
                 y_pred.extend(torch.sigmoid(output).detach().cpu().numpy())
+                y_pred.extend(np.argmax(probs, axis=1))
 
             y_true = np.array(y_true)
             y_pred = np.array(y_pred)
+            y_probs = np.array(y_probs)
 
             y_pred = (y_pred > 0.5).astype(int)
 
             metrics = get_metrics(y_pred, y_true)
-            return epoch_loss / len(loader), metrics
+            return epoch_loss / len(loader), metrics, y_probs
 
         for epoch in range(epochs):
-            train_loss, train_metrics = run_epoch(train_loader, model, criterion, optimizer, train=True)
-            val_loss, val_metrics = run_epoch(val_loader, model, criterion, train=False)
+            train_loss, train_metrics, train_probs = run_epoch(train_loader, model, criterion, optimizer, train=True)
+            val_loss, val_metrics, val_probs = run_epoch(val_loader, model, criterion, train=False)
 
             print(f'Epoch {epoch+1}, Train Loss: {train_loss:.4f}, '
                 f'Train Accuracy: {train_metrics["accuracy"]:.4f}, Precision: {train_metrics["precision"]:.4f}, '
@@ -208,6 +212,7 @@ def transformer_model(df, config):
                 'Train Precision': train_metrics['precision'],
                 'Train Recall': train_metrics['recall'],
                 'Train F1-score': train_metrics['f1'],
+                'Train Probabilities': wandb.Histogram(train_probs),
                 'Epoch': epoch + 1
             })
 
@@ -221,16 +226,18 @@ def transformer_model(df, config):
                 'Val Precision': val_metrics['precision'],
                 'Val Recall': val_metrics['recall'],
                 'Val F1-score': val_metrics['f1'],
+                'Val Probabilities': wandb.Histogram(val_probs),
                 'Epoch': epoch + 1
             })
 
-        test_loss, test_metrics = run_epoch(test_loader, model, criterion, train=False)
+        test_loss, test_metrics, test_probs = run_epoch(test_loader, model, criterion, train=False)
         wandb.log({
             'Test Loss': test_loss,
             'Test Accuracy': test_metrics['accuracy'],
             'Test Precision': test_metrics['precision'],
             'Test Recall': test_metrics['recall'],
             'Test F1-score': test_metrics['f1'],
+            'Test Probabilities': wandb.Histogram(test_probs),
             'Epoch': epoch + 1
         })
 

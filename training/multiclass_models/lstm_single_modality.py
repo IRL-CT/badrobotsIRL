@@ -6,7 +6,7 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from keras.models import Sequential, Model
 from keras.layers import LSTM, Dense, Dropout, BatchNormalization, Input, Bidirectional, concatenate
-from keras.callbacks import ModelCheckpoint
+from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.regularizers import l1_l2, l1, l2
 from keras.utils import to_categorical
 import tensorflow as tf
@@ -140,13 +140,22 @@ def train_single_modality_model(df, config):
         
         model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
 
-        model_checkpoint = ModelCheckpoint("../best_model.keras", monitor="val_accuracy", save_best_only=True)
+        #model_checkpoint = ModelCheckpoint("../best_model.keras", monitor="val_accuracy", save_best_only=True)
+
+        early_stopping = EarlyStopping(
+            monitor="val_accuracy",
+            patience=10,
+            min_delta=0.001,
+            restore_best_weights=True,
+            verbose=1
+        )
         
         model_history = model.fit(
             X_train_sequences, y_train_sequences,
             epochs=epochs,
             batch_size=batch_size,
             validation_data=(X_val_sequences, y_val_sequences),
+            callbacks=[early_stopping],
             # callbacks=[model_checkpoint],
             verbose=2
         )
@@ -178,6 +187,7 @@ def train_single_modality_model(df, config):
             wandb.log(metrics)
 
         y_predict_probs = model.predict(X_test_sequences)
+        wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs})
         
         y_pred = np.argmax(y_predict_probs, axis=1)
         y_test_sequences = np.argmax(y_test_sequences, axis=1)
@@ -278,7 +288,7 @@ def main():
     
     sweep_config = {
         'method': 'random',
-        'name': f'lstm_multiclass_{modality}',
+        'name': f'lstm_multiclass_{modality}_v1',
         'parameters': {
             'modality' : {'value': modality},
 
@@ -307,7 +317,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project=f"lstm_multiclass_{modality}")
+    sweep_id = wandb.sweep(sweep=sweep_config, project=f"lstm_multiclass_{modality}_v1")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from keras.models import Sequential, Model
 from keras.layers import LSTM, Dense, Dropout, BatchNormalization, Input, Bidirectional, concatenate
-from keras.callbacks import ModelCheckpoint
+from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.regularizers import l1_l2, l1, l2
 from keras.utils import to_categorical
 import tensorflow as tf
@@ -50,7 +50,7 @@ def train_single_modality_model(df, config):
         if data == "reg" or data == "norm":
             splits = create_data_splits(
                 df, "binary",
-                fold_no=0,
+                fold_no=fold,
                 num_folds=5,
                 seed_value=42,
                 sequence_length=sequence_length)
@@ -60,7 +60,7 @@ def train_single_modality_model(df, config):
         elif data == "pca":
             splits = create_data_splits_pca(
                 df, "binary",
-                fold_no=0,
+                fold_no=fold,
                 num_folds=5,
                 seed_value=42,
                 sequence_length=sequence_length)
@@ -127,26 +127,34 @@ def train_single_modality_model(df, config):
             model.add(Dense(1, activation="sigmoid"))
 
         if optimizer == 'adam':
-            optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+            optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
         elif optimizer == 'sgd':
-            optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate)
+            optimizer = tf.keras.optimizers.legacy.SGD(learning_rate=learning_rate)
         elif optimizer == 'adadelta':
-            optimizer = tf.keras.optimizers.Adadelta(learning_rate=learning_rate)
+            optimizer = tf.keras.optimizers.legacy.Adadelta(learning_rate=learning_rate)
         elif optimizer == 'rmsprop':
-            optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)
+            optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
 
         model.summary()
         
         model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
 
-        model_checkpoint = ModelCheckpoint("../best_model.keras", monitor="val_accuracy", save_best_only=True)
+        #model_checkpoint = ModelCheckpoint("../best_model.keras", monitor="val_accuracy", save_best_only=True)
+
+        # early_stopping = EarlyStopping(
+        #     monitor="val_accuracy",
+        #     patience=10,
+        #     min_delta=0.001,
+        #     restore_best_weights=True,
+        #     verbose=1
+        # )
         
         model_history = model.fit(
             X_train_sequences, y_train_sequences,
             epochs=epochs,
             batch_size=batch_size,
             validation_data=(X_val_sequences, y_val_sequences),
-            # callbacks=[model_checkpoint],
+            #callbacks=[early_stopping],
             verbose=2
         )
 
@@ -177,6 +185,8 @@ def train_single_modality_model(df, config):
             wandb.log(metrics)
 
         y_predict_probs = model.predict(X_test_sequences)
+        y_predict_probs_list = np.array(y_predict_probs).tolist()
+        wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs_list})
         
         if loss == "categorical_crossentropy":
             y_pred = np.argmax(y_predict_probs, axis=1)
@@ -190,7 +200,7 @@ def train_single_modality_model(df, config):
         print(f"Fold {fold} Test Metrics:", test_metrics)
         
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
-    wandb.log(avg_test_metrics)
+    wandb.run.summary.update(avg_test_metrics)
     print("Average Test Metrics Across All Folds:", avg_test_metrics)
 
 def train():
@@ -281,7 +291,7 @@ def main():
     
     sweep_config = {
         'method': 'random',
-        'name': f'lstm_binary_{modality}',
+        'name': f'lstm_binary_{modality}_v1',
         'parameters': {
             'modality' : {'value': modality},
 
@@ -297,7 +307,7 @@ def main():
             'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'rmsprop']},
             'learning_rate': {'values': [0.001, 0.01, 0.005]},
             'batch_size': {'values': [32, 64, 128]},
-            'epochs': {'value': 500},
+            'epochs': {'value': 200},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["binary_crossentropy", "categorical_crossentropy"]},
             'sequence_length' : {'values' : [30, 60, 90]}
@@ -310,7 +320,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project=f"lstm_binary_{modality}")
+    sweep_id = wandb.sweep(sweep=sweep_config, project=f"lstm_binary_{modality}_v1")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':

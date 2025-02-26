@@ -301,3 +301,5 @@ if __name__ == "__main__":
 
     #DEFAULT COMMAND
     #python ast_feats.py --audio_dir ../../data/audio/wav/ --label_dir ../../data/all_data_05.csv  --window_duration 1.0 --hop_duration 0.5
+
+    #python ast_feats.py --audio_dir /feature_extraction/nodbot_wav_files_silenced/ --label_dir all_participants_0_3.csv --session p2nodbot --window_duration 1.0 --hop_duration 0.5
