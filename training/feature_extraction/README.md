@@ -31,7 +31,7 @@ Arguments:
 
  ` python3 get_text_embeddings.py ../../data/transcripts/ ../../data/all_participants.csv ../../data/text_embeddings/ `
 
- text embeddings are matched to the frequency of the labels. Using pca.py, the text_embeddings csv can be reduced to a smaller feature vector.
+ text embeddings are matched to the frequency of the labels. Using pca.py, the text_embeddings csv can be reduced to a smaller feature vector, in this case explaining 95% of variance.
 
 The pca embeddings can be treated like any other feature modality, and for single modality training we can use the 2 datasets (test PCA and original, dimension 768)
 
