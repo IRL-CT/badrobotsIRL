@@ -16,10 +16,10 @@ fine_tuning_ast.py -- trains AST in dataset, calculates features too
 get_text_embeddings.py - gets text embeddings from BERT (or other specified model) into csv file 
 
 Arguments:
-*'vtt_folder', help='Path to the VTT folder')
-*'label_csv', help='Path to the label csv file')
-*'output_prefix', help='Prefix for output files')
-*'--model', default='bert-base-uncased', 
+* 'vtt_folder', help='Path to the VTT folder')
+* 'label_csv', help='Path to the label csv file')
+* 'output_prefix', help='Prefix for output files')
+* '--model', default='bert-base-uncased', 
 
  ` python3 get_text_embeddings.py ../../data/transcripts/ ../../data/all_participants.csv ../../data/text_embeddings/ `
 
