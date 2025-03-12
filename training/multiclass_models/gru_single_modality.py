@@ -32,6 +32,8 @@ def train_single_modality_model(df, config):
     sequence_length = config.sequence_length
     data = config.data
 
+    print(df)
+
     test_metrics_list = {
         "test_accuracy": [],
         "test_precision": [],
@@ -142,20 +144,20 @@ def train_single_modality_model(df, config):
 
         #model_checkpoint = ModelCheckpoint("../best_model.keras", monitor="val_accuracy", save_best_only=True)
 
-        early_stopping = EarlyStopping(
-            monitor="val_accuracy",
-            patience=10,
-            min_delta=0.001,
-            restore_best_weights=True,
-            verbose=1
-        )
+        # early_stopping = EarlyStopping(
+        #     monitor="val_accuracy",
+        #     patience=10,
+        #     min_delta=0.001,
+        #     restore_best_weights=True,
+        #     verbose=1
+        # )
         
         model_history = model.fit(
             X_train_sequences, y_train_sequences,
             epochs=epochs,
             batch_size=batch_size,
             validation_data=(X_val_sequences, y_val_sequences),
-            callbacks=[early_stopping],
+            # callbacks=[early_stopping],
             # callbacks=[model_checkpoint],
             verbose=2
         )
@@ -187,7 +189,13 @@ def train_single_modality_model(df, config):
             wandb.log(metrics)
 
         y_predict_probs = model.predict(X_test_sequences)
+
+        df_probs = pd.DataFrame(y_predict_probs)
+
+        table = wandb.Table(dataframe=df_probs)
+
         wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs})
+        wandb.log({"fold_{}_prediction_probabilities".format(fold): table})
         
         y_pred = np.argmax(y_predict_probs, axis=1)
         y_test_sequences = np.argmax(y_test_sequences, axis=1)
@@ -195,7 +203,10 @@ def train_single_modality_model(df, config):
         test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
         wandb.log({f"fold_{fold}_metrics": test_metrics})
         print(f"Fold {fold} Test Metrics:", test_metrics)
-    
+
+        for key in test_metrics_list.keys():
+            test_metrics_list[key].append(test_metrics[key])
+
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
     wandb.log(avg_test_metrics)
     print("Average Test Metrics Across All Folds:", avg_test_metrics)
@@ -280,11 +291,13 @@ def train():
 
         return df
 
-    train_single_modality_model(get_modality_data(modality, data), config)
+    df = get_modality_data(modality, data)
+
+    train_single_modality_model(df, config)
 
 def main():
 
-    modality = "facial"
+    modality = "audio"
     
     sweep_config = {
         'method': 'random',
@@ -304,7 +317,7 @@ def main():
             'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'rmsprop']},
             'learning_rate': {'values': [0.001, 0.01, 0.005]},
             'batch_size': {'values': [32, 64, 128]},
-            'epochs': {'value': 500},
+            'epochs': {'value': 100},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["categorical_crossentropy"]},
             'sequence_length' : {'values' : [30, 60, 90]}

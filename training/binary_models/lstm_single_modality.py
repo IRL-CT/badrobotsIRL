@@ -185,8 +185,13 @@ def train_single_modality_model(df, config):
             wandb.log(metrics)
 
         y_predict_probs = model.predict(X_test_sequences)
-        y_predict_probs_list = np.array(y_predict_probs).tolist()
-        wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs_list})
+
+        df_probs = pd.DataFrame(y_predict_probs)
+
+        table = wandb.Table(dataframe=df_probs)
+
+        wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs})
+        wandb.log({"fold_{}_prediction_probabilities".format(fold): table})
         
         if loss == "categorical_crossentropy":
             y_pred = np.argmax(y_predict_probs, axis=1)
@@ -198,9 +203,12 @@ def train_single_modality_model(df, config):
         test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
         wandb.log({f"fold_{fold}_metrics": test_metrics})
         print(f"Fold {fold} Test Metrics:", test_metrics)
-        
+    
+        for key in test_metrics_list.keys():
+            test_metrics_list[key].append(test_metrics[key])
+
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
-    wandb.run.summary.update(avg_test_metrics)
+    wandb.log(avg_test_metrics)
     print("Average Test Metrics Across All Folds:", avg_test_metrics)
 
 def train():
@@ -287,7 +295,7 @@ def train():
 
 def main():
 
-    modality = "audio"
+    modality = "facial"
     
     sweep_config = {
         'method': 'random',
@@ -307,7 +315,7 @@ def main():
             'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'rmsprop']},
             'learning_rate': {'values': [0.001, 0.01, 0.005]},
             'batch_size': {'values': [32, 64, 128]},
-            'epochs': {'value': 200},
+            'epochs': {'value': 100},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["binary_crossentropy", "categorical_crossentropy"]},
             'sequence_length' : {'values' : [30, 60, 90]}
