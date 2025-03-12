@@ -2,7 +2,7 @@
 
 Shannon Liu, Maria Teresa Parreira, Wendy Ju
 
-<!-- Read paper [here](). -->
+Read the paper [here](https://dl.acm.org/doi/10.5555/3721488.3721699)!
 
 ## Overview
 
