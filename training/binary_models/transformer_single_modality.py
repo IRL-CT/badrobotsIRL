@@ -50,7 +50,7 @@ class TransformerModel(nn.Module):
         x = self.output_activation(x)
         return x
     
-def transformer_model(df, config):
+def transformer_model(df, config, fold):
 
     print(config)
 
@@ -76,176 +76,180 @@ def transformer_model(df, config):
     epochs = config.epochs
     data = config.data
 
-    for fold in range(5):
+    splits = None
 
-        splits = None
+    if data == "reg" or data == "norm":
+        splits = create_data_splits(
+            df, "binary",
+            fold_no=fold,
+            num_folds=5,
+            seed_value=42,
+            sequence_length=sequence_length)
+        if splits is None:
+            return
 
-        if data == "reg" or data == "norm":
-            splits = create_data_splits(
-                df, "binary",
-                fold_no=5,
-                num_folds=5,
-                seed_value=42,
-                sequence_length=sequence_length)
-            if splits is None:
-                return
+    elif data == "pca":
+        splits = create_data_splits_pca(
+            df, "binary",
+            fold_no=fold,
+            num_folds=5,
+            seed_value=42,
+            sequence_length=sequence_length)
+        if splits is None:
+            return
 
-        elif data == "pca":
-            splits = create_data_splits_pca(
-                df, "binary",
-                fold_no=5,
-                num_folds=5,
-                seed_value=42,
-                sequence_length=sequence_length)
-            if splits is None:
-                return
+    X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length = splits
 
-        X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length = splits
+    print("X_train_sequences shape:", X_train_sequences.shape)
+    print("X_val_sequences shape:", X_val_sequences.shape)
+    print("X_test_sequences shape:", X_test_sequences.shape)
 
-        print("X_train_sequences shape:", X_train_sequences.shape)
-        print("X_val_sequences shape:", X_val_sequences.shape)
-        print("X_test_sequences shape:", X_test_sequences.shape)
+    input_dim = X_train_sequences.shape[2]
+    output_dim = 1
 
-        input_dim = X_train_sequences.shape[2]
-        output_dim = 1
+    if input_dim % num_heads != 0:
+        num_heads = 1
+        config.num_heads = 1
+    
+    model = TransformerModel(
+        input_dim=input_dim, 
+        num_heads=num_heads, 
+        hidden_dim=hidden_dim, 
+        num_layers=num_layers, 
+        num_classes=1, 
+        dropout=dropout, 
+        activation=activation, 
+        loss_type=loss
+    ).to(device)
 
-        if input_dim % num_heads != 0:
-            num_heads = 1
-            config.num_heads = 1
+    optimizer = {
+        'adam': torch.optim.Adam(model.parameters(), lr=learning_rate),
+        'sgd': torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9),
+        'adadelta': torch.optim.Adadelta(model.parameters(), lr=learning_rate),
+        'RMSprop': torch.optim.RMSprop(model.parameters(), lr=learning_rate)
+    }.get(optimizer, torch.optim.Adam(model.parameters(), lr=learning_rate))
+
+    criterion = {
+        'binary_crossentropy': nn.BCEWithLogitsLoss(),
+        'categorical_crossentropy': nn.CrossEntropyLoss()
+    }.get(config.loss, nn.BCEWithLogitsLoss())
+
+    train_loader = torch.utils.data.DataLoader(
+        torch.utils.data.TensorDataset(
+            torch.Tensor(X_train_sequences), 
+            torch.Tensor(y_train_sequences).unsqueeze(1)
+        ),
+        batch_size=batch_size,
+        shuffle=True
+    )
+
+    val_loader = torch.utils.data.DataLoader(
+        torch.utils.data.TensorDataset(
+            torch.Tensor(X_val_sequences), 
+            torch.Tensor(y_val_sequences).unsqueeze(1)
+        ),
+        batch_size=config.batch_size,
+        shuffle=False
+    )
+
+    test_loader = torch.utils.data.DataLoader(
+        torch.utils.data.TensorDataset(
+            torch.Tensor(X_test_sequences), 
+            torch.Tensor(y_test_sequences).unsqueeze(1)
+        ),
+        batch_size=config.batch_size,
+        shuffle=False
+    )
+    
+    def run_epoch(loader, model, criterion, optimizer=None, train=True):
+        epoch_loss = 0.0
+        y_true, y_pred, y_probs = [], [], []
         
-        model = TransformerModel(
-            input_dim=input_dim, 
-            num_heads=num_heads, 
-            hidden_dim=hidden_dim, 
-            num_layers=num_layers, 
-            num_classes=1, 
-            dropout=dropout, 
-            activation=activation, 
-            loss_type=loss
-        ).to(device)
+        for data, target in loader:
+            data, target = data.to(device), target.to(device)
+            if train:
+                model.train()
+                optimizer.zero_grad()
+            else:
+                model.eval()
 
-        optimizer = {
-            'adam': torch.optim.Adam(model.parameters(), lr=learning_rate),
-            'sgd': torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9),
-            'adadelta': torch.optim.Adadelta(model.parameters(), lr=learning_rate),
-            'RMSprop': torch.optim.RMSprop(model.parameters(), lr=learning_rate)
-        }.get(optimizer, torch.optim.Adam(model.parameters(), lr=learning_rate))
-
-        criterion = {
-            'binary_crossentropy': nn.BCEWithLogitsLoss(),
-            'categorical_crossentropy': nn.CrossEntropyLoss()
-        }.get(config.loss, nn.BCEWithLogitsLoss())
-
-        train_loader = torch.utils.data.DataLoader(
-            torch.utils.data.TensorDataset(
-                torch.Tensor(X_train_sequences), 
-                torch.Tensor(y_train_sequences).unsqueeze(1)
-            ),
-            batch_size=batch_size,
-            shuffle=True
-        )
-
-        val_loader = torch.utils.data.DataLoader(
-            torch.utils.data.TensorDataset(
-                torch.Tensor(X_val_sequences), 
-                torch.Tensor(y_val_sequences).unsqueeze(1)
-            ),
-            batch_size=config.batch_size,
-            shuffle=False
-        )
-
-        test_loader = torch.utils.data.DataLoader(
-            torch.utils.data.TensorDataset(
-                torch.Tensor(X_test_sequences), 
-                torch.Tensor(y_test_sequences).unsqueeze(1)
-            ),
-            batch_size=config.batch_size,
-            shuffle=False
-        )
-        
-        def run_epoch(loader, model, criterion, optimizer=None, train=True):
-            epoch_loss = 0.0
-            y_true, y_pred = [], []
-            
-            for data, target in loader:
-                data, target = data.to(device), target.to(device)
+            with torch.set_grad_enabled(train):
+                output = model(data)
+                loss = criterion(output, target)
+                epoch_loss += loss.item()
                 if train:
-                    model.train()
-                    optimizer.zero_grad()
-                else:
-                    model.eval()
+                    loss.backward()
+                    optimizer.step()
 
-                with torch.set_grad_enabled(train):
-                    output = model(data)
-                    loss = criterion(output, target)
-                    epoch_loss += loss.item()
-                    if train:
-                        loss.backward()
-                        optimizer.step()
+            probs = torch.sigmoid(output).detach().cpu().numpy()
+            y_probs.extend(probs)
 
-                probs = torch.sigmoid(output).detach().cpu().numpy()
-
-                y_true.extend(target.cpu().numpy())
-                y_pred.extend(torch.sigmoid(output).detach().cpu().numpy())
+            y_true.extend(target.cpu().numpy())
+            if config.loss == "binary_crossentropy":
+                y_pred.extend((torch.sigmoid(output).detach().cpu().numpy() > 0.5).astype(int))
+            elif config.loss == "categorical_crossentropy":
                 y_pred.extend(np.argmax(probs, axis=1))
 
-            y_true = np.array(y_true)
-            y_pred = np.array(y_pred)
-            y_probs = np.array(y_probs)
 
-            y_pred = (y_pred > 0.5).astype(int)
+        y_true = np.array(y_true).flatten()
+        y_pred = np.array(y_pred).flatten()
+        y_probs = np.array(y_probs).flatten()
 
-            metrics = get_metrics(y_pred, y_true)
-            return epoch_loss / len(loader), metrics, y_probs
+        y_pred = (y_pred > 0.5).astype(int)
 
-        for epoch in range(epochs):
-            train_loss, train_metrics, train_probs = run_epoch(train_loader, model, criterion, optimizer, train=True)
-            val_loss, val_metrics, val_probs = run_epoch(val_loader, model, criterion, train=False)
+        metrics = get_metrics(y_pred, y_true)
+        return epoch_loss / len(loader), metrics, y_probs
 
-            print(f'Epoch {epoch+1}, Train Loss: {train_loss:.4f}, '
-                f'Train Accuracy: {train_metrics["accuracy"]:.4f}, Precision: {train_metrics["precision"]:.4f}, '
-                f'Recall: {train_metrics["recall"]:.4f}, F1-score: {train_metrics["f1"]:.4f}')
+    for epoch in range(epochs):
+        train_loss, train_metrics, train_probs = run_epoch(train_loader, model, criterion, optimizer, train=True)
+        val_loss, val_metrics, val_probs = run_epoch(val_loader, model, criterion, train=False)
 
-            wandb.log({
-                'Train Loss': train_loss,
-                'Train Accuracy': train_metrics['accuracy'],
-                'Train Precision': train_metrics['precision'],
-                'Train Recall': train_metrics['recall'],
-                'Train F1-score': train_metrics['f1'],
-                'Train Probabilities': wandb.Histogram(train_probs),
-                'Epoch': epoch + 1
-            })
+        print(f'Fold {fold} Epoch {epoch+1}, Train Loss: {train_loss:.4f}, '
+            f'Train Accuracy: {train_metrics["accuracy"]:.4f}, Precision: {train_metrics["precision"]:.4f}, '
+            f'Recall: {train_metrics["recall"]:.4f}, F1-score: {train_metrics["f1"]:.4f}')
 
-            print(f'Epoch {epoch+1}, Val Loss: {val_loss:.4f}, '
-                f'Val Accuracy: {val_metrics["accuracy"]:.4f}, Precision: {val_metrics["precision"]:.4f}, '
-                f'Recall: {val_metrics["recall"]:.4f}, F1-score: {val_metrics["f1"]:.4f}')
-            
-            wandb.log({
-                'Val Loss': val_loss,
-                'Val Accuracy': val_metrics['accuracy'],
-                'Val Precision': val_metrics['precision'],
-                'Val Recall': val_metrics['recall'],
-                'Val F1-score': val_metrics['f1'],
-                'Val Probabilities': wandb.Histogram(val_probs),
-                'Epoch': epoch + 1
-            })
-
-        test_loss, test_metrics, test_probs = run_epoch(test_loader, model, criterion, train=False)
         wandb.log({
-            'Test Loss': test_loss,
-            'Test Accuracy': test_metrics['accuracy'],
-            'Test Precision': test_metrics['precision'],
-            'Test Recall': test_metrics['recall'],
-            'Test F1-score': test_metrics['f1'],
-            'Test Probabilities': wandb.Histogram(test_probs),
-            'Epoch': epoch + 1
+            f'Fold {fold} Train Loss': train_loss,
+            f'Fold {fold} Train Accuracy': train_metrics['accuracy'],
+            f'Fold {fold} Train Precision': train_metrics['precision'],
+            f'Fold {fold} Train Recall': train_metrics['recall'],
+            f'Fold {fold} Train F1-score': train_metrics['f1'],
+            f'Fold {fold} Train Probabilities': wandb.Histogram(train_probs),
+            f'Fold {fold} Epoch': epoch + 1
         })
 
-        print(f'Test Loss: {test_loss:.4f}, '
-            f'Test Accuracy: {test_metrics["accuracy"]:.4f}, Precision: {test_metrics["precision"]:.4f}, '
-            f'Recall: {test_metrics["recall"]:.4f}, F1-score: {test_metrics["f1"]:.4f}')
+        print(f'Fold {fold} Epoch {epoch+1}, Val Loss: {val_loss:.4f}, '
+            f'Val Accuracy: {val_metrics["accuracy"]:.4f}, Precision: {val_metrics["precision"]:.4f}, '
+            f'Recall: {val_metrics["recall"]:.4f}, F1-score: {val_metrics["f1"]:.4f}')
+        
+        wandb.log({
+            f'Fold {fold} Val Loss': val_loss,
+            f'Fold {fold} Val Accuracy': val_metrics['accuracy'],
+            f'Fold {fold} Val Precision': val_metrics['precision'],
+            f'Fold {fold} Val Recall': val_metrics['recall'],
+            f'Fold {fold} Val F1-score': val_metrics['f1'],
+            f'Fold {fold} Val Probabilities': wandb.Histogram(val_probs),
+            f'Fold {fold} Epoch': epoch + 1
+        })
 
-        wandb.finish()
+    test_loss, test_metrics, test_probs = run_epoch(test_loader, model, criterion, train=False)
+    wandb.log({
+        f'Fold {fold} Test Loss': test_loss,
+        f'Fold {fold} Test Accuracy': test_metrics['accuracy'],
+        f'Fold {fold} Test Precision': test_metrics['precision'],
+        f'Fold {fold} Test Recall': test_metrics['recall'],
+        f'Fold {fold} Test F1-score': test_metrics['f1'],
+        f'Fold {fold} Test Probabilities': wandb.Histogram(test_probs),
+        f'Fold {fold} Epoch': epoch + 1
+    })
+
+    print("Val probs:", val_probs)
+    print("Test probs:", test_probs)
+
+    print(f'Test Loss: {test_loss:.4f}, '
+        f'Test Accuracy: {test_metrics["accuracy"]:.4f}, Precision: {test_metrics["precision"]:.4f}, '
+        f'Recall: {test_metrics["recall"]:.4f}, F1-score: {test_metrics["f1"]:.4f}')
+
 
 def train():
 
@@ -321,8 +325,11 @@ def train():
             df = create_normalized_df(df)
 
         return df
-
-    transformer_model(get_modality_data(modality, data), config)
+    
+    for fold in range(5):
+        print("Starting fold ", fold)
+        transformer_model(get_modality_data(modality, data), config, fold)
+    
 
 
 def main():
@@ -331,7 +338,7 @@ def main():
 
     sweep_config = {
         'method': 'random',
-        'name': f'transformer_{modality}',
+        'name': f'transformer_binary_{modality}_test',
         'parameters': {
             'modality' : {'value': modality},
             
@@ -346,7 +353,7 @@ def main():
             'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'RMSprop']},
             'learning_rate': {'values': [0.001, 0.01, 0.005]},
             'batch_size': {'values': [32, 64, 128, 256]},
-            'epochs': {'value': 500},
+            'epochs': {'value': 5},
             'loss': {'values': ["binary_crossentropy", "categorical_crossentropy"]},
             'sequence_length': {'values': [1, 5, 15, 30, 60, 90]},
         }
@@ -355,7 +362,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project=f"transformer_{modality}")
+    sweep_id = wandb.sweep(sweep=sweep_config, project=f"transformer_binary_{modality}_test")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':

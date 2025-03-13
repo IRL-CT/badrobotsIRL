@@ -188,10 +188,16 @@ def train_single_modality_model(df, config):
 
         df_probs = pd.DataFrame(y_predict_probs)
 
+        print(df_probs)
+
+        df_probs = pd.DataFrame(y_predict_probs, columns=[f"class_{i}" for i in range(y_predict_probs.shape[1])])
+
+        print(df_probs)
+
         table = wandb.Table(dataframe=df_probs)
 
         wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs})
-        wandb.log({"fold_{}_prediction_probabilities".format(fold): table})
+        wandb.log({"fold_{}_prediction_probabilities_table".format(fold): table})
         
         if loss == "categorical_crossentropy":
             y_pred = np.argmax(y_predict_probs, axis=1)
@@ -295,7 +301,7 @@ def train():
 
 def main():
 
-    modality = "audio"
+    modality = "facial"
     
     sweep_config = {
         'method': 'random',
