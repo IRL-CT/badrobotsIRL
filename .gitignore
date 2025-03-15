@@ -18,4 +18,5 @@ training/multiclass_models/__pycache__
 training/multiclass_models/training_outputs
 training/multiclass_models/wandb
 training/feature_extraction
+preprocessing/text_embeddings.csv
 get-pip.py
