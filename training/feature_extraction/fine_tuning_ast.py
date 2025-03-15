@@ -60,7 +60,7 @@ sweep_config = {
             'values': [4, 8]  # Add gradient accumulation
         },
         'num_epochs': {
-            'value': 3
+            'value': 100
         }
     }
 }
@@ -98,7 +98,7 @@ class ASTFineTuner:
             label_dim=num_classes,
             input_tdim=1024,
             imagenet_pretrain=True,
-            audioset_pretrain=True
+            audioset_pretrain=False
         )
 
         audioset_mdl_url = 'https://www.dropbox.com/s/cv4knew8mvbrnvq/audioset_0.4593.pth?dl=1'
@@ -290,8 +290,8 @@ def train():
     random.seed(seed_value)
 
     # Default arguments
-    audio_dir = Path('../../data/wav')
-    label_path = '../../data/all_participants.csv'
+    audio_dir = Path('nodbot_wav_files_silenced')
+    label_path = 'all_participants_0_3.csv'
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--audio_dir', type=str, default=str(audio_dir))

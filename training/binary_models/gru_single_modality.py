@@ -301,7 +301,7 @@ def train():
 
 def main():
 
-    modality = "facial"
+    modality = "audio"
     
     sweep_config = {
         'method': 'random',

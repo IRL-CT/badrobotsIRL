@@ -130,13 +130,13 @@ def train_single_modality_model(df, config):
         print(f"Model output classes: {num_classes}")
         
         if optimizer == 'adam':
-            optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+            optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
         elif optimizer == 'sgd':
-            optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate)
+            optimizer = tf.keras.optimizers.legacy.SGD(learning_rate=learning_rate)
         elif optimizer == 'adadelta':
-            optimizer = tf.keras.optimizers.Adadelta(learning_rate=learning_rate)
+            optimizer = tf.keras.optimizers.legacy.Adadelta(learning_rate=learning_rate)
         elif optimizer == 'rmsprop':
-            optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)
+            optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
 
         model.summary()
         
@@ -195,7 +195,7 @@ def train_single_modality_model(df, config):
         table = wandb.Table(dataframe=df_probs)
 
         wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs})
-        wandb.log({"fold_{}_prediction_probabilities".format(fold): table})
+        wandb.log({"fold_{}_prediction_probabilities_table".format(fold): table})
         
         y_pred = np.argmax(y_predict_probs, axis=1)
         y_test_sequences = np.argmax(y_test_sequences, axis=1)
@@ -305,7 +305,7 @@ def main():
         'parameters': {
             'modality' : {'value': modality},
 
-            'feature_set' : {'values': ["full", "stats", "rf"]},
+            'feature_set' : {'values': ["full", "rf", "stats"]},
             'data' : {'values' : ["reg", "norm", "pca"]},
 
             'use_bidirectional': {'values': [True, False]},
@@ -320,7 +320,7 @@ def main():
             'epochs': {'value': 100},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["categorical_crossentropy"]},
-            'sequence_length' : {'values' : [30, 60, 90]}
+            'sequence_length' : {'values' : [10, 30, 60, 90]}
         }
         # feature set (full, stats, rf) -> modality selection (combined, pose, facial, etc.) -> (reg, norm, pca) -> fusion
     }

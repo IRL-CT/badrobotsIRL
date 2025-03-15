@@ -301,7 +301,7 @@ def train():
 
 def main():
 
-    modality = "pose"
+    modality = "facial"
     
     sweep_config = {
         'method': 'random',
