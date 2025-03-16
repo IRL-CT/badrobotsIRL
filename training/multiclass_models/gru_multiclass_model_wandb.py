@@ -464,7 +464,7 @@ def train_intermediate_fusion(df_pose, df_facial, df_audio, config):
     print("Average Test Metrics Across All Folds:", avg_test_metrics)
 
 
-def train_late_fusion(df_pose, df_facial, df_audio, config):
+def train_late_fusion(modalities, config):
 
     num_gru_layers = config.num_gru_layers
     gru_units = config.gru_units
@@ -513,160 +513,54 @@ def train_late_fusion(df_pose, df_facial, df_audio, config):
         optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
 
     for fold in range(5):
+
         print("Fold ", fold)
 
-        splits_pose, splits_facial, splits_audio = None, None, None
-        
-        input = []
-        output = []
+        selected_modalities = [m for m in modality if m in modalities]
 
-        if feature_set == "full" or feature_set == "rf":
-            if data in ["reg", "norm"]:
-                if "pose" in modality:
-                    splits_pose = create_data_splits(df_pose, "multiclass", fold_no=fold, num_folds=5, seed_value=42, sequence_length=sequence_length)
-                    X_train_pose, X_val_pose, X_test_pose, y_train, y_val, y_test, X_train_pose_seq, y_train_sequences, X_val_pose_seq, y_val_sequences, X_test_pose_seq, y_test_sequences, sequence_length = splits_pose
-                if "facial" in modality:
-                    splits_facial = create_data_splits(df_facial, "multiclass", fold_no=fold, num_folds=5, seed_value=42, sequence_length=sequence_length)
-                    X_train_facial, X_val_facial, X_test_facial, y_train, y_val, y_test, X_train_facial_seq, y_train_sequences, X_val_facial_seq, y_val_sequences, X_test_facial_seq, y_test_sequences, sequence_length = splits_facial
-                if "audio" in modality:
-                    splits_audio = create_data_splits(df_audio, "multiclass", fold_no=fold, num_folds=5, seed_value=42, sequence_length=sequence_length)
-                    X_train_audio, X_val_audio, X_test_audio, y_train, y_val, y_test, X_train_audio_seq, y_train_sequences, X_val_audio_seq, y_val_sequences, X_test_audio_seq, y_test_sequences, sequence_length = splits_audio
-            elif data == "pca":
-                if "pose" in modality:
-                    splits_pose = create_data_splits_pca(df_pose, "multiclass", fold_no=fold, num_folds=5, seed_value=42, sequence_length=sequence_length)
-                    X_train_pose, X_val_pose, X_test_pose, y_train, y_val, y_test, X_train_pose_seq, y_train_sequences, X_val_pose_seq, y_val_sequences, X_test_pose_seq, y_test_sequences, sequence_length = splits_pose
-                if "facial" in modality:
-                    splits_facial = create_data_splits_pca(df_facial, "multiclass", fold_no=fold, num_folds=5, seed_value=42, sequence_length=sequence_length)
-                    X_train_facial, X_val_facial, X_test_facial, y_train, y_val, y_test, X_train_facial_seq, y_train_sequences, X_val_facial_seq, y_val_sequences, X_test_facial_seq, y_test_sequences, sequence_length = splits_facial
-                if "audio" in modality:
-                    splits_audio = create_data_splits_pca(df_audio, "multiclass", fold_no=fold, num_folds=5, seed_value=42, sequence_length=sequence_length)
-                    X_train_audio, X_val_audio, X_test_audio, y_train, y_val, y_test, X_train_audio_seq, y_train_sequences, X_val_audio_seq, y_val_sequences, X_test_audio_seq, y_test_sequences, sequence_length = splits_audio
+        splits = {}
+        input_layers = []
+        outputs = []
 
-        elif feature_set == "stats":
-            if data in ["reg", "norm"]:
-                if "facial" in modality:
-                    splits_facial = create_data_splits(df_facial, "multiclass", fold_no=fold, num_folds=5, seed_value=42, sequence_length=sequence_length)
-                    X_train_facial, X_val_facial, X_test_facial, y_train, y_val, y_test, X_train_facial_seq, y_train_sequences, X_val_facial_seq, y_val_sequences, X_test_facial_seq, y_test_sequences, sequence_length = splits_facial
-                if "audio" in modality:
-                    splits_audio = create_data_splits(df_audio, "multiclass", fold_no=fold, num_folds=5, seed_value=42, sequence_length=sequence_length)
-                    X_train_audio, X_val_audio, X_test_audio, y_train, y_val, y_test, X_train_audio_seq, y_train_sequences, X_val_audio_seq, y_val_sequences, X_test_audio_seq, y_test_sequences, sequence_length = splits_audio
-            elif data == "pca":
-                if "facial" in modality:
-                    splits_facial = create_data_splits_pca(df_facial, "multiclass", fold_no=fold, num_folds=5, seed_value=42, sequence_length=sequence_length)
-                    X_train_facial, X_val_facial, X_test_facial, y_train, y_val, y_test, X_train_facial_seq, y_train_sequences, X_val_facial_seq, y_val_sequences, X_test_facial_seq, y_test_sequences, sequence_length = splits_facial
-                if "audio" in modality:
-                    splits_audio = create_data_splits_pca(df_audio, "multiclass", fold_no=fold, num_folds=5, seed_value=42, sequence_length=sequence_length)
-                    X_train_audio, X_val_audio, X_test_audio, y_train, y_val, y_test, X_train_audio_seq, y_train_sequences, X_val_audio_seq, y_val_sequences, X_test_audio_seq, y_test_sequences, sequence_length = splits_audio
-
-        if feature_set == "full" or feature_set == "rf":
-            input = []
-            output = []
+        for modality_name in selected_modalities:
+            df = modalities[modality_name]
             
-            if "pose" in modality:
-                X_train_pose, X_val_pose, X_test_pose, y_train, y_val, y_test, X_train_pose_seq, y_train_sequences, X_val_pose_seq, y_val_sequences, X_test_pose_seq, y_test_sequences, sequence_length = splits_pose
-                pose_input = Input(shape=(sequence_length, X_train_pose_seq.shape[2]))
-                pose_model = build_early_late_model(sequence_length, X_train_pose_seq.shape[2], num_gru_layers, gru_units, activation, use_bidirectional, dropout, kernel_regularizer)
-                pose_output = pose_model(pose_input)
-                input.append(pose_input)
-                output.append(pose_output)
+            splits[modality_name] = create_data_splits(df, "multiclass", fold_no=fold, num_folds=5, seed_value=42, sequence_length=sequence_length)
 
-            if "facial" in modality:
-                X_train_facial, X_val_facial, X_test_facial, y_train, y_val, y_test, X_train_facial_seq, y_train_sequences, X_val_facial_seq, y_val_sequences, X_test_facial_seq, y_test_sequences, sequence_length = splits_facial
-                facial_input = Input(shape=(sequence_length, X_train_facial_seq.shape[2]))
-                facial_model = build_early_late_model(sequence_length, X_train_facial_seq.shape[2], num_gru_layers, gru_units, activation, use_bidirectional, dropout, kernel_regularizer)
-                facial_output = facial_model(facial_input)
-                input.append(facial_input)
-                output.append(facial_output)
-
-            if "audio" in modality:
-                X_train_audio, X_val_audio, X_test_audio, y_train, y_val, y_test, X_train_audio_seq, y_train_sequences, X_val_audio_seq, y_val_sequences, X_test_audio_seq, y_test_sequences, sequence_length = splits_audio
-                audio_input = Input(shape=(sequence_length, X_train_audio_seq.shape[2]))
-                audio_model = build_early_late_model(sequence_length, X_train_audio_seq.shape[2], num_gru_layers, gru_units, activation, use_bidirectional, dropout, kernel_regularizer)
-                audio_output = audio_model(audio_input)
-                input.append(audio_input)
-                output.append(audio_output)
+        for modality_name in selected_modalities:
+            X_train_seq, X_val_seq, X_test_seq = splits[modality_name][6], splits[modality_name][8], splits[modality_name][10]
             
-            concatenated = concatenate(output)
+            input_layer = Input(shape=(sequence_length, X_train_seq.shape[2]))
+            model = build_early_late_model(sequence_length, X_train_seq.shape[2], num_gru_layers, gru_units, activation, use_bidirectional, dropout, kernel_regularizer)
+            
+            input_layers.append(input_layer)
+            outputs.append(model(input_layer))
 
-        elif feature_set == "stats":
-            X_train_facial, X_val_facial, X_test_facial, y_train, y_val, y_test, X_train_facial_seq, y_train_sequences, X_val_facial_seq, y_val_sequences, X_test_facial_seq, y_test_sequences, sequence_length = splits_facial
-            X_train_audio, X_val_audio, X_test_audio, y_train, y_val, y_test, X_train_audio_seq, y_train_sequences, X_val_audio_seq, y_val_sequences, X_test_audio_seq, y_test_sequences, sequence_length = splits_audio
-            facial_input = Input(shape=(sequence_length, X_train_facial_seq.shape[2]))
-            audio_input = Input(shape=(sequence_length, X_train_audio_seq.shape[2]))
+        if len(outputs) > 1:
+            concatenated = concatenate(outputs)
+        else:
+            concatenated = outputs[0]
 
-            facial_input = Input(shape=(sequence_length, X_train_facial_seq.shape[2]))
-            audio_input = Input(shape=(sequence_length, X_train_audio_seq.shape[2]))
-
-            facial_model = build_early_late_model(sequence_length, X_train_facial_seq.shape[2], num_gru_layers, gru_units, activation, use_bidirectional, dropout, kernel_regularizer)
-            audio_model = build_early_late_model(sequence_length, X_train_audio_seq.shape[2], num_gru_layers, gru_units, activation, use_bidirectional, dropout, kernel_regularizer)
-
-            facial_output = facial_model(facial_input)
-            audio_output = audio_model(audio_input)
-            concatenated = concatenate([facial_output, audio_output])
-
-        num_classes = len(np.unique(y_train))
-        print("Num classes: ", num_classes)
-        print("Unique labels in y_train:", np.unique(y_train))
-        print("Unique labels in y_val:", np.unique(y_val))
-        print("Unique labels in y_test:", np.unique(y_test))
+        y_train_sequences = splits[selected_modalities[0]][7]
+        num_classes = len(np.unique(y_train_sequences))
 
         x = Dense(dense_units, activation=activation)(concatenated)
-        output = Dense(num_classes, activation="softmax")(x)
+        output_layer = Dense(num_classes, activation="softmax")(x)
 
-        if feature_set == "full" or feature_set == "rf":
-            model = Model(inputs=input, outputs=output)
-        elif feature_set == "stats":
-            model = Model(inputs=[facial_input, audio_input], outputs=output)
+        model = Model(inputs=input_layers, outputs=output_layer)
+        model.compile(optimizer=optimizer, loss=loss, metrics=["val_accuracy"])
 
-        model.summary()
+        train_inputs = [splits[m][6] for m in selected_modalities]
+        val_inputs = [splits[m][8] for m in selected_modalities]
+        test_inputs = [splits[m][10] for m in selected_modalities]
 
-        model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
-        
-        model_checkpoint = ModelCheckpoint("../best_model.keras", monitor="val_accuracy", save_best_only=True)
-        
-        if feature_set == "full" or feature_set == "rf":
-            if modality == "pose_facial":
-                model_history = model.fit(
-                [X_train_pose_seq, X_train_facial_seq], y_train_sequences,
-                epochs=epochs,
-                batch_size=batch_size,
-                validation_data=([X_val_pose_seq, X_val_facial_seq], y_val_sequences),
-                # callbacks=[model_checkpoint],
-                verbose=2)
-            elif modality == "facial_audio":
-                model_history = model.fit(
-                [X_train_facial_seq, X_train_audio_seq], y_train_sequences,
-                epochs=epochs,
-                batch_size=batch_size,
-                validation_data=([X_val_facial_seq, X_val_audio_seq], y_val_sequences),
-                # callbacks=[model_checkpoint],
-                verbose=2)
-            elif modality == "pose_facial":
-                model_history = model.fit(
-                [X_train_pose_seq, X_train_facial_seq], y_train_sequences,
-                epochs=epochs,
-                batch_size=batch_size,
-                validation_data=([X_val_pose_seq, X_val_facial_seq], y_val_sequences),
-                # callbacks=[model_checkpoint],
-                verbose=2)
-            else:
-                model_history = model.fit(
-                [X_train_pose_seq, X_train_facial_seq, X_train_audio_seq], y_train_sequences,
-                epochs=epochs,
-                batch_size=batch_size,
-                validation_data=([X_val_pose_seq, X_val_facial_seq, X_val_audio_seq], y_val_sequences),
-                # callbacks=[model_checkpoint],
-                verbose=2)
-        
-        elif feature_set == "stats":
-            model_history = model.fit(
-                [X_train_facial_seq, X_train_audio_seq], y_train_sequences,
-                epochs=epochs,
-                batch_size=batch_size,
-                validation_data=([X_val_facial_seq, X_val_audio_seq], y_val_sequences),
-                # callbacks=[model_checkpoint],
-                verbose=2
-            )
+        model_history = model.fit(
+            train_inputs, y_train_sequences,
+            epochs=epochs,
+            batch_size=batch_size,
+            validation_data=(val_inputs, splits[selected_modalities[0]][9]),  # y_val_sequences
+            verbose=2
+        )
         
         for epoch in range(len(model_history.history['loss'])):
 
@@ -704,28 +598,14 @@ def train_late_fusion(df_pose, df_facial, df_audio, config):
 
             wandb.log(metrics)
 
+        y_predict_probs = model.predict(test_inputs)
 
-        if feature_set == "full" or feature_set == "rf":
-            if modality == "pose_facial":
-                y_predict_probs = model.predict([X_test_pose_seq, X_test_facial_seq])
-            elif modality == "facial_audio":
-                y_predict_probs = model.predict([X_test_facial_seq, X_test_audio_seq])
-            elif modality == "pose_audio":
-                y_predict_probs = model.predict([X_test_pose_seq, X_test_audio_seq])
-            else:
-                y_predict_probs = model.predict([X_test_pose_seq, X_test_facial_seq, X_test_audio_seq])
-        elif feature_set == "stats":
-            y_predict_probs = model.predict([X_test_facial_seq, X_test_audio_seq])
-        
         df_probs = pd.DataFrame(y_predict_probs)
-
-        table = wandb.Table(dataframe=df_probs)
-
-        wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs})
-        wandb.log({"fold_{}_prediction_probabilities_table".format(fold): table})
+        wandb.log({f"fold_{fold}_prediction_probabilities": y_predict_probs})
+        wandb.log({f"fold_{fold}_prediction_probabilities_table": wandb.Table(dataframe=df_probs)})
 
         y_pred = np.argmax(y_predict_probs, axis=1)
-        y_test_sequences = np.argmax(y_test_sequences, axis=1)
+        y_test_sequences = np.argmax(splits[selected_modalities[0]][11], axis=1)
 
         test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
         for key in test_metrics_list.keys():
@@ -733,10 +613,44 @@ def train_late_fusion(df_pose, df_facial, df_audio, config):
 
         wandb.log({f"fold_{fold}_metrics": test_metrics})
         print(f"Fold {fold} Test Metrics:", test_metrics)
-    
+
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
     wandb.run.summary.update(avg_test_metrics)
     print("Average Test Metrics Across All Folds:", avg_test_metrics)
+
+
+    #     if feature_set == "full" or feature_set == "rf":
+    #         if modality == "pose_facial":
+    #             y_predict_probs = model.predict([X_test_pose_seq, X_test_facial_seq])
+    #         elif modality == "facial_audio":
+    #             y_predict_probs = model.predict([X_test_facial_seq, X_test_audio_seq])
+    #         elif modality == "pose_audio":
+    #             y_predict_probs = model.predict([X_test_pose_seq, X_test_audio_seq])
+    #         else:
+    #             y_predict_probs = model.predict([X_test_pose_seq, X_test_facial_seq, X_test_audio_seq])
+    #     elif feature_set == "stats":
+    #         y_predict_probs = model.predict([X_test_facial_seq, X_test_audio_seq])
+        
+    #     df_probs = pd.DataFrame(y_predict_probs)
+
+    #     table = wandb.Table(dataframe=df_probs)
+
+    #     wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs})
+    #     wandb.log({"fold_{}_prediction_probabilities_table".format(fold): table})
+
+    #     y_pred = np.argmax(y_predict_probs, axis=1)
+    #     y_test_sequences = np.argmax(y_test_sequences, axis=1)
+
+    #     test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
+    #     for key in test_metrics_list.keys():
+    #         test_metrics_list[key].append(test_metrics[key])
+
+    #     wandb.log({f"fold_{fold}_metrics": test_metrics})
+    #     print(f"Fold {fold} Test Metrics:", test_metrics)
+    
+    # avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
+    # wandb.run.summary.update(avg_test_metrics)
+    # print("Average Test Metrics Across All Folds:", avg_test_metrics)
 
 
 def train():
@@ -760,11 +674,14 @@ def train():
     df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
     df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_stats_0_3.csv")
     df_rf = pd.read_csv("../../preprocessing/rf_features/all_participants_rf_0_3_40.csv")
+    df_text = pd.read_csv("../../preprocessing/text_embeddings.csv")
+    df_text_pca = pd.read_csv("../../preprocessing/text_embeddings_pca.csv")
 
     info = df.iloc[:, :4]
     df_pose_index = df.iloc[:, 4:28]
     df_facial_index = pd.concat([df.iloc[:, 28:63], df.iloc[:, 88:]], axis=1) # action units, gaze
     df_audio_index = df.iloc[:, 63:88]
+    df_text_index = df_text.iloc[:, 2:]
 
     df_facial_index_stats = df_stats.iloc[:, 4:30]
     df_audio_index_stats = df_stats.iloc[:, 30:53]
@@ -822,6 +739,135 @@ def train():
         norm_df = pd.concat([participant_frames_labels, norm_df[features]], axis=1)
 
         return norm_df
+    
+    def create_pca_df(df):
+        participant_frames_labels = df.iloc[:, :4]
+
+        x = df.iloc[:, 4:]
+        x = StandardScaler().fit_transform(x.values)
+
+        pca = PCA(n_components=0.90)
+        principal_components = pca.fit_transform(x)
+        print(principal_components.shape)
+
+        principal_df = pd.DataFrame(data=principal_components, columns=['principal component ' + str(i) for i in range(principal_components.shape[1])])
+        principal_df = pd.concat([participant_frames_labels, principal_df], axis=1)
+
+        return principal_df
+    
+    modalities = {
+
+        "pose_full" : df_pose_index,
+        "pose_rf" : df_pose_index_rf,
+
+        "facial_full" : df_facial_index,
+        "facial_stats" : df_facial_index_stats,
+        "facial_rf" : df_facial_index_rf,
+
+        "audio_full" : df_audio_index,
+        "audio_stats" : df_audio_index_stats,
+        "audio_rf" : df_audio_index_rf,
+
+        "text_full" : df_text_index,
+
+    }
+    
+    selected_modalities = {}
+
+    def process_data(feature_df, info, data_type):
+        combined_df = pd.concat([info, feature_df], axis=1)
+        if data_type == "norm":
+            return create_normalized_df(combined_df)
+        elif data_type == "pca":
+            return create_pca_df(create_normalized_df(combined_df))
+        return combined_df  # Default to raw data
+
+    selected_modalities = {}
+
+    if fusion_type == "early":
+        # Early fusion: Concatenate all modalities first, then normalize/PCA
+        all_features = []
+
+        for m in modality:
+            if "pose" in m:
+                all_features.append(df_pose_index)
+            elif "facial" in m:
+                all_features.append(df_facial_index)
+            elif "audio" in m:
+                all_features.append(df_audio_index)
+            elif "text" in m:
+                all_features.append(df_text_index)
+
+        combined_df = pd.concat([info] + all_features, axis=1)
+
+        if data == "norm":
+            selected_modalities["early_fusion"] = create_normalized_df(combined_df)
+        elif data == "pca":
+            selected_modalities["early_fusion"] = create_pca_df(create_normalized_df(combined_df))
+        else:
+            selected_modalities["early_fusion"] = combined_df
+
+    elif fusion_type == "intermediate":
+        # Intermediate fusion: Process each modality independently, then concatenate later
+        processed_modalities = []
+
+        for m in modality:
+            if "pose" in m:
+                processed_modalities.append(process_data(df_pose_index, info, data))
+            elif "facial" in m:
+                processed_modalities.append(process_data(df_facial_index, info, data))
+            elif "audio" in m:
+                processed_modalities.append(process_data(df_audio_index, info, data))
+            elif "text" in m:
+                processed_modalities.append(pd.concat([info, df_text_index], axis=1))  # No PCA for text
+
+        selected_modalities["intermediate_fusion"] = pd.concat(processed_modalities, axis=1)
+
+    elif fusion_type == "late":
+        # Late fusion: Each modality is processed separately
+        for m in modality:
+            if "pose" in m:
+                selected_modalities["pose"] = process_data(df_pose_index, info, data)
+            elif "facial" in m:
+                selected_modalities["facial"] = process_data(df_facial_index, info, data)
+            elif "audio" in m:
+                selected_modalities["audio"] = process_data(df_audio_index, info, data)
+            elif "text" in m:
+                selected_modalities["text"] = pd.concat([info, df_text_index], axis=1)  # No PCA for text
+
+
+    
+    for m in modality:
+        if "pose" in m:
+            if feature_set == "full":
+                if data == "norm":
+                    selected_modalities["pose_full"] = create_normalized_df(pd.concat([info, df_pose_index], axis=1))
+                elif data == "pca":
+                    selected_modalities["pose_full"] = create_pca_df(create_normalized_df(pd.concat([info, df_pose_index], axis=1)))
+                elif data == "reg":
+                    selected_modalities["pose_full"] = pd.concat([info, df_pose_index], axis=1)
+            elif feature_set == "rf":
+                selected_modalities["pose_rf"] = pd.concat([info, df_pose_index_rf], axis=1)
+ 
+        elif "facial" in m:
+            if feature_set == "full":
+                selected_modalities["facial_full"] = pd.concat([info, df_facial_index], axis=1)
+            elif feature_set == "stats":
+                selected_modalities["facial_stats"] = pd.concat([info, df_facial_index_stats], axis=1)
+            elif feature_set == "rf":
+                selected_modalities["facial_rf"] = pd.concat([info, df_facial_index_rf], axis=1)
+
+        elif "audio" in m:
+            if feature_set == "full":
+                selected_modalities["audio_full"] = pd.concat([info, df_audio_index], axis=1)
+            elif feature_set == "stats":
+                selected_modalities["audio_stats"] = pd.concat([info, df_audio_index_stats], axis=1)
+            elif feature_set == "rf":
+                selected_modalities["audio_rf"] = pd.concat([info, df_audio_index_rf], axis=1)
+
+        elif "text" in m:
+            selected_modalities["text_full"] = pd.concat([info, df_text_index], axis=1)
+
 
     def get_modality_data(modality, data):
         df = pd.DataFrame()

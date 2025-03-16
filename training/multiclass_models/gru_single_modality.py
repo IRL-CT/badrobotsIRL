@@ -229,11 +229,14 @@ def train():
     df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
     df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_stats_0_3.csv")
     df_rf = pd.read_csv("../../preprocessing/rf_features/all_participants_rf_0_3_40.csv")
+    df_text = pd.read_csv("../../preprocessing/text_embeddings.csv")
+    df_text_pca = pd.read_csv("../../preprocessing/text_embeddings_pca.csv")
 
     info = df.iloc[:, :4]
     df_pose_index = df.iloc[:, 4:28]
     df_facial_index = pd.concat([df.iloc[:, 28:63], df.iloc[:, 88:]], axis=1)
     df_audio_index = df.iloc[:, 63:88]
+    df_text_index = df_text.iloc[:, 2:]
 
     df_facial_index_stats = df_stats.iloc[:, 4:30]
     df_audio_index_stats = df_stats.iloc[:, 30:53]
@@ -245,7 +248,8 @@ def train():
     modality_mapping = {
         "pose": pd.concat([info, df_pose_index], axis=1),
         "facial": pd.concat([info, df_facial_index], axis=1),
-        "audio": pd.concat([info, df_audio_index], axis=1)
+        "audio": pd.concat([info, df_audio_index], axis=1),
+        "text": pd.concat([info, df_text_index], axis=1)
     }
 
     modality_mapping_stats = {
@@ -286,18 +290,23 @@ def train():
         elif feature_set == "rf":
             df = modality_mapping_rf.get(modality)
 
-        if data != "reg":
+        if data == "norm":
             df = create_normalized_df(df)
+        
+        if modality == "text" and data == "pca":
+            df = df_text_pca
 
         return df
 
     df = get_modality_data(modality, data)
 
+    
+
     train_single_modality_model(df, config)
 
 def main():
 
-    modality = "audio"
+    modality = "text"
     
     sweep_config = {
         'method': 'random',
@@ -305,7 +314,7 @@ def main():
         'parameters': {
             'modality' : {'value': modality},
 
-            'feature_set' : {'values': ["full", "rf", "stats"]},
+            'feature_set' : {'values': ["full"]},
             'data' : {'values' : ["reg", "norm", "pca"]},
 
             'use_bidirectional': {'values': [True, False]},
