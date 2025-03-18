@@ -698,7 +698,7 @@ def main():
     
     sweep_config = {
         'method': 'random',
-        'name': 'gru_multiclass_all_v3',
+        'name': 'gru_multiclass_all_v4',
         'parameters': {
             'feature_set' : {'values': [feature_set]},
             'modality' : {'values' : [modality]},
@@ -719,10 +719,10 @@ def main():
             'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'rmsprop']},
             'learning_rate': {'values': [0.001, 0.01, 0.005]},
             'batch_size': {'values': [32, 64, 128]},
-            'epochs': {'value': 3},
+            'epochs': {'value': 100},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["categorical_crossentropy"]},
-            'sequence_length' : {'values' : [30, 60, 90]}
+            'sequence_length' : {'values' : [60, 100, 150, 300]}
         }
         # feature set (full, stats, rf) -> modality selection (pose_facial_audio, pose, facial, etc.) -> (reg, norm, pca) -> fusion
     }
@@ -732,7 +732,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_multiclass_all_v3")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_multiclass_all_v4")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':

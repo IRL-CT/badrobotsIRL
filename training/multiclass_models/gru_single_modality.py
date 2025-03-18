@@ -300,13 +300,11 @@ def train():
 
     df = get_modality_data(modality, data)
 
-    
-
     train_single_modality_model(df, config)
 
 def main():
 
-    modality = "text"
+    modality = "pose"
     
     sweep_config = {
         'method': 'random',
@@ -314,7 +312,7 @@ def main():
         'parameters': {
             'modality' : {'value': modality},
 
-            'feature_set' : {'values': ["full"]},
+            'feature_set' : {'values': ["full", "rf"]},
             'data' : {'values' : ["reg", "norm", "pca"]},
 
             'use_bidirectional': {'values': [True, False]},
@@ -329,7 +327,7 @@ def main():
             'epochs': {'value': 100},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["categorical_crossentropy"]},
-            'sequence_length' : {'values' : [10, 30, 60, 90]}
+            'sequence_length' : {'values' : [60, 100, 150, 300]}
         }
         # feature set (full, stats, rf) -> modality selection (combined, pose, facial, etc.) -> (reg, norm, pca) -> fusion
     }

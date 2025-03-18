@@ -324,7 +324,7 @@ def main():
             'epochs': {'value': 100},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["binary_crossentropy", "categorical_crossentropy"]},
-            'sequence_length' : {'values' : [30, 60, 90]}
+            'sequence_length' : {'values' : [60, 100, 150, 300]}
         }
         # feature set (full, stats, rf) -> modality selection (combined, pose, facial, etc.) -> (reg, norm, pca) -> fusion
     }
