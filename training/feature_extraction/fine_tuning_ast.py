@@ -61,6 +61,9 @@ sweep_config = {
         },
         'num_epochs': {
             'value': 100
+        },
+        'label': {
+            'values': ['binary_label','multiclass_label']
         }
     }
 }
@@ -98,7 +101,7 @@ class ASTFineTuner:
             label_dim=num_classes,
             input_tdim=1024,
             imagenet_pretrain=True,
-            audioset_pretrain=False
+            audioset_pretrain=False,
         )
 
         audioset_mdl_url = 'https://www.dropbox.com/s/cv4knew8mvbrnvq/audioset_0.4593.pth?dl=1'
@@ -159,6 +162,7 @@ class ASTFineTuner:
         total_loss = 0
         all_preds = []
         all_labels = []
+        all_original_preds = []
         
         # Clear GPU cache at the start of each epoch
         torch.cuda.empty_cache()
@@ -199,6 +203,8 @@ class ASTFineTuner:
         if len(train_loader) % self.config.gradient_accumulation_steps != 0:
             self.optimizer.step()
             self.optimizer.zero_grad()
+
+        
             
         # Calculate metrics
         metrics = get_metrics(np.array(all_labels), np.array(all_preds)) ##########BE CAREFUL WITH ypred and ytrue, check the order in script
@@ -218,6 +224,7 @@ class ASTFineTuner:
         total_loss = 0
         all_preds = []
         all_labels = []
+        all_original_preds = []
         
         with torch.no_grad():
             for features, labels in val_loader:
@@ -228,26 +235,35 @@ class ASTFineTuner:
                 
                 total_loss += loss.item()
                 _, predicted = outputs.max(1)
+
+                # Get probabilities
+                probabilities = torch.nn.functional.softmax(outputs, dim=1)
+                all_probabilities = probabilities.detach().cpu().numpy()
+
                 
                 all_preds.extend(predicted.cpu().numpy())
                 all_labels.extend(labels.cpu().numpy())
+                all_original_preds.extend(all_probabilities)
         
         # Calculate metrics
         metrics = get_metrics(all_labels, all_preds)
-        return total_loss / len(val_loader), metrics
+        return total_loss / len(val_loader), metrics, all_original_preds
 
 
 
 
-def process_fold_data(audio_files: List[str], label_df: pd.DataFrame, audio_dir: Path):
+def process_fold_data(audio_files: List[str], label_df: pd.DataFrame, audio_dir: Path, label: str) -> Tuple[torch.Tensor, torch.Tensor]:
     """Process audio files for a specific fold"""
     fold_features = []
     fold_labels = []
     
+    print(f"Processing {len(audio_files)} audio files")
+    successful_files = 0
     
     for audio_file in audio_files:
         torch.cuda.empty_cache()
         audio_path = audio_dir / f"{audio_file}.wav"
+        
         if not audio_path.exists():
             print(f"Warning: Audio file not found: {audio_path}")
             continue
@@ -259,23 +275,41 @@ def process_fold_data(audio_files: List[str], label_df: pd.DataFrame, audio_dir:
             continue
             
         features = extract_session_features(str(audio_path), participant_df)
-        #print(features.shape)
+        
         if features is None:
             print(f"Warning: No features found for participant {audio_file}")
-        labels = participant_df['binary_label'].values
-        
+            continue  # Make sure to continue to the next iteration
+            
+        labels = participant_df[label].values
         fold_features.append(features)
         fold_labels.append(labels)
-    #stack lists into tensors
-    #fold_labels = [torch.tensor(l) for l in fold_labels]
-    #collapse labels
+        successful_files += 1
+    
+    print(f"Successfully processed {successful_files} files")
+    
+    if successful_files == 0:
+        print("No files were successfully processed. Returning empty tensors.")
+        return None, None
+    
+    # Check the structure before flattening
+    print(f"Before flattening: {len(fold_features)} feature lists")
+    if len(fold_features) > 0:
+        print(f"First feature shape: {fold_features[0].shape}")
+    
+    # Flatten the lists
     fold_labels = [item for sublist in fold_labels for item in sublist]
-    #do the same for features
     fold_features = [item for sublist in fold_features for item in sublist]
+    
+    print(f"After flattening: {len(fold_features)} features")
+    
+    if len(fold_features) == 0:
+        print("After flattening, feature list is empty. Cannot stack.")
+        return None, None
+    
+    # Stack the features
     fold_features = torch.stack(fold_features)
-    print(fold_features.shape)
-
-
+    print(f"Final shape: {fold_features.shape}")
+    
     return fold_features, fold_labels
 
 def train():
@@ -290,8 +324,8 @@ def train():
     random.seed(seed_value)
 
     # Default arguments
-    audio_dir = Path('nodbot_wav_files_silenced')
-    label_path = 'all_participants_0_3.csv'
+    audio_dir = Path('../../data/wav_silenced')
+    label_path = '../../data/all_participants_0_3.csv'
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--audio_dir', type=str, default=str(audio_dir))
@@ -315,6 +349,10 @@ def train():
     
     # Perform 5-fold cross-validation
     for fold in range(5):
+        #if fold in [0, 1]:
+        #    #skip
+        #    continue
+        
         print(f"\nProcessing fold {fold + 1}/5")
         
         # Get train/val/test splits for this fold
@@ -323,10 +361,13 @@ def train():
             seed_value=seed_value
         )
         
+        print(train_sessions)
+        print(val_sessions)
+        print(test_sessions)
         # Process data for this fold
-        train_features, train_labels = process_fold_data(train_sessions, label_df, audio_dir)
-        val_features, val_labels = process_fold_data(val_sessions, label_df, audio_dir)
-        test_features, test_labels = process_fold_data(test_sessions, label_df, audio_dir)
+        train_features, train_labels = process_fold_data(train_sessions, label_df, audio_dir, config.label)
+        val_features, val_labels = process_fold_data(val_sessions, label_df, audio_dir, config.label)
+        test_features, test_labels = process_fold_data(test_sessions, label_df, audio_dir,config.label)
         
         # Create datasets and dataloaders
         train_dataset = ASTDataset(train_features, train_labels)
@@ -351,7 +392,7 @@ def train():
         
         # Initialize model for this fold
         fine_tuner = ASTFineTuner(
-            num_classes=len(set(label_df['binary_label'])),
+            num_classes=len(set(label_df[config.label])),
             config=config,
             device='cuda' if torch.cuda.is_available() else 'cpu'
         )
@@ -361,7 +402,7 @@ def train():
             print(f'Fold {fold + 1}, Epoch {epoch + 1}/{config.num_epochs}')
             
             train_loss, train_metrics = fine_tuner.train_epoch(train_loader)
-            val_loss, val_metrics = fine_tuner.validate(val_loader)
+            val_loss, val_metrics,or_preds = fine_tuner.validate(val_loader)
             
             # Log fold-specific metrics
             metrics_dict = {
@@ -372,6 +413,8 @@ def train():
             }
             
             wandb.log(metrics_dict)
+            #log original preds
+            #wandb.log({"original_preds_val": or_preds})
             
             # Store final epoch metrics
             if epoch == config.num_epochs - 1:
@@ -379,7 +422,7 @@ def train():
                 final_metrics['val'][fold] = val_metrics
         
         # Evaluate on test set after training is complete
-        test_loss, test_metrics = fine_tuner.validate(test_loader)
+        test_loss, test_metrics,or_preds = fine_tuner.validate(test_loader)
         final_metrics['test'][fold] = test_metrics
         
         # Log test metrics for this fold
@@ -388,6 +431,8 @@ def train():
             **{f'{fold}_test_{k}': v for k, v in test_metrics.items()}
         }
         wandb.log(test_metrics_dict)
+        #log original preds per fold
+        wandb.log({f"original_preds_test_{fold}": or_preds})
     
     # Calculate and log average metrics for final epoch
     avg_metrics = {}

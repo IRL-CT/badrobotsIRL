@@ -233,7 +233,8 @@ def process_audio_files(audio_dir, label_dir, output_dir, window_duration=1.0, h
         print(f"Saved features to {output_file}")
 
 
-def extract_session_features(audio_path: str, label_df: pd.DataFrame, window_duration: float = 1.0, hop_duration: float = 0.5, mel_bins: int = 128) -> torch.Tensor:
+def extract_session_features(audio_path: str, label_df: pd.DataFrame, window_duration: float = 1.0, 
+                           hop_duration: float = 0.5, mel_bins: int = 128) -> torch.Tensor:
     """
     Extract AST features for a single session.
     
@@ -280,8 +281,6 @@ if __name__ == "__main__":
                         help='Directory containing label CSV files')
     parser.add_argument('--session', type=str, required=True,
                         help='Directory containing label CSV files')
-    #parser.add_argument('--output_dir', type=str, required=True,
-    #                    help='Directory to save feature CSVs')
     parser.add_argument('--window_duration', type=float, default=1.0,
                         help='Duration of each window in seconds')
     parser.add_argument('--hop_duration', type=float, default=0.5,
@@ -299,7 +298,6 @@ if __name__ == "__main__":
         args.hop_duration
     )
 
-    #DEFAULT COMMAND
-    #python ast_feats.py --audio_dir ../../data/audio/wav/ --label_dir ../../data/all_data_05.csv  --window_duration 1.0 --hop_duration 0.5
 
-    #python ast_feats.py --audio_dir /feature_extraction/nodbot_wav_files_silenced/ --label_dir all_participants_0_3.csv --session p2nodbot --window_duration 1.0 --hop_duration 0.5
+    #DEFAULT COMMAND
+    #python ast_feats.py --audio_dir ../../data/audio/wav/ --label_dir ../../data/all_data_05.csv --output_dir ../../data/ast_feats/ --window_duration 1.0 --hop_duration 0.5

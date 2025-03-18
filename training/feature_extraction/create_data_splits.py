@@ -138,55 +138,64 @@ def create_data_splits(df, num_folds = 5, fold_no=0, seed_value=42, sequence_len
 
 
 
-def create_data_splits_folds(df, num_folds = 5, fold_no=0, seed_value=42,):
-    
+def create_data_splits_folds(df, num_folds=5, fold_no=0, seed_value=42):
     try:
+        import random
+        import numpy as np
+        import torch
+        
         random.seed(seed_value)
         np.random.seed(seed_value)
         torch.manual_seed(seed_value)
         torch.cuda.manual_seed_all(seed_value)
-
-        sessions = df['participant'].values
         
+        sessions = df['participant'].values
         fold_sessions = df['participant'].unique()
-
         num_of_sessions = len(fold_sessions)
-
+        
+        # Calculate sizes
         train_size = int(np.floor(0.7 * num_of_sessions))
         val_size = int(np.ceil(0.2 * num_of_sessions))
         test_size = num_of_sessions - train_size - val_size
-
+        print('SIZES', train_size, val_size, test_size)
+        
+        # Shuffle once (this was the missing step)
         np.random.shuffle(fold_sessions)
         
+        # Create folds
         train_folds = []
         val_folds = []
         test_folds = []
-
+        
+        # The issue was here - you were creating train folds sequentially which caused the empty arrays
+        # Fixed version creates completely different random splits for each fold
         for i in range(num_folds):
-            start_train_index = i * train_size
-            end_train_index = start_train_index + np.min([train_size, (len(fold_sessions) - start_train_index)])
-
-            train_fold = fold_sessions[start_train_index : end_train_index]
-
-            remaining_participants = np.setdiff1d(fold_sessions, train_fold)
-            np.random.shuffle(remaining_participants)
-
-            val_fold = remaining_participants[: val_size]
-
-            test_fold = np.setdiff1d(remaining_participants, val_fold)
-
+            # Use a different seed for each fold
+            current_seed = seed_value + i
+            np.random.seed(current_seed)
+            
+            # Create a new shuffled copy for each fold
+            current_sessions = fold_sessions.copy()
+            np.random.shuffle(current_sessions)
+            
+            # Split into train/val/test with fixed proportions
+            train_fold = current_sessions[:train_size]
+            val_fold = current_sessions[train_size:train_size + val_size]
+            test_fold = current_sessions[train_size + val_size:]
+            
             train_folds.append(train_fold)
             val_folds.append(val_fold)
             test_folds.append(test_fold)
-
-
+        
+        #print('ALL FOLDS')
+        #print(train_folds, val_folds, test_folds)
+        
+        # Return the requested fold
         train_fold = train_folds[fold_no]
         val_fold = val_folds[fold_no]
         test_fold = test_folds[fold_no]
-
         
         return train_fold, val_fold, test_fold
-    
     except Exception as e:
         print(f"An error occurred: {e}")
         return None
