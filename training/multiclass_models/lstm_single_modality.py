@@ -4,6 +4,7 @@ import pandas as pd
 import random
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 from keras.models import Sequential, Model
 from keras.layers import LSTM, Dense, Dropout, BatchNormalization, Input, Bidirectional, concatenate
 from keras.callbacks import ModelCheckpoint, EarlyStopping
@@ -49,25 +50,14 @@ def train_single_modality_model(df, config):
 
         splits = None
 
-        if data == "reg" or data == "norm":
-            splits = create_data_splits(
-                df, "multiclass",
-                fold_no=fold,
-                num_folds=5,
-                seed_value=42,
-                sequence_length=sequence_length)
-            if splits is None:
-                return
-
-        elif data == "pca":
-            splits = create_data_splits_pca(
-                df, "multiclass",
-                fold_no=fold,
-                num_folds=5,
-                seed_value=42,
-                sequence_length=sequence_length)
-            if splits is None:
-                return
+        splits = create_data_splits(
+            df, "multiclass",
+            fold_no=fold,
+            num_folds=5,
+            seed_value=42,
+            sequence_length=sequence_length)
+        if splits is None:
+            return
 
         if splits is None:
             raise ValueError(f"Failed to create data splits for data type '{data}'.")
@@ -203,7 +193,7 @@ def train_single_modality_model(df, config):
         test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
         wandb.log({f"fold_{fold}_metrics": test_metrics})
         print(f"Fold {fold} Test Metrics:", test_metrics)
-        
+
         for key in test_metrics_list.keys():
             test_metrics_list[key].append(test_metrics[key])
 
@@ -229,11 +219,14 @@ def train():
     df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
     df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_stats_0_3.csv")
     df_rf = pd.read_csv("../../preprocessing/rf_features/all_participants_rf_0_3_40.csv")
+    df_text = pd.read_csv("../../preprocessing/text_embeddings.csv")
+    df_text_pca = pd.read_csv("../../preprocessing/text_embeddings_pca.csv")
 
     info = df.iloc[:, :4]
     df_pose_index = df.iloc[:, 4:28]
     df_facial_index = pd.concat([df.iloc[:, 28:63], df.iloc[:, 88:]], axis=1)
     df_audio_index = df.iloc[:, 63:88]
+    df_text_index = df_text.iloc[:, 2:]
 
     df_facial_index_stats = df_stats.iloc[:, 4:30]
     df_audio_index_stats = df_stats.iloc[:, 30:53]
@@ -245,7 +238,8 @@ def train():
     modality_mapping = {
         "pose": pd.concat([info, df_pose_index], axis=1),
         "facial": pd.concat([info, df_facial_index], axis=1),
-        "audio": pd.concat([info, df_audio_index], axis=1)
+        "audio": pd.concat([info, df_audio_index], axis=1),
+        "text": pd.concat([info, df_text_index], axis=1)
     }
 
     modality_mapping_stats = {
@@ -258,6 +252,21 @@ def train():
         "facial": pd.concat([info, df_facial_index_rf], axis=1),
         "audio": pd.concat([info, df_audio_index_rf], axis=1)
     }
+
+    def create_pca_df(df):
+        participant_frames_labels = df.iloc[:, :4]
+
+        x = df.iloc[:, 4:]
+        x = StandardScaler().fit_transform(x.values)
+
+        pca = PCA(n_components=0.90)
+        principal_components = pca.fit_transform(x)
+        print(principal_components.shape)
+
+        principal_df = pd.DataFrame(data=principal_components, columns=['principal component ' + str(i) for i in range(principal_components.shape[1])])
+        principal_df = pd.concat([participant_frames_labels, principal_df], axis=1)
+
+        return principal_df
 
     def create_normalized_df(df):
         if df.empty:
@@ -286,9 +295,14 @@ def train():
         elif feature_set == "rf":
             df = modality_mapping_rf.get(modality)
 
-        if data != "reg":
-            df = create_normalized_df(df)
+        if modality == "text" and data == "pca":
+            return df_text_pca
 
+        if data == "norm":
+            df = create_normalized_df(df)
+        elif data == "pca":
+            df = create_pca_df(create_normalized_df(df))
+        
         return df
 
     df = get_modality_data(modality, data)
@@ -297,15 +311,20 @@ def train():
 
 def main():
 
-    modality = "audio"
+    # audio: "full", "stats", "rf"
+    # facial: "full", "stats", "rf"
+    # pose: "full", "rf"
+    # text: "full"
+
+    modality = "text"
     
     sweep_config = {
         'method': 'random',
-        'name': f'lstm_multiclass_{modality}_v1',
+        'name': f'lstm_multiclass_{modality}_v2',
         'parameters': {
             'modality' : {'value': modality},
 
-            'feature_set' : {'values': ["full", "rf", "stats"]},
+            'feature_set' : {'values': ["full"]},
             'data' : {'values' : ["reg", "norm", "pca"]},
 
             'use_bidirectional': {'values': [True, False]},
@@ -330,7 +349,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project=f"lstm_multiclass_{modality}_v1")
+    sweep_id = wandb.sweep(sweep=sweep_config, project=f"lstm_multiclass_{modality}_v2")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':

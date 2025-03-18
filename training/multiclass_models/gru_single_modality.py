@@ -4,6 +4,7 @@ import pandas as pd
 import random
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 from keras.models import Sequential, Model
 from keras.layers import GRU, Dense, Dropout, BatchNormalization, Input, Bidirectional, concatenate
 from keras.callbacks import ModelCheckpoint, EarlyStopping
@@ -49,25 +50,14 @@ def train_single_modality_model(df, config):
 
         splits = None
 
-        if data == "reg" or data == "norm":
-            splits = create_data_splits(
-                df, "multiclass",
-                fold_no=fold,
-                num_folds=5,
-                seed_value=42,
-                sequence_length=sequence_length)
-            if splits is None:
-                return
-
-        elif data == "pca":
-            splits = create_data_splits_pca(
-                df, "multiclass",
-                fold_no=fold,
-                num_folds=5,
-                seed_value=42,
-                sequence_length=sequence_length)
-            if splits is None:
-                return
+        splits = create_data_splits(
+            df, "multiclass",
+            fold_no=fold,
+            num_folds=5,
+            seed_value=42,
+            sequence_length=sequence_length)
+        if splits is None:
+            return
 
         if splits is None:
             raise ValueError(f"Failed to create data splits for data type '{data}'.")
@@ -263,6 +253,21 @@ def train():
         "audio": pd.concat([info, df_audio_index_rf], axis=1)
     }
 
+    def create_pca_df(df):
+        participant_frames_labels = df.iloc[:, :4]
+
+        x = df.iloc[:, 4:]
+        x = StandardScaler().fit_transform(x.values)
+
+        pca = PCA(n_components=0.90)
+        principal_components = pca.fit_transform(x)
+        print(principal_components.shape)
+
+        principal_df = pd.DataFrame(data=principal_components, columns=['principal component ' + str(i) for i in range(principal_components.shape[1])])
+        principal_df = pd.concat([participant_frames_labels, principal_df], axis=1)
+
+        return principal_df
+
     def create_normalized_df(df):
         if df.empty:
             raise ValueError("create_normalized_df: Input DataFrame is empty.")
@@ -290,12 +295,14 @@ def train():
         elif feature_set == "rf":
             df = modality_mapping_rf.get(modality)
 
+        if modality == "text" and data == "pca":
+            return df_text_pca
+
         if data == "norm":
             df = create_normalized_df(df)
+        elif data == "pca":
+            df = create_pca_df(create_normalized_df(df))
         
-        if modality == "text" and data == "pca":
-            df = df_text_pca
-
         return df
 
     df = get_modality_data(modality, data)
@@ -304,15 +311,20 @@ def train():
 
 def main():
 
-    modality = "pose"
+    # audio: "full", "stats", "rf"
+    # facial: "full", "stats", "rf"
+    # pose: "full", "rf"
+    # text: "full"
+
+    modality = "text"
     
     sweep_config = {
         'method': 'random',
-        'name': f'gru_multiclass_{modality}_v1',
+        'name': f'gru_multiclass_{modality}_v2',
         'parameters': {
             'modality' : {'value': modality},
 
-            'feature_set' : {'values': ["full", "rf"]},
+            'feature_set' : {'values': ["full"]},
             'data' : {'values' : ["reg", "norm", "pca"]},
 
             'use_bidirectional': {'values': [True, False]},
@@ -337,7 +349,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project=f"gru_multiclass_{modality}_v1")
+    sweep_id = wandb.sweep(sweep=sweep_config, project=f"gru_multiclass_{modality}_v2")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':
