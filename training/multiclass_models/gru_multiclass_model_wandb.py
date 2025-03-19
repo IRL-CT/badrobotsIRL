@@ -689,7 +689,7 @@ def main():
     feature_set = random.choice(["full", "stats", "rf"])
     
     if feature_set == "full":
-        modality = random.choice(['pose_facial_audio', 'pose', 'facial', 'audio', 'pose_facial', 'pose_audio', 'facial_audio', 'text', 'pose_facial_audio_text'])
+        modality = random.choice(['pose_facial_audio', 'pose', 'facial', 'audio', 'pose_facial', 'pose_audio', 'facial_audio', 'text', 'pose_facial_audio_text', 'pose_facial_text', 'pose_audio_text', 'facial_audio_text', 'pose_facial_audio', 'pose_facial', 'pose_audio', 'facial_audio', 'pose_text', 'facial_text', 'audio_text'])
     elif feature_set == "stats":
         modality = random.choice(['facial_audio', 'facial', 'audio'])
     elif feature_set == "rf":
@@ -708,7 +708,7 @@ def main():
             # 'modality_rf': {'values': ['pose_facial_audio', 'pose', 'facial', 'audio', 'pose_facial', 'pose_audio', 'facial_audio']},
 
             'data' : {'values' : ["reg", "norm", "pca"]},
-            'fusion_type': {'values': [ 'intermediate', 'late']},
+            'fusion_type': {'values': ['early', 'intermediate', 'late']},
 
             'use_bidirectional': {'values': [True, False]},
             'num_gru_layers': {'values': [1, 2, 3]},
