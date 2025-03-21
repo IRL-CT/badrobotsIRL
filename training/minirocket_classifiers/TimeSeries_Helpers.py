@@ -48,7 +48,7 @@ def most_common(lst):
 
 
 
-def create_single_label_per_interval_with_context(df, interval_length, stride, features, context_length, balanced=False):
+def create_single_label_per_interval_with_context(df, interval_length, stride, features, context_length, label, balanced=False):
     '''
     Splits data into intervals of length interval_length + contextlength. The label is based only on the last frames of length interval_length
     :param df: dataframe containing the gaze data and labels
@@ -66,7 +66,7 @@ def create_single_label_per_interval_with_context(df, interval_length, stride, f
     for i in range(0, len(df), stride):
         if i + interval_length + context_length <= len(df):
             interval_labels = list(
-                df["binary_label"][i+context_length:i+context_length+interval_length])
+                df[label][i+context_length:i+context_length+interval_length])
             #print('interval labels', interval_labels)
             majority_label =  interval_labels[-1] #most_common(interval_labels)
             labels = np.append(labels, majority_label)
@@ -112,9 +112,9 @@ def create_single_label_per_interval_with_context(df, interval_length, stride, f
     print("Balanced class distribution:", Counter(balanced_labels))
 
     if balanced:
-        return balanced_values, balanced_labels, df["binary_label"]
+        return balanced_values, balanced_labels, df[label]
     else:
-        return values, labels, df["binary_label"]
+        return values, labels, df[label]
 
 # Select Modelities
 def modalities_combination_data_prep(modalities_combination_vec, X_train, feature_set_tag): # groundtruth):
@@ -297,12 +297,12 @@ def read_in_data(df_name, threshold, interval_length, stride_train, stride_eval,
     for p_number, participant in enumerate(data):
         if participant in valid_ids or participant in test_ids:
             values, labels, raw_labels = create_single_label_per_interval_with_context(
-                df=data[participant], interval_length=interval_length, stride=stride_eval, features=features, context_length=context_length, balanced=config.balanced)
+                df=data[participant], interval_length=interval_length, stride=stride_eval, features=features, context_length=context_length, label=config.label, balanced=config.balanced)
             lvl1_data.append((values, labels, raw_labels))
            
         else:
             values, labels, raw_labels = create_single_label_per_interval_with_context(
-                df=data[participant], interval_length=interval_length, stride=stride_train, features=features, context_length=context_length, balanced=config.balanced)
+                df=data[participant], interval_length=interval_length, stride=stride_train, features=features, context_length=context_length, label=config.label, balanced=config.balanced)
             lvl1_data.append((values, labels, raw_labels))
             
     return lvl1_data, data
@@ -881,8 +881,10 @@ def cross_validate(val_fold_size, config, group, name):
         #print(df['session'].unique())
         #print('FINISHED CROSS_VALIDATION')
 
-
-        train_folds, val_folds, test_folds = create_data_splits_ids(df, "binary")
+        if config.label == "binary_label":
+            train_folds, val_folds, test_folds = create_data_splits_ids(df, "binary")
+        elif config.label == "multiclass_label":
+            train_folds, val_folds, test_folds = create_data_splits_ids(df, "multiclass")
         #print("Train Folds:", train_folds)
         #print("Val Folds:", val_folds)
         #print("Test Folds:", test_folds)
@@ -1072,7 +1074,10 @@ def cross_validate_bestepoch(val_fold_size, config, group, name):
         #print('FINISHED CROSS_VALIDATION')
 
 
-        train_folds, val_folds, test_folds = create_data_splits_ids(df, "binary")
+        if config.label == "binary_label":
+            train_folds, val_folds, test_folds = create_data_splits_ids(df, "binary")
+        elif config.label == "multiclass_label":
+            train_folds, val_folds, test_folds = create_data_splits_ids(df, "multiclass")
         #print("Train Folds:", train_folds)
         #print("Val Folds:", val_folds)
         #print("Test Folds:", test_folds)
@@ -1302,7 +1307,10 @@ def cross_validate_bestmodel(val_fold_size, config, group, name):
         #print('FINISHED CROSS_VALIDATION')
 
 
-        train_folds, val_folds, test_folds = create_data_splits_ids(df, "binary")
+        if config.label == "binary_label":
+            train_folds, val_folds, test_folds = create_data_splits_ids(df, "binary")
+        elif config.label == "multiclass_label":
+            train_folds, val_folds, test_folds = create_data_splits_ids(df, "multiclass")
         #print("Train Folds:", train_folds)
         #print("Val Folds:", val_folds)
         #print("Test Folds:", test_folds)
@@ -2249,7 +2257,10 @@ def cross_validate_pretrained(val_fold_size, config, group, name):
         #print('FINISHED CROSS_VALIDATION')
 
 
-        train_folds, val_folds, test_folds = create_data_splits_ids(df, "binary")
+        if config.label == "binary_label":
+            train_folds, val_folds, test_folds = create_data_splits_ids(df, "binary")
+        elif config.label == "multiclass_label":
+            train_folds, val_folds, test_folds = create_data_splits_ids(df, "multiclass")
         #print("Train Folds:", train_folds)
         #print("Val Folds:", val_folds)
         #print("Test Folds:", test_folds)
@@ -2873,7 +2884,7 @@ def read_in_data_pp(df_name, participant, participant_minimum, threshold, interv
 
     for split in ['train', 'val', 'test']:
         values, labels, raw_labels = create_single_label_per_interval_with_context(
-                df=data[split], interval_length=interval_length, stride=stride_eval, features=features, context_length=context_length)
+                df=data[split], interval_length=interval_length, stride=stride_eval, features=features, context_length=context_length,label=config.label)
         lvl1_data.append((values, labels, raw_labels))
                  
 
