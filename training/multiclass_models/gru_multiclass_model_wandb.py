@@ -640,48 +640,50 @@ def train():
     if "text" in modality_components:
         if feature_set == "full":
             selected_modalities["text_full"] = modalities["text_full"]
-
-
-    if fusion_type == "early":
-        df = info
-        for m in selected_modalities.values():
-            df = pd.concat([df, m], axis=1)
-        
-        if data == "norm":
-            df = create_normalized_df(df)
-        elif data == "pca":
-            df = create_pca_df(create_normalized_df(df))
-
-        print(df)
-        print(df.shape)
-        
-        train_early_fusion(df, config)
     
-    if fusion_type == "intermediate" or fusion_type == "late":
-        dfs = {}
+    if len(selected_modalities) == 1:
+        train_early_fusion(df, config)
+    else:
+        if fusion_type == "early":
+            df = info
+            for m in selected_modalities.values():
+                df = pd.concat([df, m], axis=1)
+            
+            if data == "norm":
+                df = create_normalized_df(df)
+            elif data == "pca":
+                df = create_pca_df(create_normalized_df(df))
 
-        if data == "norm":
-            for modality_name, m in selected_modalities.items():
-                df_temp = pd.concat([info.copy(), m], axis=1)
-                dfs[modality_name] = create_normalized_df(df_temp)
-        elif data == "pca":
-            for modality_name, m in selected_modalities.items():
-                if modality_name == "text_full":
-                    dfs[modality_name] = df_text_pca
-                else:
+            print(df)
+            print(df.shape)
+            
+            train_early_fusion(df, config)
+        
+        if fusion_type == "intermediate" or fusion_type == "late":
+            dfs = {}
+
+            if data == "norm":
+                for modality_name, m in selected_modalities.items():
                     df_temp = pd.concat([info.copy(), m], axis=1)
-                    dfs[modality_name] = create_pca_df(create_normalized_df(df_temp))
-        elif data == "reg":
-            for modality_name, m in selected_modalities.items():
-                df_temp = pd.concat([info.copy(), m], axis=1)
-                dfs[modality_name] = create_normalized_df(df_temp)
+                    dfs[modality_name] = create_normalized_df(df_temp)
+            elif data == "pca":
+                for modality_name, m in selected_modalities.items():
+                    if modality_name == "text_full":
+                        dfs[modality_name] = df_text_pca
+                    else:
+                        df_temp = pd.concat([info.copy(), m], axis=1)
+                        dfs[modality_name] = create_pca_df(create_normalized_df(df_temp))
+            elif data == "reg":
+                for modality_name, m in selected_modalities.items():
+                    df_temp = pd.concat([info.copy(), m], axis=1)
+                    dfs[modality_name] = create_normalized_df(df_temp)
 
-        print(dfs)
+            print(dfs)
 
-        if fusion_type == "intermediate":
-            train_intermediate_fusion(dfs, config)
-        elif fusion_type == "late":
-            train_late_fusion(dfs, config)
+            if fusion_type == "intermediate":
+                train_intermediate_fusion(dfs, config)
+            elif fusion_type == "late":
+                train_late_fusion(dfs, config)
 
 
 def main():

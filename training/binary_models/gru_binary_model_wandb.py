@@ -675,7 +675,7 @@ def main():
     feature_set = random.choice(["full", "stats", "rf"])
     
     if feature_set == "full":
-        modality = random.choice(['pose_facial_audio', 'pose', 'facial', 'audio', 'pose_facial', 'pose_audio', 'facial_audio', 'text', 'pose_facial_audio_text'])
+        modality = random.choice(['pose_facial_audio', 'pose', 'facial', 'audio', 'pose_facial', 'pose_audio', 'facial_audio', 'text', 'pose_facial_audio_text', 'pose_facial_text', 'pose_audio_text', 'facial_audio_text', 'pose_facial_audio', 'pose_facial', 'pose_audio', 'facial_audio', 'pose_text', 'facial_text', 'audio_text'])
     elif feature_set == "stats":
         modality = random.choice(['facial_audio', 'facial', 'audio'])
     elif feature_set == "rf":
@@ -684,7 +684,7 @@ def main():
     
     sweep_config = {
         'method': 'random',
-        'name': 'gru_binary_all_v3',
+        'name': 'gru_binary_all_v4',
         'parameters': {
             'feature_set' : {'values': [feature_set]},
             'modality' : {'values' : [modality]},
@@ -694,7 +694,7 @@ def main():
             # 'modality_rf': {'values': ['pose_facial_audio', 'pose', 'facial', 'audio', 'pose_facial', 'pose_audio', 'facial_audio']},
 
             'data' : {'values' : ["reg", "norm", "pca"]},
-            'fusion_type': {'values': [ 'intermediate', 'late']},
+            'fusion_type': {'values': ['early', 'intermediate', 'late']},
 
             'use_bidirectional': {'values': [True, False]},
             'num_gru_layers': {'values': [1, 2, 3]},
@@ -705,7 +705,7 @@ def main():
             'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'rmsprop']},
             'learning_rate': {'values': [0.001, 0.01, 0.005]},
             'batch_size': {'values': [32, 64, 128]},
-            'epochs': {'value': 3},
+            'epochs': {'value': 100},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["categorical_crossentropy"]},
             
@@ -719,7 +719,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_binary_all_v3")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_binary_all_v4")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':
