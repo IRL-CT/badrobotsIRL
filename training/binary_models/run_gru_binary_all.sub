@@ -12,6 +12,5 @@
 #SBATCH --partition=gpu       # Request partition
 #SBATCH --gres=gpu:a6000:1                  # Type/number of GPUs needed
 
-export WANDB_API_KEY=62b9e0d8a9a27d5eaa28a5f553cf4c4a7442a4a0
 
 python3 gru_binary_model_wandb.py
