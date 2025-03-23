@@ -16,7 +16,6 @@
 #export your required environment variables below
 #################################################
 
-export WANDB_API_KEY=62b9e0d8a9a27d5eaa28a5f553cf4c4a7442a4a0
 
 
 python3 all_models.py
