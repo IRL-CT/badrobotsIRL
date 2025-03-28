@@ -29,8 +29,10 @@ from TimeSeries_Helpers import *
 from itertools import product
 
 # Generate all combinations of 4 modalities in Boolean
-modalities_combinations = list(product([True, False], repeat=3)) # ['audio', 'face', 'talk']
+modalities_combinations = list(product([True, False], repeat=5)) # ['audio', 'face', 'talk']
 modalities_combinations = [comb for comb in modalities_combinations if any(comb)] # remove all False combination
+#remove combinations where [3] and [4] ar eboth True
+modalities_combinations = [comb for comb in modalities_combinations if not (comb[3] and comb[4])]
 
 
 param_grid_models = {'model': ['LSTM_FCN',"GRU_FCN", "InceptionTime","InceptionTimePlus","MiniRocket", "gMLP"]}
@@ -48,7 +50,7 @@ param_grid_lstm = {'n_epoch': [100],
               'oversampling': [False],
               "batch_size": [256],
               "batch_tfms": [None],
-              "dataset_processing": ["pca", "norm", "clean"],
+              "dataset_processing":["pca", "norm", "clean"],
               "feature_set_tag": ["Full","Stat","RF"],
               "balanced": [True,False],
               "modalities_combination": modalities_combinations,

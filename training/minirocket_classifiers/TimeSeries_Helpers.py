@@ -186,8 +186,47 @@ def modalities_combination_data_prep(modalities_combination_vec, X_train, featur
 
         print('ADDED POSE')
 
+    if modalities_combination_vec[3]: # text_all
+        cols_or =  selected_modalities_train.columns
+        text_embeds = pd.read_csv("../../data/text_embeddings/text_embeddings.csv")
+        feats_embeds = text_embeds.iloc[:, 2:]
+        selected_modalities_train = pd.concat([selected_modalities_train,feats_embeds], axis=1, ignore_index=True)
+        print(selected_modalities_train.shape)
+        cols_names = feats_embeds.columns
+        #make it index
+        cols_names = pd.Index(cols_names)
+        print('COLS NAMES', cols_names)
+        cols = cols_or.append(cols_names)
+        selected_modalities_train.columns = cols
+        #print(selected_modalities_train.head())
+
+        print('ADDED FULL TEXTS')
+
+    if modalities_combination_vec[4]: # text_PCA
+        cols_or =  selected_modalities_train.columns
+        text_embeds = pd.read_csv("../../data/text_embeddings/text_embeddings_pca.csv")
+        feats_embeds = text_embeds.iloc[:, 2:]
+        selected_modalities_train = pd.concat([selected_modalities_train,feats_embeds], axis=1, ignore_index=True)
+        print(selected_modalities_train.shape)
+        cols_names = feats_embeds.columns
+        #make it index
+        cols_names = pd.Index(cols_names)
+        print('COLS NAMES', cols_names)
+        cols = cols_or.append(cols_names)
+        selected_modalities_train.columns = cols
+        #print(selected_modalities_train.head())
+
+        print('ADDED PCA TEXTS')
+
     
     cols = selected_modalities_train.columns
+    #reindex
+    #check for nan
+    print('NAN VALUES', selected_modalities_train.isnull().sum())
+    #remove rows with nan values
+    selected_modalities_train = selected_modalities_train.dropna()
+
+    selected_modalities_train = selected_modalities_train.reset_index(drop=True)
 
        
     if feature_set_tag == "Stat":
@@ -227,9 +266,12 @@ def apply_pca(df):
     df_pca = pd.DataFrame(df_pca)
     #reset index
     df_pca = df_pca.reset_index(drop=True)
+    print('PCA SHAPE', df_pca.shape)
     df_pca = pd.concat([df.loc[:, ['frame','participant','binary_label','multiclass_label']], df_pca], axis=1, ignore_index=True)
+    cols_pca = ['pc' + str(i) for i in range(1, df_pca.shape[1]-3)]
+    print('COLS PCA', cols_pca)
     #create string with pc + number for features
-    df_pca.columns = ['frame','participant','binary_label','multiclass_label'] + ['pc' + str(i) for i in range(1, df_pca.shape[1]-2)]
+    df_pca.columns = ['frame','participant','binary_label','multiclass_label'] + cols_pca
     #remove nan values
     df_pca = df_pca.dropna()
 
