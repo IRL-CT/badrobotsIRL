@@ -13,10 +13,19 @@ from create_data_splits import create_data_splits
 import random
 
 def train():
-
     wandb.init()
     config = wandb.config
     print(config)
+    
+    # Validate modality and feature_set combination
+    is_valid_combination = validate_modality_feature_combination(config.modality, config.feature_set)
+    
+    if not is_valid_combination:
+        print(f"Skipping invalid combination: feature_set={config.feature_set}, modality={config.modality}")
+        # Log that this was skipped
+        wandb.log({"status": "skipped_invalid_combination"})
+        return
+    
     seed_value = 42
 
     df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
@@ -38,20 +47,17 @@ def train():
     df_pose_index_rf = df_rf.iloc[:, 4:28]
     df_audio_index_rf = df_rf.iloc[:, 28:38]
 
-    # select dataset and modalities
+    # Select dataset and modalities
     modalities = {
-        "pose_full" : df_pose_index,
-        "pose_rf" : df_pose_index_rf,
-
-        "facial_full" : df_facial_index,
-        "facial_stats" : df_facial_index_stats,
-        "facial_rf" : df_facial_index_rf,
-
-        "audio_full" : df_audio_index,
-        "audio_stats" : df_audio_index_stats,
-        "audio_rf" : df_audio_index_rf,
-
-        "text_full" : df_text_index,
+        "pose_full": df_pose_index,
+        "pose_rf": df_pose_index_rf,
+        "facial_full": df_facial_index,
+        "facial_stats": df_facial_index_stats,
+        "facial_rf": df_facial_index_rf,
+        "audio_full": df_audio_index,
+        "audio_stats": df_audio_index_stats,
+        "audio_rf": df_audio_index_rf,
+        "text_full": df_text_index,
     }
 
     modality_components = config.modality.split('_')
@@ -60,30 +66,16 @@ def train():
     feature_set = config.feature_set
 
     if "pose" in modality_components:
-        if feature_set == "full":
-            selected_modalities["pose_full"] = modalities["pose_full"]
-        elif feature_set == "rf":
-            selected_modalities["pose_rf"] = modalities["pose_rf"]
+        selected_modalities["pose_" + feature_set] = modalities["pose_" + feature_set]
     
     if "facial" in modality_components:
-        if feature_set == "full":
-            selected_modalities["facial_full"] = modalities["facial_full"]
-        elif feature_set == "stats":
-            selected_modalities["facial_stats"] = modalities["facial_stats"]
-        elif feature_set == "rf":
-            selected_modalities["facial_rf"] = modalities["facial_rf"]
-    
+        selected_modalities["facial_" + feature_set] = modalities["facial_" + feature_set]
+
     if "audio" in modality_components:
-        if feature_set == "full":
-            selected_modalities["audio_full"] = modalities["audio_full"]
-        elif feature_set == "stats":
-            selected_modalities["audio_stats"] = modalities["audio_stats"]
-        elif feature_set == "rf":
-            selected_modalities["audio_rf"] = modalities["audio_rf"]
-    
+        selected_modalities["audio_" + feature_set] = modalities["audio_" + feature_set]
+
     if "text" in modality_components:
-        if feature_set == "full":
-            selected_modalities["text_full"] = modalities["text_full"]
+        selected_modalities["text_full"] = modalities["text_full"]
 
     df = info
     
@@ -97,7 +89,6 @@ def train():
 
     print(df)
     print(df.shape)
-    
     
     test_metrics_list = {
         "test_accuracy": [],
@@ -114,7 +105,7 @@ def train():
         
     for fold in range(5):
         splits = create_data_splits(
-            df, "multiclass",
+            df, config.binary_multiclass,
             fold_no=fold,
             num_folds=5,
             seed_value=42,
@@ -179,6 +170,25 @@ def train():
     print("Sorted Feature Importances:", sorted_feature_importance)
     # wandb.log({"feature_importances": feature_importance_dict})
 
+def validate_modality_feature_combination(modality, feature_set):
+    modality_components = modality.split('_')
+    
+    # Text only works with 'full' feature set
+    if 'text' in modality_components and feature_set != 'full':
+        return False
+        
+    # 'stats' feature set only works with 'facial', 'audio', and their combination
+    if feature_set == 'stats':
+        valid_components = ['facial', 'audio']
+        for component in modality_components:
+            if component not in valid_components:
+                return False
+    
+    # 'rf' feature set doesn't work with 'text'
+    if feature_set == 'rf' and 'text' in modality_components:
+        return False
+    
+    return True
 
 def create_normalized_df(df):
     if df.empty:
@@ -221,50 +231,33 @@ def create_norm_pca_df(df):
     return principal_df
 
 def main():
-    # global df
-    # global df_norm
-    # global df_pca 
-    # df = pd.read_csv("../preprocessing/merged_features/all_participants_0_3.csv")
-    # df_stats = pd.read_csv("../preprocessing/stats_features/all_participants_merged_correct_stats_0_3.csv")
-    # df_norm = create_normalized_df(df)
-    # df_pca = create_norm_pca_df(df)
-
-    # Sweep configuration
-
-    feature_set = random.choice(["full", "stats", "rf"])
-
-    if feature_set == "full":
-        modality = random.choice(
-        ['pose', 'facial', 'audio', 'text',
-         'pose_facial', 'pose_audio', 'pose_text',
-         'facial_audio', 'facial_text',
-         'audio_text',
-         'pose_facial_audio', 'pose_facial_text', 'pose_audio_text',
-         'facial_audio_text',
-         'pose_facial_audio_text',
-         ])
-    elif feature_set == "stats":
-        modality = random.choice(['facial_audio', 'facial', 'audio'])
-    elif feature_set == "rf":
-        modality = random.choice(['pose_facial_audio', 'pose', 'facial', 'audio', 'pose_facial', 'pose_audio', 'facial_audio'])
 
     sweep_config = {
         'method': 'random',
         'name': 'random_forest_tuning',
         'parameters': {
-            'feature_set': {'values': [feature_set]}, # Full, Stat, RF, Quali
+            'binary_multiclass': {'values': ['binary', 'multiclass']},
+            'feature_set': {'values': ['full', 'stats', 'rf']},
             'dataset': {'values': ['reg', 'normalized', 'pca']},
             'n_estimators': {'values': [100, 200, 300, 500, 700, 1000]},
             'max_depth': {'values': [5, 10, 15, 20, 25, 30]},
-            'modality': {'values': [modality]},
-            'sequence_length' : {'values': [30, 60, 90, 150, 300]}
+            'sequence_length' : {'values': [30, 60, 90, 150, 300]},
+            'modality': {'values': [
+                'pose', 'facial', 'audio', 'text',
+                'pose_facial', 'pose_audio', 'pose_text',
+                'facial_audio', 'facial_text',
+                'audio_text',
+                'pose_facial_audio', 'pose_facial_text', 'pose_audio_text',
+                'facial_audio_text',
+                'pose_facial_audio_text',
+            ]},
         }
     }
         
     print(sweep_config)
     
     # Start the sweep
-    sweep_id = wandb.sweep(sweep=sweep_config, project="rf_multiclass_v1")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="rf")
     wandb.agent(sweep_id, function=train)
 
 

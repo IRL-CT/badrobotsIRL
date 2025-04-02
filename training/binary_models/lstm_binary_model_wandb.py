@@ -433,7 +433,7 @@ def train_late_fusion(modality_dfs, config):
         y_val_sequences = splits[first_modality][9]
         y_test_sequences = splits[first_modality][11]
 
-        x = Dense(dense_units, activation=activation)(x)
+        x = Dense(dense_units, activation=activation)(concatenated)
         output_layer = Dense(1, activation="sigmoid")(x)
         
         model = Model(inputs=input_layers, outputs=output_layer)
@@ -523,9 +523,15 @@ def train():
     np.random.seed(seed_value)
     random.seed(seed_value)
     tf.random.set_seed(seed_value)
+
+    # Validate modality and feature_set combination
+    is_valid_combination = validate_modality_feature_combination(config.modality, config.feature_set)
     
-    feature_set = config.feature_set
-    modality = config.modality
+    if not is_valid_combination:
+        print(f"Skipping invalid combination: feature_set={config.feature_set}, modality={config.modality}")
+        # Log that this was skipped
+        wandb.log({"status": "skipped_invalid_combination"})
+        return
 
     data = config.data
     fusion_type = config.fusion_type
@@ -549,7 +555,64 @@ def train():
     df_pose_index_rf = df_rf.iloc[:, 4:28]
     df_audio_index_rf = df_rf.iloc[:, 28:38]
 
-    print("--------\nfeature set: ", feature_set, "\nmodality: ", modality, "\ndata: ", data, "\nfusion: ", fusion_type, "\n--------")
+    modalities = {
+        "pose_full": df_pose_index,
+        "pose_rf": df_pose_index_rf,
+        "facial_full": df_facial_index,
+        "facial_stats": df_facial_index_stats,
+        "facial_rf": df_facial_index_rf,
+        "audio_full": df_audio_index,
+        "audio_stats": df_audio_index_stats,
+        "audio_rf": df_audio_index_rf,
+        "text_full": df_text_index,
+    }
+
+    modality_components = config.modality.split('_')
+    selected_modalities = {}
+
+    feature_set = config.feature_set
+
+    if "pose" in modality_components:
+        selected_modalities["pose_" + feature_set] = modalities["pose_" + feature_set]
+    
+    if "facial" in modality_components:
+        selected_modalities["facial_" + feature_set] = modalities["facial_" + feature_set]
+
+    if "audio" in modality_components:
+        selected_modalities["audio_" + feature_set] = modalities["audio_" + feature_set]
+
+    if "text" in modality_components:
+        selected_modalities["text_full"] = modalities["text_full"]
+
+    df = info
+    
+    for m in selected_modalities.values():
+        df = pd.concat([df, m], axis=1)
+
+    if config.dataset == "norm":
+        df = create_normalized_df(df)
+    elif config.dataset == "pca":
+        df = create_norm_pca_df(df)
+
+    def validate_modality_feature_combination(modality, feature_set):
+        modality_components = modality.split('_')
+        
+        # Text only works with 'full' feature set
+        if 'text' in modality_components and feature_set != 'full':
+            return False
+            
+        # 'stats' feature set only works with 'facial', 'audio', and their combination
+        if feature_set == 'stats':
+            valid_components = ['facial', 'audio']
+            for component in modality_components:
+                if component not in valid_components:
+                    return False
+        
+        # 'rf' feature set doesn't work with 'text'
+        if feature_set == 'rf' and 'text' in modality_components:
+            return False
+        
+        return True
 
     def create_normalized_df(df):
         if df.empty:
@@ -566,7 +629,7 @@ def train():
 
         return norm_df
     
-    def create_pca_df(df):
+    def create_norm_pca_df(df):
         participant_frames_labels = df.iloc[:, :4]
 
         x = df.iloc[:, 4:]
@@ -581,53 +644,6 @@ def train():
 
         return principal_df
     
-    modalities = {
-
-        "pose_full" : df_pose_index,
-        "pose_rf" : df_pose_index_rf,
-
-        "facial_full" : df_facial_index,
-        "facial_stats" : df_facial_index_stats,
-        "facial_rf" : df_facial_index_rf,
-
-        "audio_full" : df_audio_index,
-        "audio_stats" : df_audio_index_stats,
-        "audio_rf" : df_audio_index_rf,
-
-        "text_full" : df_text_index,
-
-    }
-    
-    modality_components = modality.split('_')
-    selected_modalities = {}
-
-    if "pose" in modality_components:
-        if feature_set == "full":
-            selected_modalities["pose_full"] = modalities["pose_full"]
-        elif feature_set == "rf":
-            selected_modalities["pose_rf"] = modalities["pose_rf"]
-    
-    if "facial" in modality_components:
-        if feature_set == "full":
-            selected_modalities["facial_full"] = modalities["facial_full"]
-        elif feature_set == "stats":
-            selected_modalities["facial_stats"] = modalities["facial_stats"]
-        elif feature_set == "rf":
-            selected_modalities["facial_rf"] = modalities["facial_rf"]
-    
-    if "audio" in modality_components:
-        if feature_set == "full":
-            selected_modalities["audio_full"] = modalities["audio_full"]
-        elif feature_set == "stats":
-            selected_modalities["audio_stats"] = modalities["audio_stats"]
-        elif feature_set == "rf":
-            selected_modalities["audio_rf"] = modalities["audio_rf"]
-    
-    if "text" in modality_components:
-        if feature_set == "full":
-            selected_modalities["text_full"] = modalities["text_full"]
-
-
     if fusion_type == "early":
         df = info
         for m in selected_modalities.values():
@@ -636,7 +652,7 @@ def train():
         if data == "norm":
             df = create_normalized_df(df)
         elif data == "pca":
-            df = create_pca_df(create_normalized_df(df))
+            df = create_norm_pca_df(create_normalized_df(df))
 
         print(df)
         print(df.shape)
@@ -656,7 +672,7 @@ def train():
                     dfs[modality_name] = df_text_pca
                 else:
                     df_temp = pd.concat([info.copy(), m], axis=1)
-                    dfs[modality_name] = create_pca_df(create_normalized_df(df_temp))
+                    dfs[modality_name] = create_norm_pca_df(create_normalized_df(df_temp))
         elif data == "reg":
             for modality_name, m in selected_modalities.items():
                 df_temp = pd.concat([info.copy(), m], axis=1)
@@ -672,34 +688,20 @@ def train():
 
 def main():
 
-    feature_set = random.choice(["full", "stats", "rf"])
-    
-    if feature_set == "full":
-        modality = random.choice(
-        ['pose', 'facial', 'audio', 'text',
-         'pose_facial', 'pose_audio', 'pose_text',
-         'facial_audio', 'facial_text',
-         'audio_text',
-         'pose_facial_audio', 'pose_facial_text', 'pose_audio_text',
-         'facial_audio_text',
-         'pose_facial_audio_text',
-         ])    
-    elif feature_set == "stats":
-        modality = random.choice(['facial_audio', 'facial', 'audio'])
-    elif feature_set == "rf":
-        modality = random.choice(['pose_facial_audio', 'pose', 'facial', 'audio', 'pose_facial', 'pose_audio', 'facial_audio'])
-    
-    
     sweep_config = {
         'method': 'random',
         'name': 'lstm_binary_all_v4',
         'parameters': {
-            'feature_set' : {'values': [feature_set]},
-            'modality' : {'values' : [modality]},
-
-            # 'modality_full': {'values': ['pose_facial_audio', 'pose', 'facial', 'audio', 'pose_facial', 'pose_audio', 'facial_audio', 'text', 'pose_facial_audio_text']},
-            # 'modality_stats': {'values': ['facial_audio', 'facial', 'audio']},
-            # 'modality_rf': {'values': ['pose_facial_audio', 'pose', 'facial', 'audio', 'pose_facial', 'pose_audio', 'facial_audio']},
+            'feature_set': {'values': ['full', 'stats', 'rf']},
+            'modality': {'values': [
+                'pose', 'facial', 'audio', 'text',
+                'pose_facial', 'pose_audio', 'pose_text',
+                'facial_audio', 'facial_text',
+                'audio_text',
+                'pose_facial_audio', 'pose_facial_text', 'pose_audio_text',
+                'facial_audio_text',
+                'pose_facial_audio_text',
+            ]},
 
             'data' : {'values' : ["reg", "norm", "pca"]},
             'fusion_type': {'values': ['early', 'intermediate', 'late']},
