@@ -107,8 +107,8 @@ def train():
             fold_no=fold,
             num_folds=5,
             seed_value=42,
-            sequence_length=config.sequence_length)
-        X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length = splits
+            sequence_length=1)
+        X_train, X_val, X_test, y_train, y_val, y_test, _, _, _, _, _, _, _ = splits
             
         # Balance training dataset
         smote = SMOTE(random_state=42) 
@@ -228,7 +228,6 @@ def main():
                 'facial_audio_text',
                 'pose_facial_audio_text',
             ]},
-            'sequence_length': {'values': [30, 60, 90, 150, 300]}
         }
     }
     

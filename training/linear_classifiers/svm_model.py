@@ -101,9 +101,12 @@ def train():
 
     for fold in range(5):
         splits = create_data_splits(
-            df, config.binary_multiclass, fold_no=fold, num_folds=5, seed_value=seed_value, sequence_length=config.sequence_length)
-        X_train, X_val, X_test, y_train, y_val, y_test, *_ = splits
-
+            df, config.binary_multiclass,
+            fold_no=fold,
+            num_folds=5,
+            seed_value=seed_value)
+        X_train, X_val, X_test, y_train, y_val, y_test, _, _, _, _, _, _, _ = splits
+        
         smote = SMOTE(random_state=seed_value) 
         X_train_balanced, y_train_balanced = smote.fit_resample(X_train, y_train)
 

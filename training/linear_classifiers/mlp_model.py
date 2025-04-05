@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
-from sklearn.linear_model import SGDClassifier
+from sklearn.neural_network import MLPClassifier
 from imblearn.over_sampling import SMOTE
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.metrics import confusion_matrix
@@ -10,7 +10,7 @@ import wandb
 from itertools import product
 from get_metrics import get_test_metrics
 from create_data_splits import create_data_splits
-import random
+
 
 def train():
     wandb.init()
@@ -107,30 +107,27 @@ def train():
             fold_no=fold,
             num_folds=5,
             seed_value=42,
-            sequence_length=config.sequence_length)
-        X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length = splits
+            sequence_length=1)
+        X_train, X_val, X_test, y_train, y_val, y_test, _, _, _, _, _, _, _ = splits
             
         # Balance training dataset
-        smote = SMOTE(random_state=seed_value) 
+        smote = SMOTE(random_state=42) 
         X_train_balanced, y_train_balanced = smote.fit_resample(X_train, y_train)
         
-        # Use SGD parameters from config
-        # Initialize SGDClassifier with proper hyperparameters from sweep config
-        sgd = SGDClassifier(
-            loss="log_loss",
-            penalty="l2",
-            alpha=config.alpha if hasattr(config, 'alpha') else 0.0001,
-            max_iter=config.max_iter if hasattr(config, 'max_iter') else 1000,
-            tol=config.tol if hasattr(config, 'tol') else 1e-3,
-            random_state=seed_value
+        # Create MLP Classifier
+        mlp = MLPClassifier(
+            hidden_layer_sizes=config.mlp_hidden_layer_sizes,
+            activation=config.mlp_activation,
+            solver='adam',
+            random_state=42,
+            max_iter=100,
+            verbose=True
         )
-        
-        sgd.fit(X_train_balanced, y_train_balanced)
-    
-        y_pred = sgd.predict(X_test)
 
-        # Logging prediction probabilities
-        y_pred_proba = sgd.predict_proba(X_test)
+        mlp.fit(X_train_balanced, y_train_balanced)
+        y_pred = mlp.predict(X_test)
+        y_pred_proba = mlp.predict_proba(X_test)
+
 
         df_probs = pd.DataFrame(y_pred_proba, columns=[f"prob_class_{i}" for i in range(y_pred_proba.shape[1])])
         df_probs["y_pred"] = y_pred
@@ -178,7 +175,6 @@ def validate_modality_feature_combination(modality, feature_set):
     
     return True
 
-
 def create_normalized_df(df):
     if df.empty:
         raise ValueError("create_normalized_df: Input DataFrame is empty.")
@@ -217,20 +213,19 @@ def create_norm_pca_df(df):
     principal_df = pd.DataFrame(data=principal_components, columns=['principal component ' + str(i) for i in range(principal_components.shape[1])])
     principal_df = pd.concat([participant_frames_labels, principal_df], axis=1)
 
-    return principal_df    
+    return principal_df
 
 def main():
+    # A single sweep with all possible feature sets
     sweep_config = {
         'method': 'random',
-        'name': 'sgd_tuning',
+        'name': 'mlp_tuning',
         'parameters': {
             'binary_multiclass': {'values': ['binary', 'multiclass']},
-            'feature_set': {'values': ["full", "stats", "rf"]},
+            'feature_set': {'values': ['full', 'stats', 'rf']},
             'dataset': {'values': ['reg', 'norm', 'pca']},
-            'alpha': {'values': [0.00001, 0.0001, 0.001, 0.01, 0.1]},
-            'max_iter': {'values': [100, 500, 1000, 2000]},
-            'tol': {'values': [1e-4, 1e-3, 1e-2]},
-            'sequence_length': {'values': [30, 60, 90, 150, 300]},
+            'mlp_hidden_layer_sizes': {'values': [(100,), (64, 64), (128, 64)]},
+            'mlp_activation': {'values': ['relu', 'tanh']},
             'modality': {'values': [
                 'pose', 'facial', 'audio', 'text',
                 'pose_facial', 'pose_audio', 'pose_text',
@@ -242,12 +237,11 @@ def main():
             ]},
         }
     }
-
+    
     print(sweep_config)
-
-    sweep_id = wandb.sweep(sweep=sweep_config, project="sgd")
+    
+    sweep_id = wandb.sweep(sweep=sweep_config, project="mlp")
     wandb.agent(sweep_id, function=train)
-
 
 if __name__ == '__main__':
     main()
