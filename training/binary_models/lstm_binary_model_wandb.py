@@ -167,18 +167,24 @@ def train_early_fusion(df, config):
             wandb.log(metrics)
 
         y_predict_probs = model.predict(X_test_sequences)
+        y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
 
-        df_probs = pd.DataFrame(y_predict_probs)
+        df_probs = pd.DataFrame(y_predict_probs_clean)
 
         table = wandb.Table(dataframe=df_probs)
 
-        wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs})
+        wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs_clean})
         wandb.log({"fold_{}_prediction_probabilities_table".format(fold): table})
         
-        y_pred = (y_predict_probs > 0.5).astype(int).flatten()
-        y_test_sequences = np.argmax(y_test_sequences, axis=1)
+        y_pred = (y_predict_probs_clean > 0.5).astype(int).flatten()
 
-        test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
+        if len(y_test_sequences.shape) > 1 and y_test_sequences.shape[1] > 1:
+            y_test_class_indices = np.argmax(y_test_sequences, axis=1)
+        else:
+            y_test_class_indices = y_test_sequences
+
+        test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
+
         for key in test_metrics_list.keys():
             test_metrics_list[key].append(test_metrics[key])
 
@@ -327,13 +333,14 @@ def train_intermediate_fusion(modality_dfs, config):
             wandb.log(metrics)
         
         y_predict_probs = model.predict(test_inputs)
+        y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
         
-        df_probs = pd.DataFrame(y_predict_probs)
+        df_probs = pd.DataFrame(y_predict_probs_clean)
         table = wandb.Table(dataframe=df_probs)
-        wandb.log({f"fold_{fold}_prediction_probabilities": y_predict_probs})
+        wandb.log({f"fold_{fold}_prediction_probabilities": y_predict_probs_clean})
         wandb.log({f"fold_{fold}_prediction_probabilities_table": table})
         
-        y_pred = (y_predict_probs > 0.5).astype(int).flatten()
+        y_pred = (y_predict_probs_clean > 0.5).astype(int).flatten()
 
         if len(y_test_sequences.shape) > 1 and y_test_sequences.shape[1] > 1:
             y_test_class_indices = np.argmax(y_test_sequences, axis=1)
@@ -488,12 +495,13 @@ def train_late_fusion(modality_dfs, config):
             wandb.log(metrics)
 
         y_predict_probs = model.predict(test_inputs)
+        y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
 
-        df_probs = pd.DataFrame(y_predict_probs)
-        wandb.log({f"fold_{fold}_prediction_probabilities": y_predict_probs})
+        df_probs = pd.DataFrame(y_predict_probs_clean)
+        wandb.log({f"fold_{fold}_prediction_probabilities": y_predict_probs_clean})
         wandb.log({f"fold_{fold}_prediction_probabilities_table": wandb.Table(dataframe=df_probs)})
 
-        y_pred = (y_predict_probs > 0.5).astype(int).flatten()
+        y_pred = (y_predict_probs_clean > 0.5).astype(int).flatten()
 
         if len(y_test_sequences.shape) > 1 and y_test_sequences.shape[1] > 1:
             y_test_class_indices = np.argmax(y_test_sequences, axis=1)
@@ -512,6 +520,56 @@ def train_late_fusion(modality_dfs, config):
     wandb.run.summary.update(avg_test_metrics)
     print("Average Test Metrics Across All Folds:", avg_test_metrics)
 
+
+def validate_modality_feature_combination(modality, feature_set):
+    modality_components = modality.split('_')
+    
+    # Text only works with 'full' feature set
+    if 'text' in modality_components and feature_set != 'full':
+        return False
+        
+    # 'stats' feature set only works with 'facial', 'audio', and their combination
+    if feature_set == 'stats':
+        valid_components = ['facial', 'audio']
+        for component in modality_components:
+            if component not in valid_components:
+                return False
+    
+    # 'rf' feature set doesn't work with 'text'
+    if feature_set == 'rf' and 'text' in modality_components:
+        return False
+    
+    return True
+
+def create_normalized_df(df):
+    if df.empty:
+        raise ValueError("create_normalized_df: Input DataFrame is empty.")
+    participant_frames_labels = df.iloc[:, :4]
+    
+    features = df.columns[4:]
+    norm_df = df.copy()
+    
+    scaler = StandardScaler()
+    norm_df[features] = scaler.fit_transform(norm_df[features])
+    
+    norm_df = pd.concat([participant_frames_labels, norm_df[features]], axis=1)
+
+    return norm_df
+
+def create_norm_pca_df(df):
+    participant_frames_labels = df.iloc[:, :4]
+
+    x = df.iloc[:, 4:]
+    x = StandardScaler().fit_transform(x.values)
+
+    pca = PCA(n_components=0.90)
+    principal_components = pca.fit_transform(x)
+    print(principal_components.shape)
+
+    principal_df = pd.DataFrame(data=principal_components, columns=['principal component ' + str(i) for i in range(principal_components.shape[1])])
+    principal_df = pd.concat([participant_frames_labels, principal_df], axis=1)
+
+    return principal_df
 
 def train():
 
@@ -533,7 +591,7 @@ def train():
         wandb.log({"status": "skipped_invalid_combination"})
         return
 
-    data = config.data
+    data = config.dataset
     fusion_type = config.fusion_type
 
     df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
@@ -586,63 +644,13 @@ def train():
 
     df = info
     
-    for m in selected_modalities.values():
-        df = pd.concat([df, m], axis=1)
+    # for m in selected_modalities.values():
+    #     df = pd.concat([df, m], axis=1)
 
-    if config.dataset == "norm":
-        df = create_normalized_df(df)
-    elif config.dataset == "pca":
-        df = create_norm_pca_df(df)
-
-    def validate_modality_feature_combination(modality, feature_set):
-        modality_components = modality.split('_')
-        
-        # Text only works with 'full' feature set
-        if 'text' in modality_components and feature_set != 'full':
-            return False
-            
-        # 'stats' feature set only works with 'facial', 'audio', and their combination
-        if feature_set == 'stats':
-            valid_components = ['facial', 'audio']
-            for component in modality_components:
-                if component not in valid_components:
-                    return False
-        
-        # 'rf' feature set doesn't work with 'text'
-        if feature_set == 'rf' and 'text' in modality_components:
-            return False
-        
-        return True
-
-    def create_normalized_df(df):
-        if df.empty:
-            raise ValueError("create_normalized_df: Input DataFrame is empty.")
-        participant_frames_labels = df.iloc[:, :4]
-        
-        features = df.columns[4:]
-        norm_df = df.copy()
-        
-        scaler = StandardScaler()
-        norm_df[features] = scaler.fit_transform(norm_df[features])
-        
-        norm_df = pd.concat([participant_frames_labels, norm_df[features]], axis=1)
-
-        return norm_df
-    
-    def create_norm_pca_df(df):
-        participant_frames_labels = df.iloc[:, :4]
-
-        x = df.iloc[:, 4:]
-        x = StandardScaler().fit_transform(x.values)
-
-        pca = PCA(n_components=0.90)
-        principal_components = pca.fit_transform(x)
-        print(principal_components.shape)
-
-        principal_df = pd.DataFrame(data=principal_components, columns=['principal component ' + str(i) for i in range(principal_components.shape[1])])
-        principal_df = pd.concat([participant_frames_labels, principal_df], axis=1)
-
-        return principal_df
+    # if config.dataset == "norm":
+    #     df = create_normalized_df(df)
+    # elif config.dataset == "pca":
+    #     df = create_norm_pca_df(df)
     
     if fusion_type == "early":
         df = info
@@ -703,7 +711,7 @@ def main():
                 'pose_facial_audio_text',
             ]},
 
-            'data' : {'values' : ["reg", "norm", "pca"]},
+            'dataset' : {'values' : ["reg", "norm", "pca"]},
             'fusion_type': {'values': ['early', 'intermediate', 'late']},
 
             'use_bidirectional': {'values': [True, False]},
@@ -717,7 +725,7 @@ def main():
             'batch_size': {'values': [32, 64, 128]},
             'epochs': {'value': 100},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
-            'loss' : {'values' : ["categorical_crossentropy"]},
+            'loss' : {'values' : ["binary_crossentropy"]},
             
             'sequence_length' : {'values' : [60, 100, 150, 300]}
         }

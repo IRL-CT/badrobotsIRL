@@ -185,25 +185,19 @@ def train_single_modality_model(df, config):
             wandb.log(metrics)
 
         y_predict_probs = model.predict(X_test_sequences)
+        y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
 
-        df_probs = pd.DataFrame(y_predict_probs)
-
-        print(df_probs)
-
-        df_probs = pd.DataFrame(y_predict_probs, columns=[f"class_{i}" for i in range(y_predict_probs.shape[1])])
-
-        print(df_probs)
-
+        df_probs = pd.DataFrame(y_predict_probs_clean)
         table = wandb.Table(dataframe=df_probs)
 
-        wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs})
+        wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs_clean})
         wandb.log({"fold_{}_prediction_probabilities_table".format(fold): table})
         
         if loss == "categorical_crossentropy":
-            y_pred = np.argmax(y_predict_probs, axis=1)
+            y_pred = np.argmax(y_predict_probs_clean, axis=1)
             y_test_sequences = np.argmax(y_test_sequences, axis=1)
         else:
-            y_pred = (y_predict_probs > 0.5).astype(int).flatten()
+            y_pred = (y_predict_probs_clean > 0.5).astype(int).flatten()
             y_test_sequences = y_test_sequences.astype(int).flatten()
 
         test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
