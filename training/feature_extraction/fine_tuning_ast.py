@@ -43,11 +43,7 @@ sweep_config = {
         'goal': 'minimize'
     },
     'parameters': {
-        'learning_rate': {
-            'distribution': 'log_uniform',
-            'min': -9.21,  # ln(0.0001)
-            'max': -4.61   # ln(0.01)
-        },
+        'learning_rate': { 'values': [1e-4, 1e-6, 0.01,0.1] },
         'weight_decay': {
             'distribution': 'log_uniform',
             'min': -9.21,  # ln(0.0001)
@@ -64,7 +60,8 @@ sweep_config = {
         },
         'label': {
             'values': ['binary_label','multiclass_label']
-        }
+        },
+
     }
 }
 
