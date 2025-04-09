@@ -29,7 +29,7 @@ from TimeSeries_Helpers import *
 from itertools import product
 
 # Generate all combinations of 4 modalities in Boolean
-modalities_combinations = list(product([True, False], repeat=5)) # ['audio', 'face', 'talk']
+modalities_combinations = list(product([True, False], repeat=5)) # ['audio', 'face', 'talk','text','text_pca']
 modalities_combinations = [comb for comb in modalities_combinations if any(comb)] # remove all False combination
 #remove combinations where [3] and [4] ar eboth True
 modalities_combinations = [comb for comb in modalities_combinations if not (comb[3] and comb[4])]
@@ -51,10 +51,11 @@ param_grid_lstm = {'n_epoch': [100],
               "batch_size": [256],
               "batch_tfms": [None],
               "dataset_processing":["pca", "norm", "clean"],
-              "feature_set_tag": ["Full","Stat","RF"],
+              "feature_set_tag": ["Full"],
               "balanced": [True,False],
               "modalities_combination": modalities_combinations,
               "label": ['binary_label','multiclass_label'],
+              "embedding_type": ['bert', 'clip'],
               #"part_fusion": ['early','intermediate','late'],
               #"groundtruth": ['sign', 'multi'],
 
@@ -140,7 +141,8 @@ for i, grid_config in enumerate(param_grid):
                 feature_set_tag=grid_config["feature_set_tag"],
                 modalities_combination = grid_config["modalities_combination"],
                 balanced = grid_config["balanced"],
-                label = grid_config["label"]
+                label = grid_config["label"],
+                embedding_type = grid_config["embedding_type"]
                 #part_fusion = grid_config["part_fusion"],
                 #groundtruth = grid_config["groundtruth"],
                 

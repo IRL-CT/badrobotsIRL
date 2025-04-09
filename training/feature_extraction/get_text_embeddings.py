@@ -134,6 +134,14 @@ class VTTEmbeddingProcessor:
         new_df = new_df.dropna()
         print(new_df.shape)
 
+        #see if label_df [frames] is the same as new_df [frames]
+        print('checking if label_df and new_df match')
+        print([' ' if label_df['frame'].values[i] == new_df['frame'].values[i] else 'false' for i in range(len(label_df))])
+        #check if the length of new_df and label_df match
+        print('checking if label_df and new_df match')
+        print('label_df:', label_df.shape)
+        print('new_df:', new_df.shape)
+
 
 
         #save new_df as a csv file
@@ -177,4 +185,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-    #default command: python3 get_text_embeddings.py ../../data/transcripts/ ../../data/all_participants.csv ../../data/text_embeddings/ 
+    #default command: python3 get_text_embeddings.py ../../data/transcripts/ ../../data/all_participants_0_3.csv ../../data/text_embeddings/

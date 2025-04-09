@@ -188,7 +188,11 @@ def modalities_combination_data_prep(modalities_combination_vec, X_train, featur
 
     if modalities_combination_vec[3]: # text_all
         cols_or =  selected_modalities_train.columns
-        text_embeds = pd.read_csv("../../data/text_embeddings/text_embeddings.csv")
+        if config.embedding_type == 'bert':
+            text_embeds = pd.read_csv("../../data/text_embeddings/text_embeddings.csv")
+        elif config.embedding_type == 'clip':
+            text_embeds = pd.read_csv("../../data/text_embeddings/clip_text_embeddings.csv")
+        #text_embeds = pd.read_csv("../../data/text_embeddings/text_embeddings.csv")
         feats_embeds = text_embeds.iloc[:, 2:]
         selected_modalities_train = pd.concat([selected_modalities_train,feats_embeds], axis=1, ignore_index=True)
         print(selected_modalities_train.shape)
@@ -204,7 +208,10 @@ def modalities_combination_data_prep(modalities_combination_vec, X_train, featur
 
     if modalities_combination_vec[4]: # text_PCA
         cols_or =  selected_modalities_train.columns
-        text_embeds = pd.read_csv("../../data/text_embeddings/text_embeddings_pca.csv")
+        if config.embedding_type == 'bert':
+            text_embeds = pd.read_csv("../../data/text_embeddings/text_embeddings_pca.csv")
+        elif config.embedding_type == 'clip':
+            text_embeds = pd.read_csv("../../data/text_embeddings/clip_text_embeddings_pca.csv")
         feats_embeds = text_embeds.iloc[:, 2:]
         selected_modalities_train = pd.concat([selected_modalities_train,feats_embeds], axis=1, ignore_index=True)
         print(selected_modalities_train.shape)
