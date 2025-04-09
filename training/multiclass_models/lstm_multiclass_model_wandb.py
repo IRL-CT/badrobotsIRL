@@ -260,7 +260,7 @@ def train_intermediate_fusion(modality_dfs, config):
             feature_input = Input(shape=(sequence_length, X_train_seq.shape[2]))
             feature_inputs.append(feature_input)
             
-            x = feature_input
+            x = feature_input 
             for _ in range(num_lstm_layers):
                 if use_bidirectional:
                     x = Bidirectional(LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer))(x)

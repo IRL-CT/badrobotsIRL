@@ -9,7 +9,6 @@ from keras.models import Sequential, Model
 from keras.layers import LSTM, Dense, Dropout, BatchNormalization, Input, Bidirectional, concatenate
 from keras.callbacks import ModelCheckpoint
 from keras.regularizers import l1_l2, l1, l2
-from keras.utils import to_categorical
 import tensorflow as tf
 from create_data_splits import create_data_splits, create_data_splits_pca
 from get_metrics import get_test_metrics
@@ -247,10 +246,6 @@ def train_intermediate_fusion(modality_dfs, config):
         y_train_sequences = splits[first_modality][7] 
         y_val_sequences = splits[first_modality][9] 
         y_test_sequences = splits[first_modality][11] 
-        
-        y_train_sequences = to_categorical(y_train_sequences, num_classes=2)
-        y_val_sequences = to_categorical(y_val_sequences, num_classes=2)
-        y_test_sequences = to_categorical(y_test_sequences, num_classes=2)
         
         feature_inputs = []
         feature_outputs = []
