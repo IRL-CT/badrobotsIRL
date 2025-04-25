@@ -439,6 +439,9 @@ def train_late_fusion(modality_dfs, config):
         output_layer = Dense(1, activation="sigmoid")(x)
         
         model = Model(inputs=input_layers, outputs=output_layer)
+
+        model.summary()
+
         model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
         
         train_inputs = [splits[m][6] for m in modality_keys]

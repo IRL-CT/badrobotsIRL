@@ -187,8 +187,8 @@ def train_early_fusion(df, config):
         for key in test_metrics_list.keys():
             test_metrics_list[key].append(test_metrics[key])
 
-        wandb.log({f"fold_{fold}_metrics": test_metrics})
-        print(f"Fold {fold} Test Metrics:", test_metrics)
+        wandb.log({f"participant_{participant}_metrics": test_metrics})
+        print(f"Fold {participant} Test Metrics:", test_metrics)
     
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
     wandb.run.summary.update(avg_test_metrics)
@@ -453,6 +453,7 @@ def train_late_fusion(modality_dfs, config):
         output_layer = Dense(num_classes, activation="softmax")(x)
         
         model = Model(inputs=input_layers, outputs=output_layer)
+        model.summary()
         model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
         
         train_inputs = [splits[m][6] for m in modality_keys]

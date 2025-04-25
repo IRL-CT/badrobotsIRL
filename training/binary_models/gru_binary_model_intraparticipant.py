@@ -6,39 +6,38 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from keras.models import Sequential, Model
-from keras.layers import LSTM, Dense, Dropout, BatchNormalization, Input, Bidirectional, concatenate
+from keras.layers import GRU, Dense, Dropout, BatchNormalization, Input, Bidirectional, concatenate
 from keras.callbacks import ModelCheckpoint
 from keras.regularizers import l1_l2, l1, l2
-from keras.utils import to_categorical
 import tensorflow as tf
-from create_data_splits import create_data_splits, create_data_splits_pca
+from create_data_splits import create_data_splits_intraparticipant_binary
 from get_metrics import get_test_metrics
-from lstm_single_modality import train_single_modality_model
+from gru_single_modality import train_single_modality_model
 
-def build_early_late_model(sequence_length, input_shape, num_lstm_layers, lstm_units, activation, use_bidirectional, dropout, reg):
+def build_early_late_model(sequence_length, input_shape, num_gru_layers, gru_units, activation, use_bidirectional, dropout, reg):
     model = Sequential()
     model.add(Input(shape=(sequence_length, input_shape)))
 
-    if num_lstm_layers == 1:
+    if num_gru_layers == 1:
         if use_bidirectional:
-            model.add(Bidirectional(LSTM(lstm_units, activation=activation, kernel_regularizer=reg)))
+            model.add(Bidirectional(GRU(gru_units, activation=activation, kernel_regularizer=reg)))
         else:
-            model.add(LSTM(lstm_units, activation=activation, kernel_regularizer=reg))
+            model.add(GRU(gru_units, activation=activation, kernel_regularizer=reg))
         model.add(Dropout(dropout))
         model.add(BatchNormalization())
     else:
-        for _ in range(num_lstm_layers - 1):
+        for _ in range(num_gru_layers - 1):
             if use_bidirectional:
-                model.add(Bidirectional(LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=reg)))
+                model.add(Bidirectional(GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=reg)))
             else:
-                model.add(LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=reg))
+                model.add(GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=reg))
             model.add(Dropout(dropout))
             model.add(BatchNormalization())
 
         if use_bidirectional:
-            model.add(Bidirectional(LSTM(lstm_units, activation=activation)))
+            model.add(Bidirectional(GRU(gru_units, activation=activation)))
         else:
-            model.add(LSTM(lstm_units, activation=activation))
+            model.add(GRU(gru_units, activation=activation))
         model.add(Dropout(dropout))
         model.add(BatchNormalization())
 
@@ -46,8 +45,8 @@ def build_early_late_model(sequence_length, input_shape, num_lstm_layers, lstm_u
 
 def train_early_fusion(df, config):
 
-    num_lstm_layers = config.num_lstm_layers
-    lstm_units = config.lstm_units
+    num_gru_layers = config.num_gru_layers
+    gru_units = config.gru_units
     batch_size = config.batch_size
     epochs = config.epochs
     activation = config.activation_function
@@ -80,24 +79,24 @@ def train_early_fusion(df, config):
     elif optimizer == 'rmsprop':
         optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
 
-    for fold in range(5):
+    participant_list = ['p10nodbot', 'p11nodbot', 'p12nodbot', 'p14nodbot', 'p16nodbot', 'p17nodbot','p18nodbot', 'p19nodbot', 'p20nodbot', 'p21nodbot', 'p22nodbot', 'p23nodbot', 'p25nodbot', 'p26nodbot', 'p27nodbot', 'p28nodbot', 'p29nodbot', 'p2nodbot', 'p4nodbot', 'p5nodbot', 'p6nodbot', 'p7nodbot', 'p8nodbot', 'p9nodbot']
 
-        print("Fold ", fold)
+    for participant in participant_list:
 
-        splits = create_data_splits(
-                df, "multiclass",
-                fold_no=fold,
-                num_folds=5,
-                seed_value=42,
-                sequence_length=sequence_length)
+        splits_valid = True
+
+        print("Participant ", participant)
+
+        splits = create_data_splits_intraparticipant_binary(df, participant_id=participant, sequence_length=sequence_length, neutral_split_ratio=0.8, seed=42)
         if splits is None:
-            return
+            print(f"[{participant}] Invalid split for participant. Skipping...")
+            splits_valid = False
+            break
+            
+        if not splits_valid:
+            continue
 
         X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length = splits
-
-        y_train_sequences = to_categorical(y_train_sequences, num_classes=4)
-        y_val_sequences = to_categorical(y_val_sequences, num_classes=4)
-        y_test_sequences = to_categorical(y_test_sequences, num_classes=4)
 
         print("X_train_sequences shape:", X_train_sequences.shape)
         print("X_val_sequences shape:", X_val_sequences.shape)
@@ -118,7 +117,7 @@ def train_early_fusion(df, config):
         
         input_shape = X_train_sequences.shape[2]
 
-        model = build_early_late_model(sequence_length, input_shape, num_lstm_layers, lstm_units, activation, use_bidirectional, dropout, reg)
+        model = build_early_late_model(sequence_length, input_shape, num_gru_layers, gru_units, activation, use_bidirectional, dropout, reg)
         
         num_classes = len(np.unique(y_train))
         print("Num classes: ", num_classes)
@@ -127,7 +126,7 @@ def train_early_fusion(df, config):
         print("Unique labels in y_test:", np.unique(y_test))
 
         model.add(Dense(dense_units, activation=activation))
-        model.add(Dense(num_classes, activation="softmax"))
+        model.add(Dense(1, activation="sigmoid"))
 
         model.summary()
         
@@ -146,7 +145,7 @@ def train_early_fusion(df, config):
 
         for epoch in range(len(model_history.history['loss'])):
             metrics = {
-                    'fold': fold,
+                    'participant': participant,
                     'epoch': epoch,
                     'loss': model_history.history['loss'][epoch],
                     'val_loss': model_history.history['val_loss'][epoch]
@@ -177,18 +176,23 @@ def train_early_fusion(df, config):
 
         table = wandb.Table(dataframe=df_probs)
 
-        wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs_clean})
-        wandb.log({"fold_{}_prediction_probabilities_table".format(fold): table})
+        wandb.log({"participant_{}_prediction_probabilities".format(participant): y_predict_probs_clean})
+        wandb.log({"participant_{}_prediction_probabilities_table".format(participant): table})
         
-        y_pred = np.argmax(y_predict_probs_clean, axis=1)
-        y_test_sequences = np.argmax(y_test_sequences, axis=1)
+        y_pred = (y_predict_probs_clean > 0.5).astype(int).flatten()
 
-        test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
+        if len(y_test_sequences.shape) > 1 and y_test_sequences.shape[1] > 1:
+            y_test_class_indices = np.argmax(y_test_sequences, axis=1)
+        else:
+            y_test_class_indices = y_test_sequences
+
+        test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
+
         for key in test_metrics_list.keys():
             test_metrics_list[key].append(test_metrics[key])
 
-        wandb.log({f"fold_{fold}_metrics": test_metrics})
-        print(f"Fold {fold} Test Metrics:", test_metrics)
+        wandb.log({f"participant_{participant}_metrics": test_metrics})
+        print(f"Fold {participant} Test Metrics:", test_metrics)
     
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
     wandb.run.summary.update(avg_test_metrics)
@@ -197,8 +201,8 @@ def train_early_fusion(df, config):
 
 def train_intermediate_fusion(modality_dfs, config):
 
-    num_lstm_layers = config.num_lstm_layers
-    lstm_units = config.lstm_units
+    num_gru_layers = config.num_gru_layers
+    gru_units = config.gru_units
     batch_size = config.batch_size
     epochs = config.epochs
     activation = config.activation_function
@@ -233,23 +237,32 @@ def train_intermediate_fusion(modality_dfs, config):
     elif optimizer == 'rmsprop':
         optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
 
+    participant_list = ['p10nodbot', 'p11nodbot', 'p12nodbot', 'p14nodbot', 'p16nodbot', 'p17nodbot','p18nodbot', 'p19nodbot', 'p20nodbot', 'p21nodbot', 'p22nodbot', 'p23nodbot', 'p25nodbot', 'p26nodbot', 'p27nodbot', 'p28nodbot', 'p29nodbot', 'p2nodbot', 'p4nodbot', 'p5nodbot', 'p6nodbot', 'p7nodbot', 'p8nodbot', 'p9nodbot']
     
-    for fold in range(5):
-        print("Fold ", fold)
+    for participant in participant_list:
+        print("Participant ", participant)
+
+        splits_valid = True
         
         splits = {}
         for modality_key in modality_keys:
             df = modality_dfs[modality_key]
-            splits[modality_key] = create_data_splits(df, "multiclass", fold_no=fold, num_folds=5, seed_value=42, sequence_length=sequence_length)
+            splits[modality_key] = create_data_splits_intraparticipant_binary(df, participant_id=participant, sequence_length=sequence_length, neutral_split_ratio=0.8, seed=42)
+            if splits[modality_key] is None:
+                print(f"[{participant}] Invalid split for modality {modality_key} or participant. Skipping...")
+                splits_valid = False
+                break
+            if splits[modality_key][6].shape[0] == 0 or splits[modality_key][7].shape[0] == 0:
+                print(f"[{participant}] Invalid split for modality {modality_key} or participant. Skipping...")
+                splits_valid = False
+                break
+        if not splits_valid:
+            continue
         
         first_modality = modality_keys[0]
         y_train_sequences = splits[first_modality][7] 
         y_val_sequences = splits[first_modality][9] 
         y_test_sequences = splits[first_modality][11] 
-        
-        y_train_sequences = to_categorical(y_train_sequences, num_classes=4)
-        y_val_sequences = to_categorical(y_val_sequences, num_classes=4)
-        y_test_sequences = to_categorical(y_test_sequences, num_classes=4)
         
         feature_inputs = []
         feature_outputs = []
@@ -260,26 +273,24 @@ def train_intermediate_fusion(modality_dfs, config):
             feature_input = Input(shape=(sequence_length, X_train_seq.shape[2]))
             feature_inputs.append(feature_input)
             
-            x = feature_input 
-            for _ in range(num_lstm_layers):
+            x = feature_input
+            for _ in range(num_gru_layers):
                 if use_bidirectional:
-                    x = Bidirectional(LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer))(x)
+                    x = Bidirectional(GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer))(x)
                 else:
-                    x = LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer)(x)
+                    x = GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer)(x)
                 x = Dropout(dropout)(x)
                 x = BatchNormalization()(x)
             feature_outputs.append(x)
         
         concatenated_features = concatenate(feature_outputs)
         
-        x = LSTM(lstm_units, activation=activation, kernel_regularizer=kernel_regularizer)(concatenated_features)
+        x = GRU(gru_units, activation=activation, kernel_regularizer=kernel_regularizer)(concatenated_features)
         x = Dropout(dropout)(x)
         x = BatchNormalization()(x)
-        
-        num_classes = y_train_sequences.shape[1] if len(y_train_sequences.shape) > 1 else len(np.unique(y_train_sequences))
-        print("Num classes: ", num_classes)
+
         x = Dense(dense_units, activation=activation)(x)
-        x = Dense(num_classes, activation="softmax")(x)
+        x = Dense(1, activation="sigmoid")(x)
         
         model = Model(inputs=feature_inputs, outputs=x)
         model.summary()
@@ -300,7 +311,7 @@ def train_intermediate_fusion(modality_dfs, config):
         for epoch in range(len(model_history.history['loss'])):
 
             metrics = {
-                'fold': fold,
+                'participant': participant,
                 'epoch': epoch,
                 'loss': model_history.history['loss'][epoch],
                 'val_loss': model_history.history['val_loss'][epoch]
@@ -338,10 +349,10 @@ def train_intermediate_fusion(modality_dfs, config):
         
         df_probs = pd.DataFrame(y_predict_probs_clean)
         table = wandb.Table(dataframe=df_probs)
-        wandb.log({f"fold_{fold}_prediction_probabilities": y_predict_probs_clean})
-        wandb.log({f"fold_{fold}_prediction_probabilities_table": table})
-
-        y_pred = np.argmax(y_predict_probs_clean, axis=1)
+        wandb.log({f"participant_{participant}_prediction_probabilities": y_predict_probs_clean})
+        wandb.log({f"participant_{participant}_prediction_probabilities_table": table})
+        
+        y_pred = (y_predict_probs_clean > 0.5).astype(int).flatten()
 
         if len(y_test_sequences.shape) > 1 and y_test_sequences.shape[1] > 1:
             y_test_class_indices = np.argmax(y_test_sequences, axis=1)
@@ -353,8 +364,8 @@ def train_intermediate_fusion(modality_dfs, config):
         for key in test_metrics_list.keys():
             test_metrics_list[key].append(test_metrics[key])
         
-        wandb.log({f"fold_{fold}_metrics": test_metrics})
-        print(f"Fold {fold} Test Metrics:", test_metrics)
+        wandb.log({f"participant_{participant}_metrics": test_metrics})
+        print(f"Fold {participant} Test Metrics:", test_metrics)
     
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
     wandb.run.summary.update(avg_test_metrics)
@@ -363,8 +374,8 @@ def train_intermediate_fusion(modality_dfs, config):
 
 def train_late_fusion(modality_dfs, config):
 
-    num_lstm_layers = config.num_lstm_layers
-    lstm_units = config.lstm_units
+    num_gru_layers = config.num_gru_layers
+    gru_units = config.gru_units
     batch_size = config.batch_size
     epochs = config.epochs
     activation = config.activation_function
@@ -399,16 +410,28 @@ def train_late_fusion(modality_dfs, config):
     elif optimizer == 'rmsprop':
         optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
 
+    participant_list = ['p10nodbot', 'p11nodbot', 'p12nodbot', 'p14nodbot', 'p16nodbot', 'p17nodbot','p18nodbot', 'p19nodbot', 'p20nodbot', 'p21nodbot', 'p22nodbot', 'p23nodbot', 'p25nodbot', 'p26nodbot', 'p27nodbot', 'p28nodbot', 'p29nodbot', 'p2nodbot', 'p4nodbot', 'p5nodbot', 'p6nodbot', 'p7nodbot', 'p8nodbot', 'p9nodbot']
 
-    for fold in range(5):
-        print("Fold ", fold)
+    for participant in participant_list:
+        print("Participant ", participant)
+
+        splits_valid = True
         
         splits = {}
-
         for modality_key in modality_keys:
             df = modality_dfs[modality_key]
-            splits[modality_key] = create_data_splits(df, "multiclass", fold_no=fold, num_folds=5, seed_value=42, sequence_length=sequence_length)
-
+            splits[modality_key] = create_data_splits_intraparticipant_binary(df, participant_id=participant, sequence_length=sequence_length, neutral_split_ratio=0.8, seed=42)
+            if splits[modality_key] is None:
+                print(f"[{participant}] Invalid split for modality {modality_key} or participant. Skipping...")
+                splits_valid = False
+                break
+            if splits[modality_key][6].shape[0] == 0 or splits[modality_key][7].shape[0] == 0:
+                print(f"[{participant}] Invalid split for modality {modality_key} or participant. Skipping...")
+                splits_valid = False
+                break
+        if not splits_valid:
+            continue
+        
         input_layers = []
         outputs = []
 
@@ -420,8 +443,8 @@ def train_late_fusion(modality_dfs, config):
             model = build_early_late_model(
                 sequence_length, 
                 X_train_seq.shape[2], 
-                num_lstm_layers, 
-                lstm_units, 
+                num_gru_layers, 
+                gru_units, 
                 activation, 
                 use_bidirectional, 
                 dropout, 
@@ -441,19 +464,13 @@ def train_late_fusion(modality_dfs, config):
         y_val_sequences = splits[first_modality][9]
         y_test_sequences = splits[first_modality][11]
 
-        if len(y_train_sequences.shape) == 1 or y_train_sequences.shape[1] == 1:
-            num_classes = len(np.unique(y_train_sequences))
-            y_train_sequences = to_categorical(y_train_sequences, num_classes=num_classes)
-            y_val_sequences = to_categorical(y_val_sequences, num_classes=num_classes)
-            y_test_sequences = to_categorical(y_test_sequences, num_classes=num_classes)
-        else:
-            num_classes = y_train_sequences.shape[1]
-
         x = Dense(dense_units, activation=activation)(concatenated)
-        output_layer = Dense(num_classes, activation="softmax")(x)
+        output_layer = Dense(1, activation="sigmoid")(x)
         
         model = Model(inputs=input_layers, outputs=output_layer)
+
         model.summary()
+
         model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
         
         train_inputs = [splits[m][6] for m in modality_keys]
@@ -471,7 +488,7 @@ def train_late_fusion(modality_dfs, config):
         for epoch in range(len(model_history.history['loss'])):
 
             metrics = {
-                'fold': fold,
+                'participant': participant,
                 'epoch': epoch,
                 'loss': model_history.history['loss'][epoch],
                 'val_loss': model_history.history['val_loss'][epoch]
@@ -508,10 +525,10 @@ def train_late_fusion(modality_dfs, config):
         y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
 
         df_probs = pd.DataFrame(y_predict_probs_clean)
-        wandb.log({f"fold_{fold}_prediction_probabilities": y_predict_probs_clean})
-        wandb.log({f"fold_{fold}_prediction_probabilities_table": wandb.Table(dataframe=df_probs)})
+        wandb.log({f"participant_{participant}_prediction_probabilities": y_predict_probs_clean})
+        wandb.log({f"participant_{participant}_prediction_probabilities_table": wandb.Table(dataframe=df_probs)})
 
-        y_pred = np.argmax(y_predict_probs_clean, axis=1)
+        y_pred = (y_predict_probs_clean > 0.5).astype(int).flatten()
 
         if len(y_test_sequences.shape) > 1 and y_test_sequences.shape[1] > 1:
             y_test_class_indices = np.argmax(y_test_sequences, axis=1)
@@ -523,8 +540,8 @@ def train_late_fusion(modality_dfs, config):
         for key in test_metrics_list.keys():
             test_metrics_list[key].append(test_metrics[key])
 
-        wandb.log({f"fold_{fold}_metrics": test_metrics})
-        print(f"Fold {fold} Test Metrics:", test_metrics)
+        wandb.log({f"participant_{participant}_metrics": test_metrics})
+        print(f"Fold {participant} Test Metrics:", test_metrics)
 
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
     wandb.run.summary.update(avg_test_metrics)
@@ -601,7 +618,7 @@ def train():
         wandb.log({"status": "skipped_invalid_combination"})
         return
 
-    data = config.data
+    data = config.dataset
     fusion_type = config.fusion_type
 
     df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
@@ -708,9 +725,9 @@ def main():
 
     sweep_config = {
         'method': 'random',
-        'name': 'lstm_multiclass_all_v4',
+        'name': 'gru_binary_all_v4',
         'parameters': {
-            'feature_set': {'values': ['full', 'stats', 'rf']},
+            'feature_set': {'values': ['full', 'stats', 'pca']},
             'modality': {'values': [
                 'pose', 'facial', 'audio', 'text',
                 'pose_facial', 'pose_audio', 'pose_text',
@@ -721,12 +738,12 @@ def main():
                 'pose_facial_audio_text',
             ]},
 
-            'data' : {'values' : ["reg", "norm", "pca"]},
+            'dataset' : {'values' : ["reg", "norm", "pca"]},
             'fusion_type': {'values': ['early', 'intermediate', 'late']},
 
             'use_bidirectional': {'values': [True, False]},
-            'num_lstm_layers': {'values': [1, 2, 3]},
-            'lstm_units': {'values': [64, 128, 256]},
+            'num_gru_layers': {'values': [1, 2, 3]},
+            'gru_units': {'values': [64, 128, 256]},
             'dropout_rate': {'values': [0.0, 0.3, 0.5, 0.8]},
             'dense_units': {'values': [32, 64, 128]},
             'activation_function': {'values': ['tanh', 'relu', 'sigmoid']},
@@ -735,9 +752,9 @@ def main():
             'batch_size': {'values': [32, 64, 128]},
             'epochs': {'value': 100},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
-            'loss' : {'values' : ["categorical_crossentropy"]},
+            'loss' : {'values' : ["binary_crossentropy"]},
             
-            'sequence_length' : {'values' : [60, 100, 150, 300]}
+            'sequence_length' : {'values' : [5, 10, 15, 30, 60]}
         }
         # feature set (full, stats, rf) -> modality selection (pose_facial_audio, pose, facial, etc.) -> (reg, norm, pca) -> fusion
     }
@@ -747,7 +764,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_multiclass_all_v4")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_binary_all_v4")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':
