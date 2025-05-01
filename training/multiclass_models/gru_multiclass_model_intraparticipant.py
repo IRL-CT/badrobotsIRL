@@ -89,7 +89,7 @@ def train_early_fusion(df, config):
 
         print("Participant ", participant)
 
-        splits = create_data_splits_intraparticipant_multiclass(df, participant_id=participant, sequence_length=sequence_length, neutral_split_ratio=0.8, seed=42)
+        splits = create_data_splits_intraparticipant_multiclass(df, participant_id=participant, sequence_length=sequence_length, seed=42)
         if splits is None:
             print(f"[{participant}] Invalid split for participant. Skipping...")
             splits_valid = False
@@ -124,7 +124,8 @@ def train_early_fusion(df, config):
 
         model = build_early_late_model(sequence_length, input_shape, num_gru_layers, gru_units, activation, use_bidirectional, dropout, reg)
         
-        num_classes = len(np.unique(y_train))
+        num_classes = 4
+        #num_classes = len(np.unique(y_train))
         print("Num classes: ", num_classes)
         print("Unique labels in y_train:", np.unique(y_train))
         print("Unique labels in y_val:", np.unique(y_val))
@@ -249,7 +250,7 @@ def train_intermediate_fusion(modality_dfs, config):
         splits = {}
         for modality_key in modality_keys:
             df = modality_dfs[modality_key]
-            splits[modality_key] = create_data_splits_intraparticipant_multiclass(df, participant_id=participant, sequence_length=sequence_length, neutral_split_ratio=0.8, seed=42)
+            splits[modality_key] = create_data_splits_intraparticipant_multiclass(df, participant_id=participant, sequence_length=sequence_length, seed=42)
             if splits[modality_key] is None:
                 print(f"[{participant}] Invalid split for modality {modality_key} or participant. Skipping...")
                 splits_valid = False
@@ -294,7 +295,8 @@ def train_intermediate_fusion(modality_dfs, config):
         x = Dropout(dropout)(x)
         x = BatchNormalization()(x)
 
-        num_classes = y_train_sequences.shape[1] if len(y_train_sequences.shape) > 1 else len(np.unique(y_train_sequences))
+        num_classes = 4
+        #num_classes = y_train_sequences.shape[1] if len(y_train_sequences.shape) > 1 else len(np.unique(y_train_sequences))
         print("Num classes: ", num_classes)
         x = Dense(dense_units, activation=activation)(x)
         x = Dense(num_classes, activation="softmax")(x)
@@ -427,7 +429,7 @@ def train_late_fusion(modality_dfs, config):
         splits = {}
         for modality_key in modality_keys:
             df = modality_dfs[modality_key]
-            splits[modality_key] = create_data_splits_intraparticipant_multiclass(df, participant_id=participant, sequence_length=sequence_length, neutral_split_ratio=0.8, seed=42)
+            splits[modality_key] = create_data_splits_intraparticipant_multiclass(df, participant_id=participant, sequence_length=sequence_length, seed=42)
             if splits[modality_key] is None:
                 print(f"[{participant}] Invalid split for modality {modality_key} or participant. Skipping...")
                 splits_valid = False
@@ -472,12 +474,14 @@ def train_late_fusion(modality_dfs, config):
         y_test_sequences = splits[first_modality][11]
 
         if len(y_train_sequences.shape) == 1 or y_train_sequences.shape[1] == 1:
-            num_classes = len(np.unique(y_train_sequences))
+            num_classes = 4
+            #num_classes = len(np.unique(y_train_sequences))
             y_train_sequences = to_categorical(y_train_sequences, num_classes=num_classes)
             y_val_sequences = to_categorical(y_val_sequences, num_classes=num_classes)
             y_test_sequences = to_categorical(y_test_sequences, num_classes=num_classes)
         else:
-            num_classes = y_train_sequences.shape[1]
+            num_classes = 4
+            #num_classes = y_train_sequences.shape[1]
 
         x = Dense(dense_units, activation=activation)(concatenated)
         output_layer = Dense(num_classes, activation="softmax")(x)
@@ -765,7 +769,7 @@ def main():
             'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'rmsprop']},
             'learning_rate': {'values': [0.001, 0.01, 0.005]},
             'batch_size': {'values': [32, 64, 128]},
-            'epochs': {'value': 100},
+            'epochs': {'value': 50},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["categorical_crossentropy"]},
             
