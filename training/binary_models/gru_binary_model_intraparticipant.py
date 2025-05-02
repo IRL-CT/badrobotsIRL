@@ -750,7 +750,7 @@ def main():
             'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'rmsprop']},
             'learning_rate': {'values': [0.001, 0.01, 0.005]},
             'batch_size': {'values': [32, 64, 128]},
-            'epochs': {'value': 50},
+            'epochs': {'value': 20},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["binary_crossentropy"]},
             

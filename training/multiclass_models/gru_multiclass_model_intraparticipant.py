@@ -744,7 +744,7 @@ def main():
 
     sweep_config = {
         'method': 'random',
-        'name': 'gru_multiclass_all_v4',
+        'name': 'gru_multiclass_intra_v1',
         'parameters': {
             'feature_set': {'values': ['full', 'stats', 'pca']},
             'modality': {'values': [
@@ -783,7 +783,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_multiclass_all_v4")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_multiclass_intra_v1")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':
