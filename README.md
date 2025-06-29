@@ -183,13 +183,13 @@ The full feature set contains all final facial, pose, and audio features listed 
 
 #### Stats Feature Set
 
-Features kept: [stats_features](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/stats/stats_features_ttest_full.csv)
+A statistical analysis was used to assess statistically significant features.
+Feature set: [stats_features](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/stats/stats_features_ttest_full.csv)
 
 #### Random Forest (RF) Feature Set
 
-Selected features if feature drop > 40%
-
-Features kept: [rf_features](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/rf/rf_features_selected_40.csv)
+A random forest was used to assess feature importance. Features were retained up to the point where the importance drop exceeded 40%.
+Feature set: [rf_features](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/rf/rf_features_selected_40.csv)
 
 ## Labels
 
@@ -287,9 +287,44 @@ Participant 29's interaction consisted of 5 errors. Therefore, it contained 2 ad
 
 The Python script that assisted with the label analysis is found here: [label_analysis.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/label_analysis.py)
 
-## Training
+## Model Training
 
-LSTM, GRU, Minirocket models
+We evaluated model performance using two training approaches:
+
+- Interparticipant training
+  - Models are trained on data from some participants, then tested on different unseen participants.
+  - Models can assess how well a system can predict its failures based on reactions of new individuals.
+- Intraparticipant training
+  - Models are trained on a subset of one participant's data, then tested on a different subset of the same participant's data.
+  - Models can assess how well a system can predict its failures based on unseen reactions from the same individual.
+
+Our models were trained on 15 combinations of different modalities including facial, pose, audio, and text features.
+
+Our models were trained using 3 different feature sets including the full set of features, statistically significant features, and features of most importance. Please refer to [this section](https://github.com/IRL-CT/badrobotsIRL?tab=readme-ov-file#feature-selection) for more details on feature set selection.
+
+Our models were trained using 3 different datasets including the original dataset itself, the normalized dataset, and the dataset resulting from a principal component analysis (PCA). Please refer to [this section](https://github.com/IRL-CT/badrobotsIRL?tab=readme-ov-file#principal-component-analysis-pca) for more details on PCA.
+
+We explored fusion strategies to combine the features from different modalities:
+- Early Fusion
+  - Modality features are concatenated, then input into the model.
+- Intermediate Fusion
+  - Each modality is processed independently, then intermediate representations are concatenated and input into further layers of a model.
+- Late Fusion
+  - Each modality is trained independently, then their predictions are concatenated.
+
+We explored different model architectures to assess performance across different complexity levels and modalities.
+- Long Short Term Memory (LSTM)
+- Gated Recurrent Network (GRU)
+- MiniRocket Model
+- Linear Classifiers
+  - K Nearest Neighbor (KNN)
+  - Random Forest (RF)
+  - Stochastic Gradient Descent (SGD)
+  - Support Vector Machine (SVM)
+  - Multilayer Perceptron (MLP)
+- Audio Spectrogram Transformer (AST) for audio features
+
+These models were trained using interparticipant and intraparticipant splits and with different fusion strategies, feature sets, and datasets as explained above.
 
 ## Participant Exclusion
 
