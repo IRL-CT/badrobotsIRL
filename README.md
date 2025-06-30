@@ -48,7 +48,7 @@ The robot failure was verbalized as "Sorry, I do not understand" and occurred at
 1. [Analysis of Human Reactions to Robot Failure](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#analysis-of-human-reactions-to-robot-failure)
 2. [Features](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#feature-extraction)
 3. [Labels](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#labels)
-4. [Training](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#training)
+4. [Training](https://github.com/IRL-CT/badrobotsIRL?tab=readme-ov-file#model-training)
 5. [Participant Exclusion](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#participant-exclusion)
 6. [Principal Component Analysis](https://github.com/FAR-Lab/badrobotsIRL/tree/main?tab=readme-ov-file#principal-component-analysis-pca)
 
