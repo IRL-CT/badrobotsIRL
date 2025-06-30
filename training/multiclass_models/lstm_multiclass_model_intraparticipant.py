@@ -6,7 +6,7 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from keras.models import Sequential, Model
-from keras.layers import GRU, Dense, Dropout, BatchNormalization, Input, Bidirectional, concatenate
+from keras.layers import LSTM, Dense, Dropout, BatchNormalization, Input, Bidirectional, concatenate
 from keras.callbacks import ModelCheckpoint
 from keras.regularizers import l1_l2, l1, l2
 from keras.utils import to_categorical
@@ -14,32 +14,32 @@ from keras.utils import to_categorical
 import tensorflow as tf
 from create_data_splits import create_data_splits_intraparticipant_multiclass
 from get_metrics import get_test_metrics
-from gru_single_modality import train_single_modality_model
+from lstm_single_modality import train_single_modality_model
 
-def build_early_late_model(sequence_length, input_shape, num_gru_layers, gru_units, activation, use_bidirectional, dropout, reg):
+def build_early_late_model(sequence_length, input_shape, num_lstm_layers, lstm_units, activation, use_bidirectional, dropout, reg):
     model = Sequential()
     model.add(Input(shape=(sequence_length, input_shape)))
 
-    if num_gru_layers == 1:
+    if num_lstm_layers == 1:
         if use_bidirectional:
-            model.add(Bidirectional(GRU(gru_units, activation=activation, kernel_regularizer=reg)))
+            model.add(Bidirectional(LSTM(lstm_units, activation=activation, kernel_regularizer=reg)))
         else:
-            model.add(GRU(gru_units, activation=activation, kernel_regularizer=reg))
+            model.add(LSTM(lstm_units, activation=activation, kernel_regularizer=reg))
         model.add(Dropout(dropout))
         model.add(BatchNormalization())
     else:
-        for _ in range(num_gru_layers - 1):
+        for _ in range(num_lstm_layers - 1):
             if use_bidirectional:
-                model.add(Bidirectional(GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=reg)))
+                model.add(Bidirectional(LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=reg)))
             else:
-                model.add(GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=reg))
+                model.add(LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=reg))
             model.add(Dropout(dropout))
             model.add(BatchNormalization())
 
         if use_bidirectional:
-            model.add(Bidirectional(GRU(gru_units, activation=activation)))
+            model.add(Bidirectional(LSTM(lstm_units, activation=activation)))
         else:
-            model.add(GRU(gru_units, activation=activation))
+            model.add(LSTM(lstm_units, activation=activation))
         model.add(Dropout(dropout))
         model.add(BatchNormalization())
 
@@ -47,8 +47,8 @@ def build_early_late_model(sequence_length, input_shape, num_gru_layers, gru_uni
 
 def train_early_fusion(df, config):
 
-    num_gru_layers = config.num_gru_layers
-    gru_units = config.gru_units
+    num_lstm_layers = config.num_lstm_layers
+    lstm_units = config.lstm_units
     batch_size = config.batch_size
     epochs = config.epochs
     activation = config.activation_function
@@ -122,7 +122,7 @@ def train_early_fusion(df, config):
         
         input_shape = X_train_sequences.shape[2]
 
-        model = build_early_late_model(sequence_length, input_shape, num_gru_layers, gru_units, activation, use_bidirectional, dropout, reg)
+        model = build_early_late_model(sequence_length, input_shape, num_lstm_layers, lstm_units, activation, use_bidirectional, dropout, reg)
         
         num_classes = 4
         #num_classes = len(np.unique(y_train))
@@ -204,8 +204,8 @@ def train_early_fusion(df, config):
 
 def train_intermediate_fusion(modality_dfs, config):
 
-    num_gru_layers = config.num_gru_layers
-    gru_units = config.gru_units
+    num_lstm_layers = config.num_lstm_layers
+    lstm_units = config.lstm_units
     batch_size = config.batch_size
     epochs = config.epochs
     activation = config.activation_function
@@ -280,18 +280,18 @@ def train_intermediate_fusion(modality_dfs, config):
             feature_inputs.append(feature_input)
             
             x = feature_input
-            for _ in range(num_gru_layers):
+            for _ in range(num_lstm_layers):
                 if use_bidirectional:
-                    x = Bidirectional(GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer))(x)
+                    x = Bidirectional(LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer))(x)
                 else:
-                    x = GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer)(x)
+                    x = LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer)(x)
                 x = Dropout(dropout)(x)
                 x = BatchNormalization()(x)
             feature_outputs.append(x)
         
         concatenated_features = concatenate(feature_outputs)
         
-        x = GRU(gru_units, activation=activation, kernel_regularizer=kernel_regularizer)(concatenated_features)
+        x = LSTM(lstm_units, activation=activation, kernel_regularizer=kernel_regularizer)(concatenated_features)
         x = Dropout(dropout)(x)
         x = BatchNormalization()(x)
 
@@ -383,8 +383,8 @@ def train_intermediate_fusion(modality_dfs, config):
 
 def train_late_fusion(modality_dfs, config):
 
-    num_gru_layers = config.num_gru_layers
-    gru_units = config.gru_units
+    num_lstm_layers = config.num_lstm_layers
+    lstm_units = config.lstm_units
     batch_size = config.batch_size
     epochs = config.epochs
     activation = config.activation_function
@@ -452,8 +452,8 @@ def train_late_fusion(modality_dfs, config):
             model = build_early_late_model(
                 sequence_length, 
                 X_train_seq.shape[2], 
-                num_gru_layers, 
-                gru_units, 
+                num_lstm_layers, 
+                lstm_units, 
                 activation, 
                 use_bidirectional, 
                 dropout, 
@@ -744,7 +744,7 @@ def main():
 
     sweep_config = {
         'method': 'random',
-        'name': 'gru_multiclass_intra_v1',
+        'name': 'lstm_multiclass_intra_v1',
         'parameters': {
             'feature_set': {'values': ['full', 'stats', 'rf']},
             'modality': {'values': [
@@ -761,8 +761,8 @@ def main():
             'fusion_type': {'values': ['early', 'intermediate', 'late']},
 
             'use_bidirectional': {'values': [True, False]},
-            'num_gru_layers': {'values': [1, 2, 3]},
-            'gru_units': {'values': [64, 128, 256]},
+            'num_lstm_layers': {'values': [1, 2, 3]},
+            'lstm_units': {'values': [64, 128, 256]},
             'dropout_rate': {'values': [0.0, 0.3, 0.5, 0.8]},
             'dense_units': {'values': [32, 64, 128]},
             'activation_function': {'values': ['tanh', 'relu', 'sigmoid']},
@@ -783,7 +783,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_multiclass_intra_v1")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_multiclass_intra_v1")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':

@@ -624,8 +624,8 @@ def train():
     df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
     df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_stats_0_3.csv")
     df_rf = pd.read_csv("../../preprocessing/rf_features/all_participants_rf_0_3_40.csv")
-    df_text = pd.read_csv("../../preprocessing/text_embeddings.csv")
-    df_text_pca = pd.read_csv("../../preprocessing/text_embeddings_pca.csv")
+    df_text = pd.read_csv("../../preprocessing/clip_text_embeddings.csv")
+    df_text_pca = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
 
     info = df.iloc[:, :4]
     df_pose_index = df.iloc[:, 4:28]
@@ -725,9 +725,9 @@ def main():
 
     sweep_config = {
         'method': 'random',
-        'name': 'gru_binary_all_v4',
+        'name': 'gru_binary_intra_v1',
         'parameters': {
-            'feature_set': {'values': ['full', 'stats', 'pca']},
+            'feature_set': {'values': ['full', 'stats', 'rf']},
             'modality': {'values': [
                 'pose', 'facial', 'audio', 'text',
                 'pose_facial', 'pose_audio', 'pose_text',
@@ -750,7 +750,7 @@ def main():
             'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'rmsprop']},
             'learning_rate': {'values': [0.001, 0.01, 0.005]},
             'batch_size': {'values': [32, 64, 128]},
-            'epochs': {'value': 20},
+            'epochs': {'value': 50},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["binary_crossentropy"]},
             
@@ -764,7 +764,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_binary_all_v4")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_binary_intra_v1")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':
