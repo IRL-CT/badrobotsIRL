@@ -47,14 +47,14 @@ def create_sequences_intraparticipant(data, target, sequence_length):
     
     return np.array(sequences), np.array(targets)
 
-
+'''
 def create_data_splits_intraparticipant_binary(df, participant_id, sequence_length=1, neutral_split_ratio=0.8, seed=42):
     try:
         np.random.seed(seed)
 
         participant_data = df[df["participant"] == participant_id].copy().reset_index(drop=True)
         features = participant_data.iloc[:, 4:]
-        labels = participant_data["multiclass_label"].values.astype(int)
+        binary_labels = participant_data["binary_label"].values.astype(int)
 
         # Split neutral (label 0) into train/test
         neutral_indices = participant_data[participant_data["multiclass_label"] == 0].index.to_numpy()
@@ -76,7 +76,7 @@ def create_data_splits_intraparticipant_binary(df, participant_id, sequence_leng
 
         # Extract initial training data
         X_train = features.iloc[train_indices].reset_index(drop=True)
-        y_train = labels[train_indices]
+        y_train = binary_labels[train_indices]
 
         # Split train into train/val (stratified)
         train_df = X_train.copy()
@@ -92,7 +92,7 @@ def create_data_splits_intraparticipant_binary(df, participant_id, sequence_leng
 
         # Test set
         X_test = features.loc[test_indices].reset_index(drop=True)
-        y_test = labels[test_indices]
+        y_test = binary_labels[test_indices]
 
         X_train_seq, y_train_seq = create_sequences_intraparticipant(X_train.values, y_train, sequence_length)
         X_val_seq, y_val_seq = create_sequences_intraparticipant(X_val.values, y_val, sequence_length)
@@ -101,6 +101,9 @@ def create_data_splits_intraparticipant_binary(df, participant_id, sequence_leng
         if len(X_train_seq) == 0 or len(X_test_seq) == 0:
             print(f"Participant {participant_id}: Empty sequence data. Skipping.")
             return None
+
+        print(f"Participant {participant_id}: Train: {len(train_indices)}, Val: {len(val_df)}, Test: {len(test_indices)}")
+        print(f"Label distribution: Train {np.bincount(y_train)}, Val {np.bincount(y_val)}, Test {np.bincount(y_test)}")
 
         return (
             X_train, X_val, X_test,
@@ -114,7 +117,89 @@ def create_data_splits_intraparticipant_binary(df, participant_id, sequence_leng
     except Exception as e:
         print(f"An error occurred for participant {participant_id}: {e}")
         return None
+'''
 
+def create_data_splits_intraparticipant_binary(df, participant_id, sequence_length=1, neutral_split_ratio = 0.8, error_sample_ratio=0.8, seed=42):
+    try:
+        np.random.seed(seed)
+
+        participant_data = df[df["participant"] == participant_id].copy().reset_index(drop=True)
+        features = participant_data.iloc[:, 4:]
+        binary_labels = participant_data["binary_label"].values.astype(int)
+
+        neutral_indices = participant_data[participant_data["binary_label"] == 0].index.to_numpy()
+        error_indices = participant_data[participant_data["binary_label"] == 1].index.to_numpy()
+        np.random.shuffle(neutral_indices)
+        np.random.shuffle(error_indices)
+
+        neutral_split_point = int(len(neutral_indices) * neutral_split_ratio)
+        neutral_train_indices = neutral_indices[:neutral_split_point]   # 80% train
+        neutral_test_indices = neutral_indices[neutral_split_point:] # 20% test
+
+        error_split_point = int(len(error_indices) * error_sample_ratio)
+        error_train_indices = error_indices[:error_split_point]   # 80% train
+        error_test_indices = error_indices[error_split_point:] # 20% test
+
+        train_indices = np.concatenate([neutral_train_indices, error_train_indices])
+        test_indices = np.concatenate([neutral_test_indices, error_test_indices])
+    
+        if len(train_indices) == 0 or len(test_indices) == 0:
+            print(f"Participant {participant_id}: Empty train or test split. Skipping.")
+            return None
+
+        X_train = features.iloc[train_indices].reset_index(drop=True)
+        y_train = binary_labels[train_indices]
+
+        train_df = X_train.copy()
+        train_df["label"] = y_train
+
+        train_df, val_df = train_test_split(
+            train_df,
+            test_size=0.1,
+            random_state=seed,
+            stratify=train_df["label"] if len(train_df["label"].unique()) > 1 else None
+        )
+
+        X_train = train_df.drop("label", axis=1).reset_index(drop=True)
+        y_train = train_df["label"].values
+
+        X_val = val_df.drop("label", axis=1).reset_index(drop=True)
+        y_val = val_df["label"].values
+
+        X_test = features.iloc[test_indices].reset_index(drop=True)
+        y_test = binary_labels[test_indices]
+
+        X_train_seq, y_train_seq = create_sequences_intraparticipant(X_train.values, y_train, sequence_length)
+        X_val_seq, y_val_seq = create_sequences_intraparticipant(X_val.values, y_val, sequence_length)
+        X_test_seq, y_test_seq = create_sequences_intraparticipant(X_test.values, y_test, sequence_length)
+
+        if len(X_train_seq) == 0 or len(X_test_seq) == 0:
+            print(f"Participant {participant_id}: Empty sequence data. Skipping.")
+            return None
+        
+        print(f"Participant {participant_id}: Train: {len(train_indices)}, Val: {len(val_df)}, Test: {len(test_indices)}")
+        print(f"Label distribution: Train {np.bincount(y_train)}, Val {np.bincount(y_val)}, Test {np.bincount(y_test)}")
+
+        return (
+            X_train, X_val, X_test,
+            y_train, y_val, y_test,
+            X_train_seq, y_train_seq,
+            X_val_seq, y_val_seq,
+            X_test_seq, y_test_seq,
+            sequence_length
+        )
+    
+    except Exception as e:
+        print(f"An error occurred for participant {participant_id}: {e}")
+        return None
+
+
+'''
+
+Creates and returns train, val, test splits for a single participant for multiclass classification
+Uses only multiclass labels 1, 2, 3
+
+'''
 
 def create_data_splits_intraparticipant_multiclass(df, participant_id, sequence_length=1, error_sample_ratio=0.2, seed=42):
     try:
@@ -176,6 +261,9 @@ def create_data_splits_intraparticipant_multiclass(df, participant_id, sequence_
         if len(X_train_seq) == 0 or len(X_test_seq) == 0:
             print(f"Participant {participant_id}: Empty sequence data. Skipping.")
             return None
+        
+        print(f"Participant {participant_id}: Train: {len(train_indices)}, Val: {len(val_df)}, Test: {len(test_indices)}")
+        print(f"Label distribution: Train {np.bincount(y_train)}, Val {np.bincount(y_val)}, Test {np.bincount(y_test)}")
 
         return (
             X_train, X_val, X_test,
