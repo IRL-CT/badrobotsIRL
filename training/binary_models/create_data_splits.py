@@ -119,6 +119,32 @@ def create_data_splits_intraparticipant_binary(df, participant_id, sequence_leng
         return None
 '''
 
+'''
+Creates and returns train, val, test splits for a single participant for binary classification based on the binary labels 0, 1
+
+Requires:
+- a dataframe consisting of features to be trained on and target values
+- an integer equal to the participant id
+- an integer equal to the length of each sequence that will be created.
+- a float equal to the ratio of neutral samples in the training set
+- a float equal to the ratio of error samples in the training set
+- an integer seed value for random number generator
+
+Returns:
+- X_train: training set data
+- X_val: validation set data
+- X_test: testing set data
+- y_train: training set targets
+- y_val: validation set targets
+- y_test: testing set targets
+- X_train_sequences: sequences generated from training set data
+- y_train_sequences: an array of corresponding target values
+- X_val_sequences: sequences generated from validation set data
+- y_val_sequences: an array of corresponding target values
+- X_test_sequences: sequences generated from test set data
+- y_test_sequences: an array of corresponding target values
+- sequence_length: the length of the sequences returned
+'''
 def create_data_splits_intraparticipant_binary(df, participant_id, sequence_length=1, neutral_split_ratio = 0.8, error_sample_ratio=0.8, seed=42):
     try:
         np.random.seed(seed)
@@ -195,10 +221,28 @@ def create_data_splits_intraparticipant_binary(df, participant_id, sequence_leng
 
 
 '''
+Creates and returns train, val, test splits for a single participant for multiclass classification based on the multiclass labels 1, 2, 3
 
-Creates and returns train, val, test splits for a single participant for multiclass classification
-Uses only multiclass labels 1, 2, 3
-
+Requires:
+- a dataframe consisting of features to be trained on and target values
+- an integer equal to the participant id
+- an integer equal to the length of each sequence that will be created.
+- a float equal to the ratio of error samples in the training set
+- an integer seed value for random number generator
+Returns:
+- X_train: training set data
+- X_val: validation set data
+- X_test: testing set data
+- y_train: training set targets
+- y_val: validation set targets
+- y_test: testing set targets
+- X_train_sequences: sequences generated from training set data
+- y_train_sequences: an array of corresponding target values
+- X_val_sequences: sequences generated from validation set data
+- y_val_sequences: an array of corresponding target values
+- X_test_sequences: sequences generated from test set data
+- y_test_sequences: an array of corresponding target values
+- sequence_length: the length of the sequences returned
 '''
 
 def create_data_splits_intraparticipant_multiclass(df, participant_id, sequence_length=1, error_sample_ratio=0.2, seed=42):
