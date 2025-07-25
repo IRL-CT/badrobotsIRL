@@ -20,4 +20,4 @@ training/multiclass_models/wandb
 training/feature_extraction
 preprocessing/text_embeddings.csv
 get-pip.py
-*.sub
+**/*.sub
