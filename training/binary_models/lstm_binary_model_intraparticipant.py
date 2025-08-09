@@ -10,7 +10,7 @@ from keras.layers import LSTM, Dense, Dropout, BatchNormalization, Input, Bidire
 from keras.callbacks import ModelCheckpoint
 from keras.regularizers import l1_l2, l1, l2
 import tensorflow as tf
-from create_data_splits import create_data_splits_intraparticipant_binary
+from create_data_splits import create_data_splits_intraparticipant_binary as create_data_splits
 from get_metrics import get_test_metrics
 from lstm_single_modality import train_single_modality_model
 
@@ -87,7 +87,7 @@ def train_early_fusion(df, config):
 
         print("Participant ", participant)
 
-        splits = create_data_splits_intraparticipant_binary(df, participant_id=participant, sequence_length=sequence_length, neutral_split_ratio=0.8, seed=42)
+        splits = create_data_splits(df, participant_id=participant, sequence_length=sequence_length, neutral_split_ratio=0.8, seed=42)
         if splits is None:
             print(f"[{participant}] Invalid split for participant. Skipping...")
             splits_valid = False
@@ -247,7 +247,7 @@ def train_intermediate_fusion(modality_dfs, config):
         splits = {}
         for modality_key in modality_keys:
             df = modality_dfs[modality_key]
-            splits[modality_key] = create_data_splits_intraparticipant_binary(df, participant_id=participant, sequence_length=sequence_length, neutral_split_ratio=0.8, seed=42)
+            splits[modality_key] = create_data_splits(df, participant_id=participant, sequence_length=sequence_length, neutral_split_ratio=0.8, seed=42)
             if splits[modality_key] is None:
                 print(f"[{participant}] Invalid split for modality {modality_key} or participant. Skipping...")
                 splits_valid = False
@@ -420,7 +420,7 @@ def train_late_fusion(modality_dfs, config):
         splits = {}
         for modality_key in modality_keys:
             df = modality_dfs[modality_key]
-            splits[modality_key] = create_data_splits_intraparticipant_binary(df, participant_id=participant, sequence_length=sequence_length, neutral_split_ratio=0.8, seed=42)
+            splits[modality_key] = create_data_splits(df, participant_id=participant, sequence_length=sequence_length, neutral_split_ratio=0.8, seed=42)
             if splits[modality_key] is None:
                 print(f"[{participant}] Invalid split for modality {modality_key} or participant. Skipping...")
                 splits_valid = False
