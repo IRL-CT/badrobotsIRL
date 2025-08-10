@@ -10,7 +10,7 @@ from keras.layers import LSTM, Dense, Dropout, BatchNormalization, Input, Bidire
 from keras.callbacks import ModelCheckpoint
 from keras.regularizers import l1_l2, l1, l2
 import tensorflow as tf
-from create_data_splits import create_data_splits_intraparticipant_multiclass_to_binary as create_data_splits
+from create_data_splits import create_data_splits_intraparticipant_hybrid_binary as create_data_splits
 from get_metrics import get_test_metrics
 from lstm_single_modality import train_single_modality_model
 
@@ -725,7 +725,7 @@ def main():
 
     sweep_config = {
         'method': 'random',
-        'name': 'lstm_binary_intra_v1_hybrid',
+        'name': 'lstm_binary_intra_v2_hybrid',
         'parameters': {
             'feature_set': {'values': ['full', 'stats', 'rf']},
             'modality': {'values': [
@@ -764,7 +764,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_binary_intra_v1_hybrid")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_binary_intra_v2_hybrid")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':

@@ -147,6 +147,8 @@ Returns:
 '''
 def create_data_splits_intraparticipant_binary(df, participant_id, sequence_length=1, neutral_split_ratio = 0.8, error_sample_ratio=0.8, seed=42):
     try:
+
+        print("Classic binary split for participant:", participant_id)
         np.random.seed(seed)
 
         participant_data = df[df["participant"] == participant_id].copy().reset_index(drop=True)
@@ -247,6 +249,7 @@ Returns:
 
 def create_data_splits_intraparticipant_multiclass_exclude_neutral(df, participant_id, sequence_length=1, error_sample_ratio=0.2, seed=42):
     try:
+        print("Multiclass split exclude neutral for participant:", participant_id)
         np.random.seed(seed)
 
         participant_data = df[df["participant"] == participant_id].copy().reset_index(drop=True)
@@ -349,6 +352,7 @@ Returns:
 
 def create_data_splits_intraparticipant_multiclass(df, participant_id, sequence_length=1, error_sample_ratio=0.2, seed=42):
     try:
+        print("Classic multiclass split for participant:", participant_id)
         np.random.seed(seed)
 
         participant_data = df[df["participant"] == participant_id].copy().reset_index(drop=True)
@@ -451,6 +455,7 @@ Returns:
 '''
 def create_data_splits_intraparticipant_multiclass_to_binary(df, participant_id, sequence_length=1, seed=42):
     try:
+        print("Multiclass to binary split for participant:", participant_id)
         np.random.seed(seed)
 
         participant_data = df[df["participant"] == participant_id].copy().reset_index(drop=True)
@@ -556,6 +561,7 @@ Returns:
 '''
 def create_data_splits_intraparticipant_hybrid_binary(df, participant_id, sequence_length=1, seed=42):
     try:
+        print("Hybrid binary split for participant:", participant_id)
         np.random.seed(seed)
 
         participant_data = df[df["participant"] == participant_id].copy().reset_index(drop=True)
