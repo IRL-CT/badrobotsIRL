@@ -902,3 +902,104 @@ def create_data_splits_pca(df, model, fold_no, num_folds=5, seed_value=42, seque
         print(f"An error occurred: {e}")
         return None
 
+
+def create_data_splits_intra(df, fold_no=0, train_ratio=0.05, val_ratio=0.10, seed_value=42, sequence_length=1):
+    
+    try:
+        random.seed(seed_value)
+        np.random.seed(seed_value)
+        torch.manual_seed(seed_value)
+        torch.cuda.manual_seed_all(seed_value)
+
+        features = df.iloc[:, 3:]
+        target = df.iloc[:, 2].values.astype('int')
+        sessions = df['participant'].values
+        
+        # Get unique sessions/participants
+        unique_sessions = df['participant'].unique()
+        
+        # Select the session for this fold
+        if fold_no >= len(unique_sessions):
+            raise ValueError(f"fold_no {fold_no} exceeds number of available sessions {len(unique_sessions)}")
+        
+        current_session = unique_sessions[fold_no]
+        print(f"Processing session: {current_session}")
+        
+        # Get all data for this session, maintaining chronological order
+        session_mask = df['participant'] == current_session
+        session_df = df[session_mask].copy()
+        session_indices = session_df.index
+        
+        # Ensure chronological order (assuming data is already sorted, but just to be safe)
+        session_df = session_df.sort_index()
+        session_indices = session_df.index
+        
+        n_samples = len(session_df)
+        print(f"Total samples in session {current_session}: {n_samples}")
+        
+        # Calculate split points
+        train_size = int(np.floor(train_ratio * n_samples))
+        val_size = int(np.floor(val_ratio * n_samples))
+        
+        # Ensure minimum sizes
+        if train_size < 1:
+            train_size = 1
+        if val_size < 1:
+            val_size = 1
+            
+        # Ensure we don't exceed total samples
+        if train_size + val_size >= n_samples:
+            # Adjust sizes proportionally
+            available = n_samples - 1  # Leave at least 1 for test
+            train_size = max(1, int(available * train_ratio / (train_ratio + val_ratio)))
+            val_size = max(1, available - train_size)
+        
+        test_size = n_samples - train_size - val_size
+        
+        print(f"Split sizes - Train: {train_size}, Val: {val_size}, Test: {test_size}")
+        
+        # Create chronological splits
+        train_end = train_size
+        val_end = train_size + val_size
+        
+        # Get indices for each split
+        train_indices = session_indices[:train_end]
+        val_indices = session_indices[train_end:val_end]
+        test_indices = session_indices[val_end:]
+        
+        # Extract features and targets
+        X_train = features.loc[train_indices]
+        y_train = target[train_indices]
+        session_train = sessions[train_indices]
+        
+        X_val = features.loc[val_indices]
+        y_val = target[val_indices]
+        session_val = sessions[val_indices]
+        
+        X_test = features.loc[test_indices]
+        y_test = target[test_indices]
+        session_test = sessions[test_indices]
+        
+        print("Train shapes:", X_train.shape, y_train.shape)
+        print("Val shapes:", X_val.shape, y_val.shape)
+        print("Test shapes:", X_test.shape, y_test.shape)
+        
+        # Reset indices
+        X_train = X_train.reset_index(drop=True)
+        X_val = X_val.reset_index(drop=True)
+        X_test = X_test.reset_index(drop=True)
+        
+        # Create sequences
+        X_train_sequences, y_train_sequences = create_sequences(X_train.values, y_train, session_train, sequence_length)
+        X_val_sequences, y_val_sequences = create_sequences(X_val.values, y_val, session_val, sequence_length) 
+        X_test_sequences, y_test_sequences = create_sequences(X_test.values, y_test, session_test, sequence_length)
+        
+        print("Train sequences shape:", X_train_sequences.shape, y_train_sequences.shape)
+        print("Val sequences shape:", X_val_sequences.shape, y_val_sequences.shape)
+        print("Test sequences shape:", X_test_sequences.shape, y_test_sequences.shape)
+
+        return X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length
+    
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
