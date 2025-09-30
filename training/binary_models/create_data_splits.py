@@ -903,7 +903,7 @@ def create_data_splits_pca(df, model, fold_no, num_folds=5, seed_value=42, seque
         return None
 
 
-def create_data_splits_intra(df, fold_no=0, train_ratio=0.05, val_ratio=0.10, seed_value=42, sequence_length=1):
+def create_data_splits_intra(df, fold_no=0, train_ratio=0.05, test_ratio=0.20, seed_value=42, sequence_length=1):
     
     try:
         random.seed(seed_value)
@@ -939,7 +939,7 @@ def create_data_splits_intra(df, fold_no=0, train_ratio=0.05, val_ratio=0.10, se
         
         # Calculate split points
         train_size = int(np.floor(train_ratio * n_samples))
-        val_size = int(np.floor(val_ratio * n_samples))
+        test_size = int(np.floor(test_ratio * n_samples))
         
         # Ensure minimum sizes
         if train_size < 1:
@@ -948,13 +948,13 @@ def create_data_splits_intra(df, fold_no=0, train_ratio=0.05, val_ratio=0.10, se
             val_size = 1
             
         # Ensure we don't exceed total samples
-        if train_size + val_size >= n_samples:
+        if train_size + test_size >= n_samples:
             # Adjust sizes proportionally
             available = n_samples - 1  # Leave at least 1 for test
-            train_size = max(1, int(available * train_ratio / (train_ratio + val_ratio)))
-            val_size = max(1, available - train_size)
+            train_size = max(1, int(available * train_ratio / (train_ratio + test_ratio)))
+            test_size = max(1, available - train_size)
         
-        test_size = n_samples - train_size - val_size
+        val_size = n_samples - train_size - test_size
         
         print(f"Split sizes - Train: {train_size}, Val: {val_size}, Test: {test_size}")
         
