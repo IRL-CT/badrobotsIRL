@@ -8,7 +8,7 @@ This repository contains the code to develop machine learning models to classify
 
 We explore a range of machine learning strategies to detect successive robot error for a single user or across multiple participants. Model training on single participants allows systems to learn each individual's unique way of signaling robot errors, while training on multiple participants tests generalization to unseen participants. 
 
-Our models use data extracted from videos collected in [prior work](https://github.com/IRL-CT/badrobotsIRL?tab=readme-ov-file#im-done-describing-human-reactions-to-successive-robot-failure) and adopt different data splitting, feature representation, modality combinations, model architecture, and fusion strategies.
+Our models use data extracted from videos collected in [prior work]([https://github.com/IRL-CT/badrobotsIRL?tab=readme-ov-file#im-done-describing-human-reactions-to-successive-robot-failure](https://github.com/IRL-CT/badrobotsIRL?tab=readme-ov-file#im-done-describing-human-reactions-to-successive-robot-failure-hri-2025)) and adopt different data splitting, feature representation, modality combinations, model architecture, and fusion strategies.
 
 ### Intraparticipant Training Models
 
