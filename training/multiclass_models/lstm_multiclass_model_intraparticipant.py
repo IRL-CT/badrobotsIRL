@@ -12,7 +12,7 @@ from keras.regularizers import l1_l2, l1, l2
 from keras.utils import to_categorical
 
 import tensorflow as tf
-from create_data_splits import create_data_splits_intraparticipant_multiclass as create_data_splits
+from create_data_splits import create_data_splits_intra as create_data_splits
 from get_metrics import get_test_metrics
 from lstm_single_modality import train_single_modality_model
 
@@ -60,6 +60,7 @@ def train_early_fusion(df, config):
     kernel_regularizer = config.recurrent_regularizer
     loss = config.loss
     sequence_length = config.sequence_length
+    train_ratio = config.train_ratio
 
     test_metrics_list = {
         "test_accuracy": [],
@@ -81,35 +82,35 @@ def train_early_fusion(df, config):
     elif optimizer == 'rmsprop':
         optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
 
-    participant_list = ['p10nodbot', 'p11nodbot', 'p12nodbot', 'p14nodbot', 'p16nodbot', 'p17nodbot','p18nodbot', 'p19nodbot', 'p20nodbot', 'p21nodbot', 'p22nodbot', 'p23nodbot', 'p25nodbot', 'p26nodbot', 'p27nodbot', 'p28nodbot', 'p29nodbot', 'p2nodbot', 'p4nodbot', 'p5nodbot', 'p6nodbot', 'p7nodbot', 'p8nodbot', 'p9nodbot']
+    
+    unique_sessions = df['participant'].unique()
+    print("Total folds:", len(unique_sessions))
 
-    for participant in participant_list:
+    for fold_no in range(len(unique_sessions)):
+        print(f"\n=== Fold {fold_no} / session {unique_sessions[fold_no]} ===")
 
-        splits_valid = True
-
-        print("Participant ", participant)
-
-        splits = create_data_splits(df, participant_id=participant, sequence_length=sequence_length, seed=42)
+        splits = create_data_splits(
+            df,
+            fold_no=fold_no,
+            train_ratio=train_ratio,
+            test_ratio=0.2,
+            seed_value=42,
+            sequence_length=sequence_length
+        )
         if splits is None:
-            print(f"[{participant}] Invalid split for participant. Skipping...")
-            splits_valid = False
-            break
-            
-        if not splits_valid:
+            print(f"[Fold {fold_no}] Invalid split. Skipping…")
             continue
+        
+        (X_train, X_val, X_test,
+         y_train, y_val, y_test,
+         X_train_sequences, y_train_sequences,
+         X_val_sequences, y_val_sequences,
+         X_test_sequences, y_test_sequences,
+         sequence_length) = splits
 
-        X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length = splits
         y_train_sequences = to_categorical(y_train_sequences, num_classes=4)
         y_val_sequences = to_categorical(y_val_sequences, num_classes=4)
         y_test_sequences = to_categorical(y_test_sequences, num_classes=4)
-
-        print("X_train_sequences shape:", X_train_sequences.shape)
-        print("X_val_sequences shape:", X_val_sequences.shape)
-        print("X_test_sequences shape:", X_test_sequences.shape)
-        print("y_train_sequences shape:", y_train_sequences.shape)
-        print("y_val_sequences shape:", y_val_sequences.shape)
-        print("y_test_sequences shape:", y_test_sequences.shape)
-
 
         if kernel_regularizer == "l1":
             reg = l1(0.01)
@@ -119,11 +120,16 @@ def train_early_fusion(df, config):
             reg = l1_l2(0.01, 0.01)
         else:
             reg = None
-        
+
         input_shape = X_train_sequences.shape[2]
 
-        model = build_early_late_model(sequence_length, input_shape, num_lstm_layers, lstm_units, activation, use_bidirectional, dropout, reg)
-        
+        model = build_early_late_model(
+            sequence_length, input_shape,
+            num_lstm_layers, lstm_units,
+            activation, use_bidirectional,
+            dropout, reg
+        )
+
         num_classes = 4
         #num_classes = len(np.unique(y_train))
         print("Num classes: ", num_classes)
@@ -135,44 +141,32 @@ def train_early_fusion(df, config):
         model.add(Dense(num_classes, activation="softmax"))
 
         model.summary()
-        
-        model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
 
-        model_checkpoint = ModelCheckpoint("../best_model.keras", monitor="val_accuracy", save_best_only=True)
-        
+        model.compile(optimizer=optimizer,
+                      loss=loss,
+                      metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
+
         model_history = model.fit(
             X_train_sequences, y_train_sequences,
             epochs=epochs,
             batch_size=batch_size,
             validation_data=(X_val_sequences, y_val_sequences),
-            # callbacks=[model_checkpoint],
             verbose=2
         )
 
         for epoch in range(len(model_history.history['loss'])):
             metrics = {
-                    'participant': participant,
-                    'epoch': epoch,
-                    'loss': model_history.history['loss'][epoch],
-                    'val_loss': model_history.history['val_loss'][epoch]
-                }
-            if 'accuracy' in model_history.history:
-                metrics['accuracy'] = model_history.history['accuracy'][epoch]
-            if 'val_accuracy' in model_history.history:
-                metrics['val_accuracy'] = model_history.history['val_accuracy'][epoch]
-            if 'precision' in model_history.history:
-                metrics['precision'] = model_history.history['precision'][epoch]
-            if 'val_precision' in model_history.history:
-                metrics['val_precision'] = model_history.history['val_precision'][epoch]
-            if 'recall' in model_history.history:
-                metrics['recall'] = model_history.history['recall'][epoch]
-            if 'val_recall' in model_history.history:
-                metrics['val_recall'] = model_history.history['val_recall'][epoch]
-            if 'auc' in model_history.history:
-                metrics['auc'] = model_history.history['auc'][epoch]
-            if 'val_auc' in model_history.history:
-                metrics['val_auc'] = model_history.history['val_auc'][epoch]
-            
+                'fold': fold_no,
+                'epoch': epoch,
+                'loss': model_history.history['loss'][epoch],
+                'val_loss': model_history.history['val_loss'][epoch]
+            }
+            for k in ['accuracy', 'val_accuracy',
+                      'precision', 'val_precision',
+                      'recall', 'val_recall',
+                      'auc', 'val_auc']:
+                if k in model_history.history:
+                    metrics[k] = model_history.history[k][epoch]
             wandb.log(metrics)
 
         y_predict_probs = model.predict(X_test_sequences)
@@ -182,8 +176,8 @@ def train_early_fusion(df, config):
 
         table = wandb.Table(dataframe=df_probs)
 
-        wandb.log({"participant_{}_prediction_probabilities".format(participant): y_predict_probs_clean})
-        wandb.log({"participant_{}_prediction_probabilities_table".format(participant): table})
+        wandb.log({"participant_{}_prediction_probabilities".format(fold_no): y_predict_probs_clean})
+        wandb.log({"participant_{}_prediction_probabilities_table".format(fold_no): table})
         
         y_pred = np.argmax(y_predict_probs_clean, axis=1)
 
@@ -194,8 +188,8 @@ def train_early_fusion(df, config):
         for key in test_metrics_list.keys():
             test_metrics_list[key].append(test_metrics[key])
 
-        wandb.log({f"participant_{participant}_metrics": test_metrics})
-        print(f"Fold {participant} Test Metrics:", test_metrics)
+        wandb.log({f"participant_{fold_no}_metrics": test_metrics})
+        print(f"Fold {fold_no} Test Metrics:", test_metrics)
     
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
     wandb.run.summary.update(avg_test_metrics)
@@ -217,6 +211,7 @@ def train_intermediate_fusion(modality_dfs, config):
     kernel_regularizer = config.recurrent_regularizer
     loss = config.loss
     sequence_length = config.sequence_length
+    train_ratio = config.train_ratio
 
     modality_keys = list(modality_dfs.keys())
 
@@ -240,25 +235,36 @@ def train_intermediate_fusion(modality_dfs, config):
     elif optimizer == 'rmsprop':
         optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
 
-    participant_list = ['p10nodbot', 'p11nodbot', 'p12nodbot', 'p14nodbot', 'p16nodbot', 'p17nodbot','p18nodbot', 'p19nodbot', 'p20nodbot', 'p21nodbot', 'p22nodbot', 'p23nodbot', 'p25nodbot', 'p26nodbot', 'p27nodbot', 'p28nodbot', 'p29nodbot', 'p2nodbot', 'p4nodbot', 'p5nodbot', 'p6nodbot', 'p7nodbot', 'p8nodbot', 'p9nodbot']
-    
-    for participant in participant_list:
-        print("Participant ", participant)
+    unique_sessions = modality_dfs[next(iter(modality_dfs))]['participant'].unique()
+    print("Total folds:", len(unique_sessions))
+
+    for fold_no, participant in enumerate(unique_sessions):
+        print(f"\n=== Fold {fold_no} / session {participant} ===")
 
         splits_valid = True
-        
         splits = {}
+
         for modality_key in modality_keys:
             df = modality_dfs[modality_key]
-            splits[modality_key] = create_data_splits(df, participant_id=participant, sequence_length=sequence_length, seed=42)
+
+            splits[modality_key] = create_data_splits(
+                df,
+                fold_no=fold_no,
+                train_ratio=train_ratio,
+                test_ratio=0.20,
+                seed_value=42,
+                sequence_length=sequence_length
+            )
+
             if splits[modality_key] is None:
-                print(f"[{participant}] Invalid split for modality {modality_key} or participant. Skipping...")
+                print(f"[Fold {fold_no}] Invalid split for {modality_key}. Skipping...")
                 splits_valid = False
                 break
             if splits[modality_key][6].shape[0] == 0 or splits[modality_key][7].shape[0] == 0:
-                print(f"[{participant}] Invalid split for modality {modality_key} or participant. Skipping...")
+                print(f"[Fold {fold_no}] Empty split for {modality_key}. Skipping...")
                 splits_valid = False
                 break
+
         if not splits_valid:
             continue
         
@@ -396,6 +402,7 @@ def train_late_fusion(modality_dfs, config):
     kernel_regularizer = config.recurrent_regularizer
     loss = config.loss
     sequence_length = config.sequence_length
+    train_ratio = config.train_ratio
 
     modality_keys = list(modality_dfs.keys())
 
@@ -419,25 +426,36 @@ def train_late_fusion(modality_dfs, config):
     elif optimizer == 'rmsprop':
         optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
 
-    participant_list = ['p10nodbot', 'p11nodbot', 'p12nodbot', 'p14nodbot', 'p16nodbot', 'p17nodbot','p18nodbot', 'p19nodbot', 'p20nodbot', 'p21nodbot', 'p22nodbot', 'p23nodbot', 'p25nodbot', 'p26nodbot', 'p27nodbot', 'p28nodbot', 'p29nodbot', 'p2nodbot', 'p4nodbot', 'p5nodbot', 'p6nodbot', 'p7nodbot', 'p8nodbot', 'p9nodbot']
+    unique_sessions = modality_dfs[next(iter(modality_dfs))]['participant'].unique()
+    print("Total folds:", len(unique_sessions))
 
-    for participant in participant_list:
-        print("Participant ", participant)
+    for fold_no, participant in enumerate(unique_sessions):
+        print(f"\n=== Fold {fold_no} / session {participant} ===")
 
         splits_valid = True
-        
         splits = {}
+
         for modality_key in modality_keys:
             df = modality_dfs[modality_key]
-            splits[modality_key] = create_data_splits(df, participant_id=participant, sequence_length=sequence_length, seed=42)
+
+            splits[modality_key] = create_data_splits(
+                df,
+                fold_no=fold_no,
+                train_ratio=train_ratio,
+                test_ratio=0.20,
+                seed_value=42,
+                sequence_length=sequence_length
+            )
+
             if splits[modality_key] is None:
-                print(f"[{participant}] Invalid split for modality {modality_key} or participant. Skipping...")
+                print(f"[Fold {fold_no}] Invalid split for {modality_key}. Skipping...")
                 splits_valid = False
                 break
             if splits[modality_key][6].shape[0] == 0 or splits[modality_key][7].shape[0] == 0:
-                print(f"[{participant}] Invalid split for modality {modality_key} or participant. Skipping...")
+                print(f"[Fold {fold_no}] Empty split for {modality_key}. Skipping...")
                 splits_valid = False
                 break
+
         if not splits_valid:
             continue
         
@@ -744,7 +762,7 @@ def main():
 
     sweep_config = {
         'method': 'random',
-        'name': 'lstm_multiclass_intra_with_neutral_v1',
+        'name': 'lstm_multiclass_intra_train_rat_fixed_test',
         'parameters': {
             'feature_set': {'values': ['full', 'stats', 'rf']},
             'modality': {'values': [
@@ -773,7 +791,9 @@ def main():
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["categorical_crossentropy"]},
             
-            'sequence_length' : {'values' : [5, 10, 15, 30, 60]}
+            'sequence_length' : {'values' : [5, 10, 15, 30, 60]},
+
+            'train_ratio' : {'values' : [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]}
         }
         # feature set (full, stats, rf) -> modality selection (pose_facial_audio, pose, facial, etc.) -> (reg, norm, pca) -> fusion
     }
@@ -783,7 +803,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_multiclass_intra_with_neutral_v1")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_multiclass_intra_train_rat_fixed_test")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':

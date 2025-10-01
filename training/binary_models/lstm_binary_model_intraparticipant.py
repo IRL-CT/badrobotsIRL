@@ -58,6 +58,7 @@ def train_early_fusion(df, config):
     kernel_regularizer = config.recurrent_regularizer
     loss = config.loss
     sequence_length = config.sequence_length
+    train_ratio = config.train_ratio
 
     test_metrics_list = {
         "test_accuracy": [],
@@ -89,8 +90,8 @@ def train_early_fusion(df, config):
         splits = create_data_splits(
             df,
             fold_no=fold_no,
-            train_ratio=0.05,
-            val_ratio=0.1,
+            train_ratio=train_ratio,
+            test_ratio=0.2,
             seed_value=42,
             sequence_length=sequence_length
         )
@@ -206,6 +207,7 @@ def train_intermediate_fusion(modality_dfs, config):
     kernel_regularizer = config.recurrent_regularizer
     loss = config.loss
     sequence_length = config.sequence_length
+    train_ratio = config.train_ratio
 
     modality_keys = list(modality_dfs.keys())
 
@@ -245,8 +247,8 @@ def train_intermediate_fusion(modality_dfs, config):
             splits[modality_key] = create_data_splits(
                 df,
                 fold_no=fold_no,
-                train_ratio=0.05,
-                val_ratio=0.1,
+                train_ratio=train_ratio,
+                test_ratio=0.2,
                 seed_value=42,
                 sequence_length=sequence_length
             )
@@ -370,6 +372,7 @@ def train_late_fusion(modality_dfs, config):
     kernel_regularizer = config.recurrent_regularizer
     loss = config.loss
     sequence_length = config.sequence_length
+    train_ratio = config.train_ratio
 
     modality_keys = list(modality_dfs.keys())
 
@@ -408,8 +411,8 @@ def train_late_fusion(modality_dfs, config):
             splits[modality_key] = create_data_splits(
                 df,
                 fold_no=fold_no,
-                train_ratio=0.05,
-                val_ratio=0.1,
+                train_ratio=train_ratio,
+                test_ratio=0.2,
                 seed_value=42,
                 sequence_length=sequence_length
             )
@@ -698,7 +701,7 @@ def main():
 
     sweep_config = {
         'method': 'random',
-        'name': 'lstm_binary_intra_train_rat',
+        'name': 'lstm_binary_intra_train_rat_fixed_test',
         'parameters': {
             'feature_set': {'values': ['full', 'stats', 'rf']},
             'modality': {'values': [
@@ -727,7 +730,9 @@ def main():
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["binary_crossentropy"]},
             
-            'sequence_length' : {'values' : [5, 10, 15, 30]}
+            'sequence_length' : {'values' : [5, 10, 15, 30]},
+
+            'train_ratio': {'values': [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]}
         }
         # feature set (full, stats, rf) -> modality selection (pose_facial_audio, pose, facial, etc.) -> (reg, norm, pca) -> fusion
     }
@@ -737,7 +742,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_binary_intra_train_rat")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_binary_intra_train_rat_fixed_test")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':

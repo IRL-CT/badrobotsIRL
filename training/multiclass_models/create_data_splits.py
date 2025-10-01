@@ -943,8 +943,8 @@ def create_data_splits_intra(df, fold_no=0, train_ratio=0.05, test_ratio=0.20, s
         # Ensure minimum sizes
         if train_size < 1:
             train_size = 1
-        if val_size < 1:
-            val_size = 1
+        if test_size < 1:
+            test_size = 1
             
         # Ensure we don't exceed total samples
         if train_size + test_size >= n_samples:
