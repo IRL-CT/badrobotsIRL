@@ -2,6 +2,8 @@
 
 Shannon Liu, Maria Teresa Parreira, Wendy Ju
 
+Read the paper [here](https://arxiv.org/abs/2510.09080)!
+
 ## Overview
 
 This repository contains the code to develop machine learning models to classify robot failure (binary classification) and successive robot failure (multiclass classification).
