@@ -1,4 +1,48 @@
-# "I'm Done": Describing Human Reactions to Successive Robot Failure
+# Training Models to Detect Successive Robot Errors from Human Reactions (NERC 2025)
+
+Shannon Liu, Maria Teresa Parreira, Wendy Ju
+
+Read the paper [here](https://arxiv.org/abs/2510.09080)!
+
+## Overview
+
+This repository contains the code to develop machine learning models to classify robot failure (binary classification) and successive robot failure (multiclass classification).
+
+We explore a range of machine learning strategies to detect successive robot error for a single user or across multiple participants. Model training on single participants allows systems to learn each individual's unique way of signaling robot errors, while training on multiple participants tests generalization to unseen participants. 
+
+Our models use data extracted from videos collected in [prior work](https://github.com/IRL-CT/badrobotsIRL?tab=readme-ov-file#im-done-describing-human-reactions-to-successive-robot-failure-hri-2025) and adopt different data splitting, feature representation, modality combinations, model architecture, and fusion strategies.
+
+### Intraparticipant Training Models
+
+Data splitting strategies used:
+- Error Detection (binary classification)
+- Multiple Error Detection (multiclass classification)
+- First Error to Successive Errors Generalization (binary classification)
+- Successive Error Discrimination (multiclass classification)
+These data splitting strategies were implemented in [create_data_splits.py](https://github.com/IRL-CT/badrobotsIRL/blob/main/training/binary_models/create_data_splits.py)
+
+Features were represented as:
+- raw non-normalized features
+- normalized features
+- normalized features with principal component analysis (PCA) applied
+
+Modalities included facial, pose, audio, and text embeddings, and 15 combinations of these modalities were used during training.
+
+Model architectures explored included:
+- LSTM
+  - [LSTM binary](https://github.com/IRL-CT/badrobotsIRL/blob/main/training/binary_models/lstm_binary_model_intraparticipant.py)
+  - [LSTM multiclass](https://github.com/IRL-CT/badrobotsIRL/blob/main/training/multiclass_models/lstm_multiclass_model_intraparticipant.py)
+- GRU
+  - [GRU binary](https://github.com/IRL-CT/badrobotsIRL/blob/main/training/binary_models/gru_binary_model_intraparticipant.py)
+  - [GRU multiclass](https://github.com/IRL-CT/badrobotsIRL/blob/main/training/multiclass_models/gru_multiclass_model_intraparticipant.py)
+ 
+Fusion strategies included:
+- Early fusion (concatenating features before model input)
+- Intermediate fusion (processing features then concatenating and training)
+- Late fusion (training features and combining predictions)
+
+
+# "I'm Done": Describing Human Reactions to Successive Robot Failure (HRI 2025)
 
 Shannon Liu, Maria Teresa Parreira, Wendy Ju
 
