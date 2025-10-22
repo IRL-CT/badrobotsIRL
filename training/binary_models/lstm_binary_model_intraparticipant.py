@@ -81,7 +81,7 @@ def train_early_fusion(df, config):
         print(f"\n=== Fold {fold_no} / session {unique_sessions[fold_no]} ===")
 
         splits = create_data_splits(
-            df, target_col=2,
+            df, label_column='binary_label',
             fold_no=fold_no,
             train_ratio=train_ratio,
             test_ratio=0.2,
@@ -250,7 +250,7 @@ def train_intermediate_fusion(modality_dfs, config):
         for modality_key in modality_keys:
             df = modality_dfs[modality_key]
             splits[modality_key] = create_data_splits(
-                df, target_col=2,
+                df, label_column='binary_label',
                 fold_no=fold_no,
                 train_ratio=train_ratio,
                 test_ratio=0.2,
@@ -428,7 +428,7 @@ def train_late_fusion(modality_dfs, config):
         for modality_key in modality_keys:
             df = modality_dfs[modality_key]
             splits[modality_key] = create_data_splits(
-                df, target_col=2,
+                df, label_column='binary_label',
                 fold_no=fold_no,
                 train_ratio=train_ratio,
                 test_ratio=0.2,
