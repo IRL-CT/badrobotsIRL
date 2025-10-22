@@ -5,6 +5,7 @@ import random
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+from sklearn.metrics import confusion_matrix
 from keras.models import Sequential, Model
 from keras.layers import LSTM, Dense, Dropout, BatchNormalization, Input, Bidirectional, concatenate
 from keras.callbacks import ModelCheckpoint
@@ -181,9 +182,30 @@ def train_early_fusion(df, config):
         
         y_pred = np.argmax(y_predict_probs_clean, axis=1)
 
-        y_test_sequences = np.argmax(y_test_sequences, axis=1)
+        if len(y_test_sequences.shape) > 1 and y_test_sequences.shape[1] > 1:
+            y_test_class_indices = np.argmax(y_test_sequences, axis=1)
+        else:
+            y_test_class_indices = y_test_sequences
 
-        test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
+        y_test = y_test_class_indices
+        
+        cm = confusion_matrix(y_test, y_pred)
+
+        unique_labels, counts = np.unique(y_test, return_counts=True)
+        print(f"\nLabel distribution in test set (Fold {fold_no}):")
+        for label, count in zip(unique_labels, counts):
+            print(f"  Label {label}: {count} samples")
+
+        print(f"\nConfusion Matrix (Fold {fold_no}):")
+        header = " " * 18 + "  ".join([f"Pred {i:<5}" for i in range(cm.shape[1])])
+        print(header)
+        for i in range(cm.shape[0]):
+            row = f"Actual {i:<5}" + "  ".join([f"{cm[i, j]:<8}" for j in range(cm.shape[1])])
+            print(row)
+
+        wandb.log({f"participant_{fold_no}_confusion_matrix": cm.tolist()})
+
+        test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
 
         for key in test_metrics_list.keys():
             test_metrics_list[key].append(test_metrics[key])
@@ -373,6 +395,22 @@ def train_intermediate_fusion(modality_dfs, config):
             y_test_class_indices = np.argmax(y_test_sequences, axis=1)
         else:
             y_test_class_indices = y_test_sequences
+
+        cm = confusion_matrix(y_test_class_indices, y_pred)
+
+        unique_labels, counts = np.unique(y_test_class_indices, return_counts=True)
+        print(f"\nLabel distribution in test set (Fold {fold_no}):")
+        for label, count in zip(unique_labels, counts):
+            print(f"  Label {label}: {count} samples")
+
+        print(f"\nConfusion Matrix (Fold {fold_no}):")
+        header = " " * 18 + "  ".join([f"Pred {i:<5}" for i in range(cm.shape[1])])
+        print(header)
+        for i in range(cm.shape[0]):
+            row = f"Actual {i:<5}" + "  ".join([f"{cm[i, j]:<8}" for j in range(cm.shape[1])])
+            print(row)
+
+        wandb.log({f"participant_{fold_no}_confusion_matrix": cm.tolist()})
 
         test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
         
@@ -572,6 +610,22 @@ def train_late_fusion(modality_dfs, config):
         else:
             y_test_class_indices = y_test_sequences
 
+        cm = confusion_matrix(y_test_class_indices, y_pred)
+        unique_labels, counts = np.unique(y_test_class_indices, return_counts=True)
+
+        print(f"\nLabel distribution in test set (Fold {fold_no}, Participant {participant}):")
+        for label, count in zip(unique_labels, counts):
+            print(f"  Label {label}: {count} samples")
+
+        print(f"\nConfusion Matrix (Fold {fold_no}, Participant {participant}):")
+        header = " " * 18 + "  ".join([f"Pred {i:<5}" for i in range(cm.shape[1])])
+        print(header)
+        for i in range(cm.shape[0]):
+            row = f"Actual {i:<5}" + "  ".join([f"{cm[i, j]:<8}" for j in range(cm.shape[1])])
+            print(row)
+
+        wandb.log({f"participant_{participant}_confusion_matrix": cm.tolist()})
+
         test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
 
         for key in test_metrics_list.keys():
@@ -762,7 +816,7 @@ def main():
 
     sweep_config = {
         'method': 'random',
-        'name': 'lstm_multiclass_intra_train_rat_fixed_test',
+        'name': 'lstm_multiclass_intra_train_rat_fixed_test_cm',
         'parameters': {
             'feature_set': {'values': ['full', 'stats', 'rf']},
             'modality': {'values': [
@@ -803,7 +857,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_multiclass_intra_train_rat_fixed_test")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_multiclass_intra_train_rat_fixed_test_cm")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':

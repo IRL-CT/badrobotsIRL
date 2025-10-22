@@ -5,6 +5,7 @@ import random
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+from sklearn.metrics import confusion_matrix
 from keras.models import Sequential, Model
 from keras.layers import GRU, Dense, Dropout, BatchNormalization, Input, Bidirectional, concatenate
 from keras.callbacks import ModelCheckpoint
@@ -181,9 +182,18 @@ def train_early_fusion(df, config):
         
         y_pred = np.argmax(y_predict_probs_clean, axis=1)
 
-        y_test_sequences = np.argmax(y_test_sequences, axis=1)
+        #y_test_sequences = np.argmax(y_test_sequences, axis=1)
 
-        test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
+        if len(y_test_sequences.shape) > 1 and y_test_sequences.shape[1] > 1:
+            y_test_class_indices = np.argmax(y_test_sequences, axis=1)
+        else:
+            y_test_class_indices = y_test_sequences
+
+        y_test = y_test_class_indices
+        cm = confusion_matrix(y_test, y_pred)
+        wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
+
+        test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
 
         for key in test_metrics_list.keys():
             test_metrics_list[key].append(test_metrics[key])
@@ -373,6 +383,10 @@ def train_intermediate_fusion(modality_dfs, config):
             y_test_class_indices = np.argmax(y_test_sequences, axis=1)
         else:
             y_test_class_indices = y_test_sequences
+
+        y_test = y_test_class_indices
+        cm = confusion_matrix(y_test, y_pred)
+        wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
 
         test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
         
@@ -572,6 +586,10 @@ def train_late_fusion(modality_dfs, config):
         else:
             y_test_class_indices = y_test_sequences
 
+        y_test = y_test_class_indices
+        cm = confusion_matrix(y_test, y_pred)
+        wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
+
         test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
 
         for key in test_metrics_list.keys():
@@ -762,7 +780,7 @@ def main():
 
     sweep_config = {
         'method': 'random',
-        'name': 'gru_multiclass_intra_train_rat_fixed_test',
+        'name': 'gru_multiclass_intra_train_rat_fixed_test_cm',
         'parameters': {
             'feature_set': {'values': ['full', 'stats', 'rf']},
             'modality': {'values': [
@@ -803,7 +821,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_multiclass_intra_train_rat_fixed_test")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_multiclass_intra_train_rat_fixed_test_cm")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':
