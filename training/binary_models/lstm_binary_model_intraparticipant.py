@@ -240,6 +240,15 @@ def train_intermediate_fusion(modality_dfs, config):
 
     print("Total folds:", len(unique_sessions))
 
+    if kernel_regularizer == "l1":
+        reg = l1(0.01)
+    elif kernel_regularizer == "l2":
+        reg = l2(0.01)
+    elif kernel_regularizer == "l1_l2":
+        reg = l1_l2(l1=0.01,l2=0.01)
+    else:
+        reg = None
+
     for fold_no in range(len(unique_sessions)):
         
         print(f"\n=== Fold {fold_no} / session {unique_sessions[fold_no]} ===")
@@ -285,16 +294,16 @@ def train_intermediate_fusion(modality_dfs, config):
             x = feature_input
             for _ in range(num_lstm_layers):
                 if use_bidirectional:
-                    x = Bidirectional(LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer))(x)
+                    x = Bidirectional(LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=reg))(x)
                 else:
-                    x = LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer)(x)
+                    x = LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=reg)(x)
                 x = Dropout(dropout)(x)
                 x = BatchNormalization()(x)
             feature_outputs.append(x)
         
         concatenated_features = concatenate(feature_outputs)
         
-        x = LSTM(lstm_units, activation=activation, kernel_regularizer=kernel_regularizer)(concatenated_features)
+        x = LSTM(lstm_units, activation=activation, kernel_regularizer=reg)(concatenated_features)
         x = Dropout(dropout)(x)
         x = BatchNormalization()(x)
 
@@ -418,6 +427,15 @@ def train_late_fusion(modality_dfs, config):
     unique_sessions = modality_dfs[next(iter(modality_dfs))]['participant'].unique()
 
     print("Total folds:", len(unique_sessions))
+
+    if kernel_regularizer == "l1":
+        reg = l1(0.01)
+    elif kernel_regularizer == "l2":
+        reg = l2(0.01)
+    elif kernel_regularizer == "l1_l2":
+        reg = l1_l2(l1=0.01,l2=0.01)
+    else:
+        reg = None
     
     for fold_no in range(len(unique_sessions)):
         print(f"\n=== Fold {fold_no} / session {unique_sessions[fold_no]} ===")
@@ -462,7 +480,7 @@ def train_late_fusion(modality_dfs, config):
                 activation, 
                 use_bidirectional, 
                 dropout, 
-                kernel_regularizer
+                reg
             )
             
             input_layers.append(input_layer)
