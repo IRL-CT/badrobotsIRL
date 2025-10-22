@@ -6,6 +6,7 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.metrics import confusion_matrix
+from keras import optimizers
 from keras.models import Sequential, Model
 from keras.layers import GRU, Dense, Dropout, BatchNormalization, Input, Bidirectional, concatenate
 from keras.callbacks import ModelCheckpoint
@@ -13,7 +14,7 @@ from keras.regularizers import l1_l2, l1, l2
 from keras.utils import to_categorical
 
 import tensorflow as tf
-from create_data_splits import create_data_splits_intra as create_data_splits
+from create_data_splits import create_data_splits_intra_balanced as create_data_splits
 from get_metrics import get_test_metrics
 from gru_single_modality import train_single_modality_model
 
@@ -91,7 +92,7 @@ def train_early_fusion(df, config):
         print(f"\n=== Fold {fold_no} / session {unique_sessions[fold_no]} ===")
 
         splits = create_data_splits(
-            df,
+            df, label_column='multiclass_label',
             fold_no=fold_no,
             train_ratio=train_ratio,
             test_ratio=0.2,
@@ -118,7 +119,7 @@ def train_early_fusion(df, config):
         elif kernel_regularizer == "l2":
             reg = l2(0.01)
         elif kernel_regularizer == "l1_l2":
-            reg = l1_l2(0.01, 0.01)
+            reg = l1_l2(l1=0.01,l2=0.01)
         else:
             reg = None
 
@@ -143,9 +144,16 @@ def train_early_fusion(df, config):
 
         model.summary()
 
-        model.compile(optimizer=optimizer,
-                      loss=loss,
-                      metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
+        if optimizer == 'adam':
+            optim = optimizers.Adam(learning_rate=learning_rate)
+        elif optimizer == 'sgd':
+            optim = optimizers.SGD(learning_rate=learning_rate)
+        elif optimizer == 'adadelta':
+            optim = optimizers.Adadelta(learning_rate=learning_rate)
+        elif optimizer == 'rmsprop':
+            optim = optimizers.RMSprop(learning_rate=learning_rate)
+        
+        model.compile(optimizer=optim, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
 
         model_history = model.fit(
             X_train_sequences, y_train_sequences,
@@ -182,15 +190,23 @@ def train_early_fusion(df, config):
         
         y_pred = np.argmax(y_predict_probs_clean, axis=1)
 
-        #y_test_sequences = np.argmax(y_test_sequences, axis=1)
-
         if len(y_test_sequences.shape) > 1 and y_test_sequences.shape[1] > 1:
             y_test_class_indices = np.argmax(y_test_sequences, axis=1)
         else:
             y_test_class_indices = y_test_sequences
 
         y_test = y_test_class_indices
+        
         cm = confusion_matrix(y_test, y_pred)
+
+        unique, counts = np.unique(y_test, return_counts=True)
+        print("\nTest label distribution:")
+        for label, count in zip(unique, counts):
+            print(f"Label {label}: {count}")
+
+        print("\nConfusion Matrix (Multiclass):")
+        print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
+
         wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
 
         test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
@@ -236,17 +252,18 @@ def train_intermediate_fusion(modality_dfs, config):
         "test_f1_tolerant": []
     }
 
-    if optimizer == 'adam':
-        optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
-    elif optimizer == 'sgd':
-        optimizer = tf.keras.optimizers.legacy.SGD(learning_rate=learning_rate)
-    elif optimizer == 'adadelta':
-        optimizer = tf.keras.optimizers.legacy.Adadelta(learning_rate=learning_rate)
-    elif optimizer == 'rmsprop':
-        optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
-
     unique_sessions = modality_dfs[next(iter(modality_dfs))]['participant'].unique()
+    
     print("Total folds:", len(unique_sessions))
+
+    if kernel_regularizer == "l1":
+        reg = l1(0.01)
+    elif kernel_regularizer == "l2":
+        reg = l2(0.01)
+    elif kernel_regularizer == "l1_l2":
+        reg = l1_l2(l1=0.01,l2=0.01)
+    else:
+        reg = None
 
     for fold_no, participant in enumerate(unique_sessions):
         print(f"\n=== Fold {fold_no} / session {participant} ===")
@@ -258,7 +275,7 @@ def train_intermediate_fusion(modality_dfs, config):
             df = modality_dfs[modality_key]
 
             splits[modality_key] = create_data_splits(
-                df,
+                df, label_column='multiclass_label',
                 fold_no=fold_no,
                 train_ratio=train_ratio,
                 test_ratio=0.20,
@@ -298,16 +315,16 @@ def train_intermediate_fusion(modality_dfs, config):
             x = feature_input
             for _ in range(num_gru_layers):
                 if use_bidirectional:
-                    x = Bidirectional(GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer))(x)
+                    x = Bidirectional(GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=reg))(x)
                 else:
-                    x = GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer)(x)
+                    x = GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=reg)(x)
                 x = Dropout(dropout)(x)
                 x = BatchNormalization()(x)
             feature_outputs.append(x)
         
         concatenated_features = concatenate(feature_outputs)
         
-        x = GRU(gru_units, activation=activation, kernel_regularizer=kernel_regularizer)(concatenated_features)
+        x = GRU(gru_units, activation=activation, kernel_regularizer=reg)(concatenated_features)
         x = Dropout(dropout)(x)
         x = BatchNormalization()(x)
 
@@ -316,10 +333,19 @@ def train_intermediate_fusion(modality_dfs, config):
         print("Num classes: ", num_classes)
         x = Dense(dense_units, activation=activation)(x)
         x = Dense(num_classes, activation="softmax")(x)
+
+        if optimizer == 'adam':
+            optim = optimizers.Adam(learning_rate=learning_rate)
+        elif optimizer == 'sgd':
+            optim = optimizers.SGD(learning_rate=learning_rate)
+        elif optimizer == 'adadelta':
+            optim = optimizers.Adadelta(learning_rate=learning_rate)
+        elif optimizer == 'rmsprop':
+            optim = optimizers.RMSprop(learning_rate=learning_rate)
         
         model = Model(inputs=feature_inputs, outputs=x)
         model.summary()
-        model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
+        model.compile(optimizer=optim, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
         
         train_inputs = [splits[m][6] for m in modality_keys]
         val_inputs = [splits[m][8] for m in modality_keys] 
@@ -384,9 +410,19 @@ def train_intermediate_fusion(modality_dfs, config):
         else:
             y_test_class_indices = y_test_sequences
 
-        y_test = y_test_class_indices
-        cm = confusion_matrix(y_test, y_pred)
+        cm = confusion_matrix(y_test_class_indices, y_pred)
+
+        unique, counts = np.unique(y_test_class_indices, return_counts=True)
+        print("\nTest label distribution:")
+        for label, count in zip(unique, counts):
+            print(f"Label {label}: {count}")
+
+        print("\nConfusion Matrix (Multiclass):")
+        print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
+
         wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
+
+        wandb.log({f"participant_{fold_no}_confusion_matrix": cm.tolist()})
 
         test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
         
@@ -431,18 +467,19 @@ def train_late_fusion(modality_dfs, config):
         "test_f1_tolerant": []
     }
 
-    if optimizer == 'adam':
-        optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
-    elif optimizer == 'sgd':
-        optimizer = tf.keras.optimizers.legacy.SGD(learning_rate=learning_rate)
-    elif optimizer == 'adadelta':
-        optimizer = tf.keras.optimizers.legacy.Adadelta(learning_rate=learning_rate)
-    elif optimizer == 'rmsprop':
-        optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
-
     unique_sessions = modality_dfs[next(iter(modality_dfs))]['participant'].unique()
+    
     print("Total folds:", len(unique_sessions))
 
+    if kernel_regularizer == "l1":
+        reg = l1(0.01)
+    elif kernel_regularizer == "l2":
+        reg = l2(0.01)
+    elif kernel_regularizer == "l1_l2":
+        reg = l1_l2(l1=0.01,l2=0.01)
+    else:
+        reg = None
+        
     for fold_no, participant in enumerate(unique_sessions):
         print(f"\n=== Fold {fold_no} / session {participant} ===")
 
@@ -453,7 +490,7 @@ def train_late_fusion(modality_dfs, config):
             df = modality_dfs[modality_key]
 
             splits[modality_key] = create_data_splits(
-                df,
+                df, label_column='multiclass_label',
                 fold_no=fold_no,
                 train_ratio=train_ratio,
                 test_ratio=0.20,
@@ -489,7 +526,7 @@ def train_late_fusion(modality_dfs, config):
                 activation, 
                 use_bidirectional, 
                 dropout, 
-                kernel_regularizer
+                reg
             )
             
             input_layers.append(input_layer)
@@ -522,7 +559,16 @@ def train_late_fusion(modality_dfs, config):
 
         model.summary()
 
-        model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
+        if optimizer == 'adam':
+            optim = optimizers.Adam(learning_rate=learning_rate)
+        elif optimizer == 'sgd':
+            optim = optimizers.SGD(learning_rate=learning_rate)
+        elif optimizer == 'adadelta':
+            optim = optimizers.Adadelta(learning_rate=learning_rate)
+        elif optimizer == 'rmsprop':
+            optim = optimizers.RMSprop(learning_rate=learning_rate)
+        
+        model.compile(optimizer=optim, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
         
         train_inputs = [splits[m][6] for m in modality_keys]
         val_inputs = [splits[m][8] for m in modality_keys]  
@@ -586,9 +632,19 @@ def train_late_fusion(modality_dfs, config):
         else:
             y_test_class_indices = y_test_sequences
 
-        y_test = y_test_class_indices
-        cm = confusion_matrix(y_test, y_pred)
+        cm = confusion_matrix(y_test_class_indices, y_pred)
+
+        unique, counts = np.unique(y_test_class_indices, return_counts=True)
+        print("\nTest label distribution:")
+        for label, count in zip(unique, counts):
+            print(f"Label {label}: {count}")
+
+        print("\nConfusion Matrix (Multiclass):")
+        print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
+
         wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
+
+        wandb.log({f"participant_{participant}_confusion_matrix": cm.tolist()})
 
         test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
 

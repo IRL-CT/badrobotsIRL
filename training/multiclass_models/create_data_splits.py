@@ -902,103 +902,110 @@ def create_data_splits_pca(df, model, fold_no, num_folds=5, seed_value=42, seque
 
 
 
-def create_data_splits_intra(df, fold_no=0, train_ratio=0.05, test_ratio=0.20, seed_value=42, sequence_length=1):
-    
+def create_data_splits_intra_balanced(df, label_column='multiclass_label', fold_no=0, train_ratio=0.05, test_ratio=0.20, seed_value=42, sequence_length=1):
+    """
+    Create stratified, sequence-based train/val/test splits for binary or multiclass data.
+    Test set size is fixed (test_ratio of total), while train_ratio controls the amount of training data used (as a fraction of total data).
+    Works for both binary and multiclass labels.
+    """
+
     try:
         random.seed(seed_value)
         np.random.seed(seed_value)
         torch.manual_seed(seed_value)
         torch.cuda.manual_seed_all(seed_value)
 
-        features = df.iloc[:, 3:]
-        target = df.iloc[:, 2].values.astype('int')
-        sessions = df['participant'].values
-        
-        # Get unique sessions/participants
-        unique_sessions = df['participant'].unique()
-        
-        # Select the session for this fold
-        if fold_no >= len(unique_sessions):
-            raise ValueError(f"fold_no {fold_no} exceeds number of available sessions {len(unique_sessions)}")
-        
-        current_session = unique_sessions[fold_no]
-        print(f"Processing session: {current_session}")
-        
-        # Get all data for this session, maintaining chronological order
-        session_mask = df['participant'] == current_session
-        session_df = df[session_mask].copy()
-        session_indices = session_df.index
-        
-        # Ensure chronological order (assuming data is already sorted, but just to be safe)
-        session_df = session_df.sort_index()
-        session_indices = session_df.index
-        
-        n_samples = len(session_df)
-        print(f"Total samples in session {current_session}: {n_samples}")
-        
-        # Calculate split points
-        train_size = int(np.floor(train_ratio * n_samples))
-        test_size = int(np.floor(test_ratio * n_samples))
-        
-        # Ensure minimum sizes
-        if train_size < 1:
-            train_size = 1
-        if test_size < 1:
-            test_size = 1
-            
-        # Ensure we don't exceed total samples
-        if train_size + test_size >= n_samples:
-            # Adjust sizes proportionally
-            available = n_samples - 1  # Leave at least 1 for test
-            train_size = max(1, int(available * train_ratio / (train_ratio + test_ratio)))
-            test_size = max(1, available - train_size)
-        
-        val_size = n_samples - train_size - test_size
-        
-        print(f"Split sizes - Train: {train_size}, Val: {val_size}, Test: {test_size}")
-        
-        # Create chronological splits
-        train_end = train_size
-        val_end = train_size + val_size
-        
-        # Get indices for each split
-        train_indices = session_indices[:train_end]
-        val_indices = session_indices[train_end:val_end]
-        test_indices = session_indices[val_end:]
-        
-        # Extract features and targets
-        X_train = features.loc[train_indices]
-        y_train = target[train_indices]
-        session_train = sessions[train_indices]
-        
-        X_val = features.loc[val_indices]
-        y_val = target[val_indices]
-        session_val = sessions[val_indices]
-        
-        X_test = features.loc[test_indices]
-        y_test = target[test_indices]
-        session_test = sessions[test_indices]
-        
-        print("Train shapes:", X_train.shape, y_train.shape)
-        print("Val shapes:", X_val.shape, y_val.shape)
-        print("Test shapes:", X_test.shape, y_test.shape)
-        
-        # Reset indices
-        X_train = X_train.reset_index(drop=True)
-        X_val = X_val.reset_index(drop=True)
-        X_test = X_test.reset_index(drop=True)
-        
-        # Create sequences
-        X_train_sequences, y_train_sequences = create_sequences(X_train.values, y_train, session_train, sequence_length)
-        X_val_sequences, y_val_sequences = create_sequences(X_val.values, y_val, session_val, sequence_length) 
-        X_test_sequences, y_test_sequences = create_sequences(X_test.values, y_test, session_test, sequence_length)
-        
-        print("Train sequences shape:", X_train_sequences.shape, y_train_sequences.shape)
-        print("Val sequences shape:", X_val_sequences.shape, y_val_sequences.shape)
-        print("Test sequences shape:", X_test_sequences.shape, y_test_sequences.shape)
+        participants = df["participant"].unique()
+        if fold_no >= len(participants):
+            print(f"[Fold {fold_no}] Invalid participant index.")
+            return None
 
-        return X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length
-    
+        participant_id = participants[fold_no]
+        df_participant = df[df["participant"] == participant_id].copy()
+
+        features = df_participant.iloc[:, 4:].values  # features start at column 4
+        labels = df_participant[label_column].values.astype(int)
+
+        n_samples = len(df_participant)
+        if n_samples < 10:
+            print(f"[Fold {fold_no}] Not enough samples for participant {participant_id}.")
+            return None
+
+        # Split into train+val and test first (keep test fixed at test_ratio)
+        stratify_labels = labels if len(np.unique(labels)) > 1 else None
+        try:
+            X_trainval, X_test, y_trainval, y_test = train_test_split(
+                features,
+                labels,
+                test_size=test_ratio,
+                stratify=stratify_labels,
+                random_state=seed_value
+            )
+        except ValueError:
+            # Fallback if stratify fails
+            X_trainval, X_test, y_trainval, y_test = train_test_split(
+                features,
+                labels,
+                test_size=test_ratio,
+                random_state=seed_value
+            )
+
+        # Split remaining trainval into train and val
+        remaining = len(X_trainval)
+        train_size = int(train_ratio * n_samples)
+        if train_size >= remaining:
+            train_size = max(1, remaining // 2)
+
+        val_size = remaining - train_size
+        val_ratio = val_size / (train_size + val_size + 1e-8)
+
+        stratify_labels_tv = y_trainval if len(np.unique(y_trainval)) > 1 else None
+        try:
+            X_train, X_val, y_train, y_val = train_test_split(
+                X_trainval,
+                y_trainval,
+                test_size=val_ratio,
+                stratify=stratify_labels_tv,
+                random_state=seed_value
+            )
+        except ValueError:
+            X_train, X_val, y_train, y_val = train_test_split(
+                X_trainval,
+                y_trainval,
+                test_size=val_ratio,
+                random_state=seed_value
+            )
+
+        def create_sequences(X, y, seq_len):
+            X_seqs, y_seqs = [], []
+            for i in range(len(X) - seq_len + 1):
+                X_seqs.append(X[i:i + seq_len])
+                # Use last frame’s label as target
+                y_seqs.append(y[i + seq_len - 1])
+            return np.array(X_seqs), np.array(y_seqs)
+
+        # Create sequential data
+        X_train_seq, y_train_seq = create_sequences(X_train, y_train, sequence_length)
+        X_val_seq, y_val_seq = create_sequences(X_val, y_val, sequence_length)
+        X_test_seq, y_test_seq = create_sequences(X_test, y_test, sequence_length)
+
+        if X_train_seq.shape[0] == 0 or X_test_seq.shape[0] == 0:
+            print(f"[Fold {fold_no}] Invalid sequence data — skipping participant {participant_id}.")
+            return None
+
+        print(f"[Fold {fold_no}] Participant {participant_id}")
+        print(f"  Train: {X_train_seq.shape}, Val: {X_val_seq.shape}, Test: {X_test_seq.shape}")
+        print(f"  Labels in test: {np.unique(y_test_seq)}")
+
+        return (
+            X_train, X_val, X_test,
+            y_train, y_val, y_test,
+            X_train_seq, y_train_seq,
+            X_val_seq, y_val_seq,
+            X_test_seq, y_test_seq,
+            sequence_length
+        )
+
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"Error in create_data_splits: {e}")
         return None
