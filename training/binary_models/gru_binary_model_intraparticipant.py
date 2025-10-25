@@ -761,7 +761,7 @@ def main():
 
     sweep_config = {
         'method': 'random',
-        'name': 'gru_binary_intra_train_rat_fixed_test',
+        'name': 'binary_intra_balanced',
         'parameters': {
             'feature_set': {'values': ['full', 'stats', 'rf']},
             'modality': {'values': [
@@ -792,7 +792,9 @@ def main():
             
             'sequence_length' : {'values' : [1, 2, 5, 10, 15, 30]},
 
-            'train_ratio': {'values': [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]}
+            'train_ratio': {'values': [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]},
+
+            'model' : {'values': ['gru']}
         }
         # feature set (full, stats, rf) -> modality selection (pose_facial_audio, pose, facial, etc.) -> (reg, norm, pca) -> fusion
     }
@@ -802,7 +804,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="gru_binary_intra_train_rat_fixed_test")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="binary_intra_balanced")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':
