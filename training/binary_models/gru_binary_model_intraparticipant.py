@@ -2,6 +2,7 @@ import wandb
 import numpy as np
 import pandas as pd
 import random
+import gc
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
@@ -61,6 +62,7 @@ def train_early_fusion(df, config):
     loss = config.loss
     sequence_length = config.sequence_length
     train_ratio = config.train_ratio
+    split_strategy = config.split_strategy
 
     test_metrics_list = {
         "test_accuracy": [],
@@ -81,7 +83,7 @@ def train_early_fusion(df, config):
         print(f"\n=== Fold {fold_no} / session {unique_sessions[fold_no]} ===")
 
         splits = create_data_splits(
-            df, label_column='binary_label',
+            df, label_column='binary_label',split_strategy = config.split_strategy,
             fold_no=fold_no,
             train_ratio=train_ratio,
             test_ratio=0.2,
@@ -199,6 +201,10 @@ def train_early_fusion(df, config):
         wandb.log({f"fold_{fold_no}_metrics": test_metrics})
         print(f"Fold {fold_no} Test Metrics:", test_metrics)
 
+        del model, model_history, X_train_sequences, X_val_sequences, X_test_sequences
+        gc.collect()
+        tf.keras.backend.clear_session()
+
     # Average across folds
     avg_test_metrics = {f"avg_{key}": np.mean(values)
                         for key, values in test_metrics_list.items()}
@@ -222,6 +228,7 @@ def train_intermediate_fusion(modality_dfs, config):
     loss = config.loss
     sequence_length = config.sequence_length
     train_ratio = config.train_ratio
+    split_strategy = config.split_strategy
 
     modality_keys = list(modality_dfs.keys())
 
@@ -259,7 +266,7 @@ def train_intermediate_fusion(modality_dfs, config):
         for modality_key in modality_keys:
             df = modality_dfs[modality_key]
             splits[modality_key] = create_data_splits(
-                df, label_column='binary_label',
+                df, label_column='binary_label', split_strategy=split_strategy,
                 fold_no=fold_no,
                 train_ratio=train_ratio,
                 test_ratio=0.2,
@@ -351,6 +358,7 @@ def train_intermediate_fusion(modality_dfs, config):
                 if k in model_history.history:
                     metrics[k] = model_history.history[k][epoch]
             wandb.log(metrics)
+            tf.keras.backend.clear_session()
         
         y_predict_probs = model.predict(test_inputs)
         y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
@@ -388,6 +396,10 @@ def train_intermediate_fusion(modality_dfs, config):
         
         wandb.log({f"fold_{fold_no}_metrics": test_metrics})
         print(f"Fold {fold_no} Test Metrics:", test_metrics)
+
+        del model, model_history, X_train_sequences, X_val_sequences, X_test_sequences
+        gc.collect()
+        tf.keras.backend.clear_session()
     
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
     wandb.run.summary.update(avg_test_metrics)
@@ -410,6 +422,7 @@ def train_late_fusion(modality_dfs, config):
     loss = config.loss
     sequence_length = config.sequence_length
     train_ratio = config.train_ratio
+    split_strategy = config.split_strategy
 
     modality_keys = list(modality_dfs.keys())
 
@@ -446,7 +459,7 @@ def train_late_fusion(modality_dfs, config):
         for modality_key in modality_keys:
             df = modality_dfs[modality_key]
             splits[modality_key] = create_data_splits(
-                df, label_column='binary_label',
+                df, label_column='binary_label', split_strategy=split_strategy,
                 fold_no=fold_no,
                 train_ratio=train_ratio,
                 test_ratio=0.2,
@@ -578,6 +591,10 @@ def train_late_fusion(modality_dfs, config):
 
         wandb.log({f"fold_{fold_no}_metrics": test_metrics})
         print(f"Fold {fold_no} Test Metrics:", test_metrics)
+
+        del model, model_history, X_train_sequences, X_val_sequences, X_test_sequences
+        gc.collect()
+        tf.keras.backend.clear_session()
 
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
     wandb.run.summary.update(avg_test_metrics)
@@ -793,6 +810,8 @@ def main():
             'sequence_length' : {'values' : [1, 2, 5, 10, 15, 30]},
 
             'train_ratio': {'values': [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]},
+
+            'split_strategy' : {'values' : ["binary", "multiclass_to_binary"]},
 
             'model' : {'values': ['gru']}
         }
