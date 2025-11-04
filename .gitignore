@@ -24,3 +24,4 @@ get-pip.py
 wandb/
 **/wandb/
 **/*.sub
+*.csv
