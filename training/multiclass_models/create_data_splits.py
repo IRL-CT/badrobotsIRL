@@ -930,7 +930,7 @@ def make_split_indices(participant_data, split_strategy, seed=42):
     else:
         raise ValueError(f"Unknown split_strategy: {split_strategy}")
 
-    return train_indices, test_indices
+    return train_indices, train_labels, test_indices, test_labels
 
 
 def create_data_splits_intra_balanced(df, label_column='multiclass_label', split_strategy='multiclass', fold_no=0, 
@@ -948,7 +948,7 @@ def create_data_splits_intra_balanced(df, label_column='multiclass_label', split
         participant_id = participants[fold_no]
         participant_data = df[df["participant"] == participant_id].copy().reset_index(drop=True)
 
-        train_indices, test_indices = make_split_indices(
+        train_indices, train_labels, test_indices, test_labels = make_split_indices(
             participant_data, split_strategy, seed=seed_value
         )
 
@@ -956,10 +956,10 @@ def create_data_splits_intra_balanced(df, label_column='multiclass_label', split
         labels = participant_data[label_column].values.astype(int)
 
         X_train_all = features[train_indices]
-        y_train_all = labels[train_indices]
+        y_train_all = train_labels
 
         X_test = features[test_indices]
-        y_test = labels[test_indices]
+        y_test = test_labels
 
         total_trainval = len(X_train_all)
         train_size = int(train_ratio * total_trainval)
