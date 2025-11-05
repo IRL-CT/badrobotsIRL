@@ -102,9 +102,13 @@ def train_early_fusion(df, config):
          X_test_sequences, y_test_sequences,
          sequence_length) = splits
 
-        y_train_sequences = to_categorical(y_train_sequences, num_classes=4)
-        y_val_sequences = to_categorical(y_val_sequences, num_classes=4)
-        y_test_sequences = to_categorical(y_test_sequences, num_classes=4)
+        unique_classes = np.unique(np.concatenate([y_train_sequences, y_val_sequences, y_test_sequences]))
+        num_classes = len(unique_classes)
+        print("Detected num_classes =", num_classes)
+
+        y_train_sequences = to_categorical(y_train_sequences, num_classes=num_classes)
+        y_val_sequences   = to_categorical(y_val_sequences,   num_classes=num_classes)
+        y_test_sequences  = to_categorical(y_test_sequences,  num_classes=num_classes)
 
         if kernel_regularizer == "l1":
             reg = l1(0.01)
@@ -124,7 +128,7 @@ def train_early_fusion(df, config):
             dropout, reg
         )
 
-        num_classes = 4
+        # num_classes = 4
         #num_classes = len(np.unique(y_train))
         print("Num classes: ", num_classes)
         print("Unique labels in y_train:", np.unique(y_train))
@@ -197,7 +201,11 @@ def train_early_fusion(df, config):
             print(f"Label {label}: {count}")
 
         print("\nConfusion Matrix (Multiclass):")
-        print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
+        #print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
+
+        print(pd.DataFrame(cm, index=[f"Actual {c}" for c in unique_classes],
+                            columns=[f"Pred {c}" for c in unique_classes]))
+
 
         wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
 
@@ -296,9 +304,16 @@ def train_intermediate_fusion(modality_dfs, config):
         y_train_sequences = splits[first_modality][7] 
         y_val_sequences = splits[first_modality][9] 
         y_test_sequences = splits[first_modality][11] 
-        y_train_sequences = to_categorical(y_train_sequences, num_classes=4)
-        y_val_sequences = to_categorical(y_val_sequences, num_classes=4)
-        y_test_sequences = to_categorical(y_test_sequences, num_classes=4)
+
+        unique_classes = np.unique(y_train_sequences)
+        num_classes = len(unique_classes)
+
+        print("Detected class set:", unique_classes)
+        print("Num classes:", num_classes)
+
+        y_train_sequences = to_categorical(y_train_sequences, num_classes=num_classes)
+        y_val_sequences = to_categorical(y_val_sequences, num_classes=num_classes)
+        y_test_sequences = to_categorical(y_test_sequences, num_classes=num_classes)
         
         feature_inputs = []
         feature_outputs = []
@@ -325,7 +340,7 @@ def train_intermediate_fusion(modality_dfs, config):
         x = Dropout(dropout)(x)
         x = BatchNormalization()(x)
 
-        num_classes = 4
+        #num_classes = 4
         #num_classes = y_train_sequences.shape[1] if len(y_train_sequences.shape) > 1 else len(np.unique(y_train_sequences))
         print("Num classes: ", num_classes)
         x = Dense(dense_units, activation=activation)(x)
@@ -415,7 +430,9 @@ def train_intermediate_fusion(modality_dfs, config):
             print(f"Label {label}: {count}")
 
         print("\nConfusion Matrix (Multiclass):")
-        print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
+        #print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
+        print(pd.DataFrame(cm, index=[f"Actual {c}" for c in unique_classes],
+                            columns=[f"Pred {c}" for c in unique_classes]))
 
         wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
 
@@ -544,15 +561,15 @@ def train_late_fusion(modality_dfs, config):
         y_val_sequences = splits[first_modality][9]
         y_test_sequences = splits[first_modality][11]
 
-        if len(y_train_sequences.shape) == 1 or y_train_sequences.shape[1] == 1:
-            num_classes = 4
-            #num_classes = len(np.unique(y_train_sequences))
-            y_train_sequences = to_categorical(y_train_sequences, num_classes=num_classes)
-            y_val_sequences = to_categorical(y_val_sequences, num_classes=num_classes)
-            y_test_sequences = to_categorical(y_test_sequences, num_classes=num_classes)
-        else:
-            num_classes = 4
-            #num_classes = y_train_sequences.shape[1]
+        unique_classes = np.unique(y_train_sequences)
+        num_classes = len(unique_classes)
+
+        print("Detected class set:", unique_classes)
+        print("Num classes:", num_classes)
+
+        y_train_sequences = to_categorical(y_train_sequences, num_classes=num_classes)
+        y_val_sequences = to_categorical(y_val_sequences, num_classes=num_classes)
+        y_test_sequences = to_categorical(y_test_sequences, num_classes=num_classes)
 
         x = Dense(dense_units, activation=activation)(concatenated)
         output_layer = Dense(num_classes, activation="softmax")(x)
@@ -642,7 +659,9 @@ def train_late_fusion(modality_dfs, config):
             print(f"Label {label}: {count}")
 
         print("\nConfusion Matrix (Multiclass):")
-        print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
+        #print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
+        print(pd.DataFrame(cm, index=[f"Actual {c}" for c in unique_classes],
+                            columns=[f"Pred {c}" for c in unique_classes]))
 
         wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
 
@@ -656,9 +675,10 @@ def train_late_fusion(modality_dfs, config):
         wandb.log({f"participant_{participant}_metrics": test_metrics})
         print(f"Fold {participant} Test Metrics:", test_metrics)
 
-        del model, model_history, X_train_sequences, X_val_sequences, X_test_sequences
+        del model, model_history
         gc.collect()
         tf.keras.backend.clear_session()
+
 
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
     wandb.run.summary.update(avg_test_metrics)
