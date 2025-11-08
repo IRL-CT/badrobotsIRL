@@ -12,7 +12,7 @@ from keras.models import Sequential, Model
 from keras.layers import GRU, Dense, Dropout, BatchNormalization, Input, Bidirectional, concatenate
 from keras.callbacks import ModelCheckpoint
 from keras.regularizers import l1_l2, l1, l2
-from keras.utils import to_categorical
+from keras.metrics import Precision, Recall, AUC
 
 import tensorflow as tf
 from create_data_splits import create_data_splits_intra_balanced as create_data_splits
@@ -102,13 +102,25 @@ def train_early_fusion(df, config):
          X_test_sequences, y_test_sequences,
          sequence_length) = splits
 
-        unique_classes = np.unique(np.concatenate([y_train_sequences, y_val_sequences, y_test_sequences]))
-        num_classes = len(unique_classes)
-        print("Detected num_classes =", num_classes)
+        # Remap class labels to contiguous indices
+        unique_classes = np.unique(y_train_sequences)
+        class_mapping = {old: new for new, old in enumerate(unique_classes)}
 
-        y_train_sequences = to_categorical(y_train_sequences, num_classes=num_classes)
-        y_val_sequences   = to_categorical(y_val_sequences,   num_classes=num_classes)
-        y_test_sequences  = to_categorical(y_test_sequences,  num_classes=num_classes)
+        # Build a lookup array where index = original label, value = remapped label
+        max_label = max(unique_classes)
+        mapping_array = np.zeros(max_label + 1, dtype=int)
+        for old, new in class_mapping.items():
+            mapping_array[old] = new
+
+        # Apply mapping
+        y_train_sequences = mapping_array[y_train_sequences]
+        y_val_sequences   = mapping_array[y_val_sequences]
+        y_test_sequences  = mapping_array[y_test_sequences]
+
+        print("After mapping:")
+        print("Train:", np.unique(y_train_sequences))
+        print("Val:",   np.unique(y_val_sequences))
+        print("Test:",  np.unique(y_test_sequences))
 
         if kernel_regularizer == "l1":
             reg = l1(0.01)
@@ -129,9 +141,9 @@ def train_early_fusion(df, config):
         )
 
         # num_classes = 4
-        #num_classes = len(np.unique(y_train))
+        num_classes = len(np.unique(y_train_sequences))
         print("Num classes: ", num_classes)
-        print("Unique labels in y_train:", np.unique(y_train))
+        print("Unique labels in y_train_sequences:", np.unique(y_train_sequences))
         print("Unique labels in y_val:", np.unique(y_val))
         print("Unique labels in y_test:", np.unique(y_test))
 
@@ -148,9 +160,16 @@ def train_early_fusion(df, config):
             optim = optimizers.Adadelta(learning_rate=learning_rate)
         elif optimizer == 'rmsprop':
             optim = optimizers.RMSprop(learning_rate=learning_rate)
-        
-        model.compile(optimizer=optim, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
 
+        # multiclass_metrics = [
+        #     'accuracy',
+        #     Precision(name='precision'),
+        #     Recall(name='recall'),
+        #     AUC(name='auc')
+        # ]
+
+        model.compile(optimizer=optim, loss=loss, metrics=['accuracy'])
+        
         model_history = model.fit(
             X_train_sequences, y_train_sequences,
             epochs=epochs,
@@ -177,6 +196,10 @@ def train_early_fusion(df, config):
         y_predict_probs = model.predict(X_test_sequences)
         y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
 
+        print("Pred shape:", y_predict_probs_clean.shape)
+        print("y_val_sequences shape:", y_val_sequences.shape)
+        print("y_test_sequences shape:", y_test_sequences.shape)
+
         df_probs = pd.DataFrame(y_predict_probs_clean)
 
         table = wandb.Table(dataframe=df_probs)
@@ -186,14 +209,9 @@ def train_early_fusion(df, config):
         
         y_pred = np.argmax(y_predict_probs_clean, axis=1)
 
-        if len(y_test_sequences.shape) > 1 and y_test_sequences.shape[1] > 1:
-            y_test_class_indices = np.argmax(y_test_sequences, axis=1)
-        else:
-            y_test_class_indices = y_test_sequences
-
-        y_test = y_test_class_indices
+        y_test_class_indices = y_test_sequences
         
-        cm = confusion_matrix(y_test, y_pred)
+        cm = confusion_matrix(y_test_class_indices, y_pred)
 
         unique, counts = np.unique(y_test, return_counts=True)
         print("\nTest label distribution:")
@@ -203,8 +221,11 @@ def train_early_fusion(df, config):
         print("\nConfusion Matrix (Multiclass):")
         #print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
 
-        print(pd.DataFrame(cm, index=[f"Actual {c}" for c in unique_classes],
-                            columns=[f"Pred {c}" for c in unique_classes]))
+        print(pd.DataFrame(
+            cm,
+            index=[f"Actual {c}" for c in range(num_classes)],
+            columns=[f"Pred {c}" for c in range(num_classes)]
+        ))
 
 
         wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
@@ -305,15 +326,25 @@ def train_intermediate_fusion(modality_dfs, config):
         y_val_sequences = splits[first_modality][9] 
         y_test_sequences = splits[first_modality][11] 
 
+        # Remap class labels to contiguous indices
         unique_classes = np.unique(y_train_sequences)
-        num_classes = len(unique_classes)
+        class_mapping = {old: new for new, old in enumerate(unique_classes)}
 
-        print("Detected class set:", unique_classes)
-        print("Num classes:", num_classes)
+        # Build a lookup array where index = original label, value = remapped label
+        max_label = max(unique_classes)
+        mapping_array = np.zeros(max_label + 1, dtype=int)
+        for old, new in class_mapping.items():
+            mapping_array[old] = new
 
-        y_train_sequences = to_categorical(y_train_sequences, num_classes=num_classes)
-        y_val_sequences = to_categorical(y_val_sequences, num_classes=num_classes)
-        y_test_sequences = to_categorical(y_test_sequences, num_classes=num_classes)
+        # Apply mapping
+        y_train_sequences = mapping_array[y_train_sequences]
+        y_val_sequences   = mapping_array[y_val_sequences]
+        y_test_sequences  = mapping_array[y_test_sequences]
+
+        print("After mapping:")
+        print("Train:", np.unique(y_train_sequences))
+        print("Val:",   np.unique(y_val_sequences))
+        print("Test:",  np.unique(y_test_sequences))
         
         feature_inputs = []
         feature_outputs = []
@@ -341,7 +372,7 @@ def train_intermediate_fusion(modality_dfs, config):
         x = BatchNormalization()(x)
 
         #num_classes = 4
-        #num_classes = y_train_sequences.shape[1] if len(y_train_sequences.shape) > 1 else len(np.unique(y_train_sequences))
+        num_classes = len(np.unique(y_train_sequences))
         print("Num classes: ", num_classes)
         x = Dense(dense_units, activation=activation)(x)
         x = Dense(num_classes, activation="softmax")(x)
@@ -357,7 +388,15 @@ def train_intermediate_fusion(modality_dfs, config):
         
         model = Model(inputs=feature_inputs, outputs=x)
         model.summary()
-        model.compile(optimizer=optim, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
+
+        # multiclass_metrics = [
+        #     'accuracy',
+        #     Precision(name='precision'),
+        #     Recall(name='recall'),
+        #     AUC(name='auc')
+        # ]
+
+        model.compile(optimizer=optim, loss=loss, metrics=['accuracy'])
         
         train_inputs = [splits[m][6] for m in modality_keys]
         val_inputs = [splits[m][8] for m in modality_keys] 
@@ -409,6 +448,10 @@ def train_intermediate_fusion(modality_dfs, config):
         
         y_predict_probs = model.predict(test_inputs)
         y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
+
+        print("Pred shape:", y_predict_probs_clean.shape)
+        print("y_val_sequences shape:", y_val_sequences.shape)
+        print("y_test_sequences shape:", y_test_sequences.shape)
         
         df_probs = pd.DataFrame(y_predict_probs_clean)
         table = wandb.Table(dataframe=df_probs)
@@ -417,10 +460,7 @@ def train_intermediate_fusion(modality_dfs, config):
         
         y_pred = np.argmax(y_predict_probs_clean, axis=1)
 
-        if len(y_test_sequences.shape) > 1 and y_test_sequences.shape[1] > 1:
-            y_test_class_indices = np.argmax(y_test_sequences, axis=1)
-        else:
-            y_test_class_indices = y_test_sequences
+        y_test_class_indices = y_test_sequences
 
         cm = confusion_matrix(y_test_class_indices, y_pred)
 
@@ -431,8 +471,12 @@ def train_intermediate_fusion(modality_dfs, config):
 
         print("\nConfusion Matrix (Multiclass):")
         #print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
-        print(pd.DataFrame(cm, index=[f"Actual {c}" for c in unique_classes],
-                            columns=[f"Pred {c}" for c in unique_classes]))
+        print(pd.DataFrame(
+            cm,
+            index=[f"Actual {c}" for c in range(num_classes)],
+            columns=[f"Pred {c}" for c in range(num_classes)]
+        ))
+
 
         wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
 
@@ -446,7 +490,9 @@ def train_intermediate_fusion(modality_dfs, config):
         wandb.log({f"participant_{participant}_metrics": test_metrics})
         print(f"Fold {participant} Test Metrics:", test_metrics)
 
-        del model, model_history, X_train_sequences, X_val_sequences, X_test_sequences
+        del model, model_history
+        for m in modality_keys:
+            del splits[m]
         gc.collect()
         tf.keras.backend.clear_session()
     
@@ -532,24 +578,41 @@ def train_late_fusion(modality_dfs, config):
         input_layers = []
         outputs = []
 
+        # Build each modality stream directly in functional API
         for modality_key in modality_keys:
             X_train_seq = splits[modality_key][6]
             
             input_layer = Input(shape=(sequence_length, X_train_seq.shape[2]))
-            
-            model = build_early_late_model(
-                sequence_length, 
-                X_train_seq.shape[2], 
-                num_gru_layers, 
-                gru_units, 
-                activation, 
-                use_bidirectional, 
-                dropout, 
-                reg
-            )
-            
             input_layers.append(input_layer)
-            outputs.append(model(input_layer))
+            
+            # Build the GRU layers directly instead of using Sequential
+            x = input_layer
+            
+            if num_gru_layers == 1:
+                if use_bidirectional:
+                    x = Bidirectional(GRU(gru_units, activation=activation, kernel_regularizer=reg))(x)
+                else:
+                    x = GRU(gru_units, activation=activation, kernel_regularizer=reg)(x)
+                x = Dropout(dropout)(x)
+                x = BatchNormalization()(x)
+            else:
+                for i in range(num_gru_layers - 1):
+                    if use_bidirectional:
+                        x = Bidirectional(GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=reg))(x)
+                    else:
+                        x = GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=reg)(x)
+                    x = Dropout(dropout)(x)
+                    x = BatchNormalization()(x)
+                
+                # Final GRU layer without return_sequences
+                if use_bidirectional:
+                    x = Bidirectional(GRU(gru_units, activation=activation, kernel_regularizer=reg))(x)
+                else:
+                    x = GRU(gru_units, activation=activation, kernel_regularizer=reg)(x)
+                x = Dropout(dropout)(x)
+                x = BatchNormalization()(x)
+            
+            outputs.append(x)
         
         if len(outputs) > 1:
             concatenated = concatenate(outputs)
@@ -561,15 +624,27 @@ def train_late_fusion(modality_dfs, config):
         y_val_sequences = splits[first_modality][9]
         y_test_sequences = splits[first_modality][11]
 
+        # Remap class labels to contiguous indices
         unique_classes = np.unique(y_train_sequences)
-        num_classes = len(unique_classes)
+        class_mapping = {old: new for new, old in enumerate(unique_classes)}
 
-        print("Detected class set:", unique_classes)
-        print("Num classes:", num_classes)
+        # Build a lookup array where index = original label, value = remapped label
+        max_label = max(unique_classes)
+        mapping_array = np.zeros(max_label + 1, dtype=int)
+        for old, new in class_mapping.items():
+            mapping_array[old] = new
 
-        y_train_sequences = to_categorical(y_train_sequences, num_classes=num_classes)
-        y_val_sequences = to_categorical(y_val_sequences, num_classes=num_classes)
-        y_test_sequences = to_categorical(y_test_sequences, num_classes=num_classes)
+        # Apply mapping
+        y_train_sequences = mapping_array[y_train_sequences]
+        y_val_sequences   = mapping_array[y_val_sequences]
+        y_test_sequences  = mapping_array[y_test_sequences]
+
+        print("After mapping:")
+        print("Train:", np.unique(y_train_sequences))
+        print("Val:",   np.unique(y_val_sequences))
+        print("Test:",  np.unique(y_test_sequences))
+
+        num_classes = len(np.unique(y_train_sequences))
 
         x = Dense(dense_units, activation=activation)(concatenated)
         output_layer = Dense(num_classes, activation="softmax")(x)
@@ -587,7 +662,15 @@ def train_late_fusion(modality_dfs, config):
         elif optimizer == 'rmsprop':
             optim = optimizers.RMSprop(learning_rate=learning_rate)
         
-        model.compile(optimizer=optim, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
+        # Properly configure metrics for multiclass classification
+        # multiclass_metrics = [
+        #     'accuracy',
+        #     Precision(name='precision'),
+        #     Recall(name='recall'),
+        #     AUC(name='auc')
+        # ]
+        
+        model.compile(optimizer=optim, loss=loss, metrics=["accuracy"])
         
         train_inputs = [splits[m][6] for m in modality_keys]
         val_inputs = [splits[m][8] for m in modality_keys]  
@@ -640,16 +723,17 @@ def train_late_fusion(modality_dfs, config):
         y_predict_probs = model.predict(test_inputs)
         y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
 
+        print("Pred shape:", y_predict_probs_clean.shape)
+        print("y_val_sequences shape:", y_val_sequences.shape)
+        print("y_test_sequences shape:", y_test_sequences.shape)
+
         df_probs = pd.DataFrame(y_predict_probs_clean)
         wandb.log({f"participant_{participant}_prediction_probabilities": y_predict_probs_clean})
         wandb.log({f"participant_{participant}_prediction_probabilities_table": wandb.Table(dataframe=df_probs)})
 
         y_pred = np.argmax(y_predict_probs_clean, axis=1)
 
-        if len(y_test_sequences.shape) > 1 and y_test_sequences.shape[1] > 1:
-            y_test_class_indices = np.argmax(y_test_sequences, axis=1)
-        else:
-            y_test_class_indices = y_test_sequences
+        y_test_class_indices = y_test_sequences
 
         cm = confusion_matrix(y_test_class_indices, y_pred)
 
@@ -659,12 +743,13 @@ def train_late_fusion(modality_dfs, config):
             print(f"Label {label}: {count}")
 
         print("\nConfusion Matrix (Multiclass):")
-        #print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
-        print(pd.DataFrame(cm, index=[f"Actual {c}" for c in unique_classes],
-                            columns=[f"Pred {c}" for c in unique_classes]))
+        print(pd.DataFrame(
+            cm,
+            index=[f"Actual {c}" for c in range(num_classes)],
+            columns=[f"Pred {c}" for c in range(num_classes)]
+        ))
 
         wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
-
         wandb.log({f"participant_{participant}_confusion_matrix": cm.tolist()})
 
         test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
@@ -678,7 +763,6 @@ def train_late_fusion(modality_dfs, config):
         del model, model_history
         gc.collect()
         tf.keras.backend.clear_session()
-
 
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
     wandb.run.summary.update(avg_test_metrics)
@@ -889,7 +973,7 @@ def main():
             'batch_size': {'values': [32, 64, 128]},
             'epochs': {'value': 50},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
-            'loss' : {'values' : ["categorical_crossentropy"]},
+            'loss' : {'values' : ["sparse_categorical_crossentropy"]},
             
             'sequence_length' : {'values' : [5, 10, 15, 30, 60]},
 

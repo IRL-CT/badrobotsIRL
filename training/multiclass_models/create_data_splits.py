@@ -845,7 +845,6 @@ def create_data_splits_pca(df, model, fold_no, num_folds=5, seed_value=42, seque
 #         print(f"Error in create_data_splits: {e}")
 #         return None
 
-
 def make_split_indices(participant_data, split_strategy, seed=42):
     """
     Returns balanced train/test index lists for the given split_strategy:
@@ -859,7 +858,6 @@ def make_split_indices(participant_data, split_strategy, seed=42):
     np.random.seed(seed)
 
     def balance_classes(idxs, lbls):
-        """Return balanced subset indices by undersampling larger classes."""
         class_indices = {c: np.where(lbls == c)[0] for c in np.unique(lbls)}
         min_count = min(len(v) for v in class_indices.values())
         balanced = np.concatenate([
@@ -869,62 +867,68 @@ def make_split_indices(participant_data, split_strategy, seed=42):
         np.random.shuffle(balanced)
         return idxs[balanced], lbls[balanced]
 
-    train_indices, test_indices = [], []
+    # DEFAULT INIT
+    train_indices = test_indices = None
+    train_labels = test_labels = None
 
     # 0 vs 1
     if split_strategy == "binary":
         labels = participant_data["binary_label"].values.astype(int)
         indices = np.arange(len(participant_data))
+
         valid_mask = np.isin(labels, [0, 1])
         indices, labels = indices[valid_mask], labels[valid_mask]
+
         indices, labels = balance_classes(indices, labels)
 
-        train_indices, test_indices = train_test_split(
-            indices, test_size=0.2, stratify=labels, random_state=seed
+        train_indices, test_indices, train_labels, test_labels = train_test_split(
+            indices, labels, test_size=0.2, stratify=labels, random_state=seed
         )
 
     # 0 vs 1 vs 2 vs 3
     elif split_strategy == "multiclass":
         labels = participant_data["multiclass_label"].values.astype(int)
         indices = np.arange(len(participant_data))
+
         valid_mask = np.isin(labels, [0, 1, 2, 3])
         indices, labels = indices[valid_mask], labels[valid_mask]
+
         indices, labels = balance_classes(indices, labels)
 
-        train_indices, test_indices = train_test_split(
-            indices, test_size=0.2, stratify=labels, random_state=seed
+        train_indices, test_indices, train_labels, test_labels = train_test_split(
+            indices, labels, test_size=0.2, stratify=labels, random_state=seed
         )
 
     # 1 vs 2 vs 3
     elif split_strategy == "multiclass_exclude_neutral":
         labels = participant_data["multiclass_label"].values.astype(int)
         indices = np.arange(len(participant_data))
+
         valid_mask = np.isin(labels, [1, 2, 3])
         indices, labels = indices[valid_mask], labels[valid_mask]
+
         indices, labels = balance_classes(indices, labels)
 
-        train_indices, test_indices = train_test_split(
-            indices, test_size=0.2, stratify=labels, random_state=seed
+        train_indices, test_indices, train_labels, test_labels = train_test_split(
+            indices, labels, test_size=0.2, stratify=labels, random_state=seed
         )
 
-    # 0 vs 1 train, 0 vs (2+3→1) test
+    # train on 0 vs 1, test on 0 vs (2+3→1)
     elif split_strategy == "multiclass_to_binary":
-        labels = participant_data["multiclass_label"].values.astype(int)
-        indices = np.arange(len(participant_data))
         multiclass_labels = participant_data["multiclass_label"].values.astype(int)
         all_indices = np.arange(len(participant_data))
 
-        # 0 vs 1
+        # Train: 0 vs 1
         train_mask = np.isin(multiclass_labels, [0, 1])
         train_indices = all_indices[train_mask]
         train_labels = multiclass_labels[train_mask]
         train_indices, train_labels = balance_classes(train_indices, train_labels)
 
-        # 0 vs (2+3→1)
+        # Test: 0 vs (2+3→1)
         test_mask = np.isin(multiclass_labels, [0, 2, 3])
         test_indices = all_indices[test_mask]
         test_labels = multiclass_labels[test_mask]
-        test_labels = np.where(test_labels == 0, 0, 1)  # collapse 2+3→1
+        test_labels = np.where(test_labels == 0, 0, 1)
         test_indices, test_labels = balance_classes(test_indices, test_labels)
 
     else:
@@ -948,9 +952,17 @@ def create_data_splits_intra_balanced(df, label_column='multiclass_label', split
         participant_id = participants[fold_no]
         participant_data = df[df["participant"] == participant_id].copy().reset_index(drop=True)
 
+        print(f"[Fold {fold_no}] Participant: {participant_id}")
+        print("Total samples for participant:", len(participant_data))
+        print("Label distribution (raw):", np.unique(participant_data[label_column], return_counts=True))
+
         train_indices, train_labels, test_indices, test_labels = make_split_indices(
             participant_data, split_strategy, seed=seed_value
         )
+
+        print("Train indices:", len(train_indices), "Test indices:", len(test_indices))
+        print("Train label dist before train/val split:", np.unique(train_labels, return_counts=True))
+        print("Test label dist (final test set):", np.unique(test_labels, return_counts=True))
 
         features = participant_data.iloc[:, 4:].values
         labels = participant_data[label_column].values.astype(int)
@@ -975,6 +987,10 @@ def create_data_splits_intra_balanced(df, label_column='multiclass_label', split
             random_state=seed_value
         )
 
+        print("Train size:", len(X_train), "Val size:", len(X_val))
+        print("y_train dist:", np.unique(y_train, return_counts=True))
+        print("y_val dist:", np.unique(y_val, return_counts=True))
+
         def create_sequences(X, y, seq_len):
             X_seqs, y_seqs = [], []
             for i in range(len(X) - seq_len + 1):
@@ -986,10 +1002,17 @@ def create_data_splits_intra_balanced(df, label_column='multiclass_label', split
         X_val_seq, y_val_seq = create_sequences(X_val, y_val, sequence_length)
         X_test_seq, y_test_seq = create_sequences(X_test, y_test, sequence_length)
 
-        print(f"[Fold {fold_no}] Participant {participant_id}")
-        print(f"  Train: {X_train_seq.shape}, Val: {X_val_seq.shape}, Test: {X_test_seq.shape}")
-        print(f"  Label dist (train): {np.unique(y_train_seq, return_counts=True)}")
-        print(f"  Label dist (test): {np.unique(y_test_seq, return_counts=True)}")
+        print("Sequence lengths:")
+        print("  X_train_seq:", X_train_seq.shape)
+        print("  X_val_seq:", X_val_seq.shape)
+        print("  X_test_seq:", X_test_seq.shape)
+
+        print("y_train_seq dist:", np.unique(y_train_seq, return_counts=True))
+        print("y_val_seq dist:", np.unique(y_val_seq, return_counts=True))
+        print("y_test_seq dist:", np.unique(y_test_seq, return_counts=True))
+
+        num_classes = len(np.unique(y_train_seq))
+        print("Num classes detected from y_train_seq:", num_classes)
 
         return (
             X_train, X_val, X_test,
