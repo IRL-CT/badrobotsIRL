@@ -25,3 +25,8 @@ wandb/
 **/wandb/
 **/*.sub
 *.csv
+training/badnet/__pycache__
+training/badnet/wandb
+training/badnet/output
+training/badnet/checkpoints
+training/badnet/badnet.sub
