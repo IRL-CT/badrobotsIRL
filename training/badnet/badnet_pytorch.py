@@ -314,12 +314,24 @@ def create_model(model_type='original', num_classes=2, **kwargs):
         Model instance
     """
     if model_type == 'original':
-        return BadNetCNN(num_classes=num_classes, **kwargs)
+        # Filter kwargs for BadNetCNN
+        valid_keys = ['base_filters', 'kernel_size', 'activation']
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_keys}
+        return BadNetCNN(num_classes=num_classes, **filtered_kwargs)
+    
     elif model_type == 'simple':
-        return BadNetSimple(num_classes=num_classes, **kwargs)
+        # Filter kwargs for BadNetSimple
+        valid_keys = ['base_filters', 'dropout']
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_keys}
+        return BadNetSimple(num_classes=num_classes, **filtered_kwargs)
+    
     elif model_type.startswith('pretrained_'):
+        # Filter kwargs for BadNetPretrained
+        valid_keys = ['freeze_backbone', 'dropout']
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_keys}
         backbone = model_type.replace('pretrained_', '')
-        return BadNetPretrained(num_classes=num_classes, backbone=backbone, **kwargs)
+        return BadNetPretrained(num_classes=num_classes, backbone=backbone, **filtered_kwargs)
+    
     else:
         raise ValueError(f"Unknown model_type: {model_type}")
 

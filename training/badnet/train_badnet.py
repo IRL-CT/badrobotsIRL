@@ -152,7 +152,7 @@ def main():
             "activation": {"values": ['relu', 'sigmoid']},
             "kernel_size": {"values": [2, 4, 6, 8]},
             "base_filters": {"values": [16, 32, 64]},
-            "learning_rate": {"values": [0.0001, 0.001, 0.01]},
+            "learning_rate": {"values": [0.0001, 0.001, 0.00001]},
             "batch_size": {"values": [16, 32, 64]},
             "seed": {"values": [42, 1369]},
             "epochs": {"values": [100]},
