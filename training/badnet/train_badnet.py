@@ -19,7 +19,8 @@ from sklearn.metrics import cohen_kappa_score, confusion_matrix
 import wandb
 
 from badnet_pytorch import (
-    set_seed, BadNetDataset, BadNetCNN, 
+    set_seed, BadNetDataset, BadNetCNN, BadNetDatasetWithAugmentation,
+    BadNetPretrained, BadNetSimple, create_model,  # Add these imports
     create_interparticipant_folds, train_fold
 )
 from get_metrics import get_test_metrics
@@ -162,6 +163,10 @@ def main():
             "exclude_participants": {"values": [args.exclude_participants]},
             "patience": {"values": [args.patience]},
             "num_workers": {"values": [args.num_workers]},
+            "num_augmentations": {"values": [0,2,3]},
+            "model_type": {"values": ['original', 'simple', 'pretrained_resnet18', 'pretrained_resnet34']},
+            "freeze_backbone": {"values": [True, False]},
+            "dropout": {"values": [0.3, 0.5, 0.7]},
         },
     }
     
@@ -184,6 +189,10 @@ def main():
         args.exclude_participants = config.exclude_participants
         args.patience = config.patience
         args.num_workers = config.num_workers
+        args.num_augmentations = config.num_augmentations
+        args.model_type = config.model_type
+        args.freeze_backbone = config.freeze_backbone
+        args.dropout = config.dropout
         
         set_seed(args.seed)
         
@@ -196,13 +205,6 @@ def main():
         df = pd.read_csv(args.csv_path)
         print(f"Loaded {len(df)} rows")
         print(f"Unique participants: {df['participant'].nunique()}")
-        
-        # Create image transforms
-        transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
         
         # Create folds
         print(f"\nCreating {args.num_folds} inter-participant folds...")
@@ -233,12 +235,12 @@ def main():
             
             # Create datasets
             print("\nLoading datasets...")
-            train_dataset = BadNetDataset(df, train_participants, args.image_base_path,
-                                           label_type=args.label_type, transform=transform)
-            val_dataset = BadNetDataset(df, val_participants, args.image_base_path,
-                                        label_type=args.label_type, transform=transform)
-            test_dataset = BadNetDataset(df, test_participants, args.image_base_path,
-                                         label_type=args.label_type, transform=transform)
+            train_dataset = BadNetDatasetWithAugmentation(df, train_participants, args.image_base_path,
+                                                           label_type=args.label_type, num_augmentations=args.num_augmentations)
+            val_dataset = BadNetDatasetWithAugmentation(df, val_participants, args.image_base_path,
+                                                         label_type=args.label_type, num_augmentations=0)
+            test_dataset = BadNetDatasetWithAugmentation(df, test_participants, args.image_base_path,
+                                                          label_type=args.label_type, num_augmentations=0)
             
             if len(train_dataset) == 0 or len(val_dataset) == 0 or len(test_dataset) == 0:
                 print(f"Warning: Empty dataset in fold {fold_idx}. Skipping...")
@@ -258,11 +260,14 @@ def main():
             
             # Create model
             print("\nCreating model...")
-            model = BadNetCNN(
+            model = model = create_model(
+                model_type=args.model_type,
                 num_classes=num_classes,
                 base_filters=args.base_filters,
                 kernel_size=args.kernel_size,
-                activation=args.activation
+                activation=args.activation,
+                freeze_backbone=args.freeze_backbone,
+                dropout=args.dropout
             )
             model = model.to(device)
             
