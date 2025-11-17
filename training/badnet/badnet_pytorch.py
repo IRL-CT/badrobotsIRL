@@ -85,13 +85,16 @@ class BadNetDataset(Dataset):
 
 
 class BadNetDatasetWithAugmentation(Dataset):
-    """Dataset that includes both original and augmented samples."""
+    """Dataset that includes both original and augmented samples with image caching."""
     
-    def __init__(self, df, participants, image_base_path, label_type='binary', num_augmentations=2):
+    def __init__(self, df, participants, image_base_path, label_type='binary', 
+                 num_augmentations=2, cache_images=True):
         self.df = df[df['participant'].isin(participants)].reset_index(drop=True)
         self.image_base_path = image_base_path
         self.label_type = label_type
         self.num_augmentations = num_augmentations
+        self.cache_images = cache_images
+        self.image_cache = {}  # Cache for PIL images (before transforms)
         
         self.base_transform = transforms.Compose([
             transforms.Resize((224, 224)),
@@ -106,6 +109,7 @@ class BadNetDatasetWithAugmentation(Dataset):
             transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
         ])
         
+        # Build list of (image_path, label, is_augmented) tuples
         self.samples = []
         for idx in range(len(self.df)):
             row = self.df.iloc[idx]
@@ -119,9 +123,23 @@ class BadNetDatasetWithAugmentation(Dataset):
             
             image_path = os.path.join(image_base_path, participant, f"{frame}.jpg")
             if os.path.exists(image_path):
+                # Add original
                 self.samples.append((image_path, label, False))
+                
+                # Add augmented copies
                 for _ in range(num_augmentations):
                     self.samples.append((image_path, label, True))
+        
+        # Cache images if requested (cache PIL images before any transforms)
+        if cache_images:
+            print("Caching images in memory...")
+            unique_paths = set([s[0] for s in self.samples])
+            for i, image_path in enumerate(unique_paths):
+                image = Image.open(image_path).convert('RGB')
+                self.image_cache[image_path] = image
+                if (i + 1) % 1000 == 0:
+                    print(f"Cached {i + 1}/{len(unique_paths)} unique images")
+            print(f"Cached {len(self.image_cache)} unique images")
         
         print(f"Dataset: {len(self.df)} original → {len(self.samples)} total samples "
               f"({num_augmentations} augmentations per image)")
@@ -131,12 +149,20 @@ class BadNetDatasetWithAugmentation(Dataset):
     
     def __getitem__(self, idx):
         image_path, label, is_augmented = self.samples[idx]
-        image = Image.open(image_path).convert('RGB')
         
+        # Load image (from cache if available)
+        if self.cache_images and image_path in self.image_cache:
+            image = self.image_cache[image_path].copy()  # Copy to avoid modifying cached image
+        else:
+            image = Image.open(image_path).convert('RGB')
+        
+        # Apply augmentation if flagged
         if is_augmented:
             image = self.augmentation_transform(image)
         
+        # Always apply base transform
         image = self.base_transform(image)
+        
         return image, label
 
 
