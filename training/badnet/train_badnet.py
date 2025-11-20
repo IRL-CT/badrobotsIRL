@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-BADNet PyTorch - Standalone Training Script
+BADNet PyTorch - Training Script with NPY support
 
-Run training without W&B sweep for testing or single configuration runs.
+Supports both JPG and NPY datasets for training.
 """
 
 import os
@@ -14,13 +14,12 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from torchvision import transforms
 from sklearn.metrics import cohen_kappa_score, confusion_matrix
 import wandb
 
 from badnet_pytorch import (
-    set_seed, BadNetDataset, BadNetCNN, BadNetDatasetWithAugmentation,
-    BadNetPretrained, BadNetSimple, create_model,  # Add these imports
+    set_seed, BadNetDatasetWithAugmentation, BadNetDatasetNPY,
+    BadNetPretrained, BadNetSimple, create_model, BadNetCNN,
     create_interparticipant_folds, train_fold
 )
 from get_metrics import get_test_metrics
@@ -36,7 +35,10 @@ def parse_args():
     parser.add_argument("--image_base_path", type=str, 
                         default="../../../data/frames",
                         help="Base path to image folders")
-    
+    parser.add_argument("--npy_base_path", type=str,
+                        default="../../../data/frames_npy",
+                        help="Base path to NPY folders")
+
     # Model hyperparameters
     parser.add_argument("--activation", type=str, default="relu", 
                         choices=["relu", "sigmoid"], help="Activation function")
@@ -47,7 +49,7 @@ def parse_args():
     # Training parameters
     parser.add_argument("--batch_size", type=int, default=64, help="Batch size")
     parser.add_argument("--epochs", type=int, default=100, help="Number of epochs")
-    parser.add_argument("--patience", type=int, default=20, help="Early stopping patience")
+    parser.add_argument("--patience", type=int, default=40, help="Early stopping patience")
     parser.add_argument("--num_workers", type=int, default=0, help="Number of data loader workers")
     
     # Cross-validation
@@ -58,10 +60,12 @@ def parse_args():
     # Label type
     parser.add_argument("--label_type", type=str, default="binary", 
                         choices=["binary", "multiclass"], help="Label type")
-    
+        
     # Participants
-    parser.add_argument("--exclude_participants", nargs="*", default=[], 
+    parser.add_argument("--exclude_participants", nargs="*", default=[24], 
                         help="Participants to exclude")
+    # Data format
+    parser.add_argument("--use_npy", action="store_true", help="Use NPY files instead of JPG")
     
     # Other
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
@@ -76,16 +80,9 @@ def parse_args():
 
 
 def evaluate_model(model, dataloader, device, num_classes=2):
-    """
-    Evaluate model and return metrics using get_test_metrics.
-    
-    Returns:
-        Dictionary of evaluation metrics
-    """
+    """Evaluate model and return metrics."""
     model.eval()
-    all_preds = []
-    all_labels = []
-    all_probs = []
+    all_preds, all_labels, all_probs = [], [], []
     
     with torch.no_grad():
         for inputs, labels in dataloader:
@@ -129,25 +126,22 @@ def evaluate_model(model, dataloader, device, num_classes=2):
     print(f"F1 Score:  {metrics['test_f1_tolerant']:.4f}")
     print("\nConfusion Matrix:")
     print(conf_matrix)
-    
+
     return metrics
 
 
 def main():
     args = parse_args()
-    
-    # Set seed
     set_seed(args.seed)
     
-    # Device
     use_cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device('cuda' if use_cuda else 'cpu')
-    print(f"Using device: {device}")
-    
+    print(f"Device: {device}")
+
     # Sweep configuration
     sweep_config = {
         "method": "random",
-        "metric": {"goal": "maximize", "name": "avg_test_f1"},
+        "metric": {"goal": "maximize", "name": "avg_test_accuracy"},
         "parameters": {
             "activation": {"values": ['relu', 'sigmoid']},
             "kernel_size": {"values": [2, 4, 6, 8]},
@@ -159,6 +153,7 @@ def main():
             "label_type": {"values": ['binary', 'multiclass']},
             "num_folds": {"values": [5]},
             "csv_path": {"values": [args.csv_path]},
+            "npy_base_path": {"values": [args.npy_base_path]},
             "image_base_path": {"values": [args.image_base_path]},
             "exclude_participants": {"values": [args.exclude_participants]},
             "patience": {"values": [args.patience]},
@@ -167,6 +162,8 @@ def main():
             "model_type": {"values": ['original', 'simple', 'pretrained_resnet18', 'pretrained_resnet34']},
             "freeze_backbone": {"values": [True, False]},
             "dropout": {"values": [0.3, 0.5, 0.7]},
+            "use_npy": {"values": [True]},
+            "cache_images": {"values": [True]},
         },
     }
     
@@ -174,6 +171,7 @@ def main():
         wandb.init()
         config = wandb.config
         
+        # Update args from config
         # Override args with sweep config
         args.activation = config.activation
         args.kernel_size = config.kernel_size
@@ -189,23 +187,20 @@ def main():
         args.exclude_participants = config.exclude_participants
         args.patience = config.patience
         args.num_workers = config.num_workers
+        args.npy_base_path = config.npy_base_path
         args.num_augmentations = config.num_augmentations
         args.model_type = config.model_type
         args.freeze_backbone = config.freeze_backbone
         args.dropout = config.dropout
+        args.use_npy = config.use_npy
+        args.cache_images = config.cache_images
         
         set_seed(args.seed)
         
-        # Determine number of classes
         num_classes = 2 if args.label_type == 'binary' else 4
-        print(f"Label type: {args.label_type}, Num classes: {num_classes}")
+        print(f"Setup: {args.label_type}, NPY={args.use_npy}, Cache={args.cache_images}, Model={args.model_type}")
         
-        # Load data
-        print(f"Loading data from {args.csv_path}")
         df = pd.read_csv(args.csv_path)
-        print(f"Loaded {len(df)} rows")
-        print(f"Unique participants: {df['participant'].nunique()}")
-        
         # Create folds
         print(f"\nCreating {args.num_folds} inter-participant folds...")
         folds = create_interparticipant_folds(
@@ -214,7 +209,6 @@ def main():
             exclude_participants=args.exclude_participants,
             seed=args.seed
         )
-        
         # Determine which folds to train
         if args.fold is not None:
             fold_indices = [args.fold]
@@ -224,24 +218,24 @@ def main():
         all_test_metrics = []
         
         for fold_idx in fold_indices:
-            train_participants, val_participants, test_participants = folds[fold_idx]
-            
+            train_p, val_p, test_p = folds[fold_idx]
+            print(f"\n{'='*60}\nFOLD {fold_idx}\n{'='*60}")
             print(f"\n{'='*60}")
             print(f"FOLD {fold_idx}")
             print(f"{'='*60}")
-            print(f"Train participants: {train_participants}")
-            print(f"Val participants: {val_participants}")
-            print(f"Test participants: {test_participants}")
+            print(f"Train participants: {train_p}")
+            print(f"Val participants: {val_p}")
+            print(f"Test participants: {test_p}")
+
+            # Choose dataset
+            data_path = args.npy_base_path if args.use_npy else args.image_base_path
+            DatasetClass = BadNetDatasetNPY if args.use_npy else BadNetDatasetWithAugmentation
             
-            # Create datasets
-            print("\nLoading datasets...")
-            train_dataset = BadNetDatasetWithAugmentation(df, train_participants, args.image_base_path,
-                                                           label_type=args.label_type, num_augmentations=args.num_augmentations)
-            val_dataset = BadNetDatasetWithAugmentation(df, val_participants, args.image_base_path,
-                                                         label_type=args.label_type, num_augmentations=0)
-            test_dataset = BadNetDatasetWithAugmentation(df, test_participants, args.image_base_path,
-                                                          label_type=args.label_type, num_augmentations=0)
-            
+            train_dataset = DatasetClass(df, train_p, data_path, args.label_type, 
+                                         args.num_augmentations, args.cache_images)
+            val_dataset = DatasetClass(df, val_p, data_path, args.label_type, 0, args.cache_images)
+            test_dataset = DatasetClass(df, test_p, data_path, args.label_type, 0, args.cache_images)
+
             if len(train_dataset) == 0 or len(val_dataset) == 0 or len(test_dataset) == 0:
                 print(f"Warning: Empty dataset in fold {fold_idx}. Skipping...")
                 continue
@@ -260,7 +254,7 @@ def main():
             
             # Create model
             print("\nCreating model...")
-            model = model = create_model(
+            model = create_model(
                 model_type=args.model_type,
                 num_classes=num_classes,
                 base_filters=args.base_filters,
@@ -270,7 +264,7 @@ def main():
                 dropout=args.dropout
             )
             model = model.to(device)
-            
+
             # Count parameters
             total_params = sum(p.numel() for p in model.parameters())
             trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -278,8 +272,8 @@ def main():
             print(f"Trainable parameters: {trainable_params:,}")
             
             # Loss and optimizer
-            criterion = nn.CrossEntropyLoss()
-            optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
+            criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+            optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.001)
             scheduler = optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, mode='min', factor=0.5, patience=10, verbose=True
             )
@@ -292,8 +286,7 @@ def main():
             history = train_fold(
                 model, train_loader, val_loader, criterion, optimizer, scheduler,
                 device, args.epochs, patience=args.patience, checkpoint_dir=checkpoint_dir
-            )
-            
+            )            
             # Log training history to W&B
             for epoch_idx in range(len(history['train_loss'])):
                 wandb.log({
@@ -304,9 +297,10 @@ def main():
                     'epoch': epoch_idx + 1,
                     'fold': fold_idx
                 })
-            
+                        
             # Evaluate
             print(f"\nEvaluating on test set...")
+
             metrics = evaluate_model(model, test_loader, device, num_classes=num_classes)
             all_test_metrics.append(metrics)
             

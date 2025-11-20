@@ -85,16 +85,13 @@ class BadNetDataset(Dataset):
 
 
 class BadNetDatasetWithAugmentation(Dataset):
-    """Dataset that includes both original and augmented samples with image caching."""
+    """Dataset that includes both original and augmented samples."""
     
-    def __init__(self, df, participants, image_base_path, label_type='binary', 
-                 num_augmentations=2, cache_images=True):
+    def __init__(self, df, participants, image_base_path, label_type='binary', num_augmentations=2):
         self.df = df[df['participant'].isin(participants)].reset_index(drop=True)
         self.image_base_path = image_base_path
         self.label_type = label_type
         self.num_augmentations = num_augmentations
-        self.cache_images = cache_images
-        self.image_cache = {}  # Cache for PIL images (before transforms)
         
         self.base_transform = transforms.Compose([
             transforms.Resize((224, 224)),
@@ -109,7 +106,6 @@ class BadNetDatasetWithAugmentation(Dataset):
             transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
         ])
         
-        # Build list of (image_path, label, is_augmented) tuples
         self.samples = []
         for idx in range(len(self.df)):
             row = self.df.iloc[idx]
@@ -123,23 +119,9 @@ class BadNetDatasetWithAugmentation(Dataset):
             
             image_path = os.path.join(image_base_path, participant, f"{frame}.jpg")
             if os.path.exists(image_path):
-                # Add original
                 self.samples.append((image_path, label, False))
-                
-                # Add augmented copies
                 for _ in range(num_augmentations):
                     self.samples.append((image_path, label, True))
-        
-        # Cache images if requested (cache PIL images before any transforms)
-        if cache_images:
-            print("Caching images in memory...")
-            unique_paths = set([s[0] for s in self.samples])
-            for i, image_path in enumerate(unique_paths):
-                image = Image.open(image_path).convert('RGB')
-                self.image_cache[image_path] = image
-                if (i + 1) % 1000 == 0:
-                    print(f"Cached {i + 1}/{len(unique_paths)} unique images")
-            print(f"Cached {len(self.image_cache)} unique images")
         
         print(f"Dataset: {len(self.df)} original → {len(self.samples)} total samples "
               f"({num_augmentations} augmentations per image)")
@@ -149,21 +131,90 @@ class BadNetDatasetWithAugmentation(Dataset):
     
     def __getitem__(self, idx):
         image_path, label, is_augmented = self.samples[idx]
+        image = Image.open(image_path).convert('RGB')
         
-        # Load image (from cache if available)
-        if self.cache_images and image_path in self.image_cache:
-            image = self.image_cache[image_path].copy()  # Copy to avoid modifying cached image
-        else:
-            image = Image.open(image_path).convert('RGB')
-        
-        # Apply augmentation if flagged
         if is_augmented:
             image = self.augmentation_transform(image)
         
-        # Always apply base transform
         image = self.base_transform(image)
-        
         return image, label
+
+
+class BadNetDatasetNPY(Dataset):
+    """Dataset loading preprocessed NPY files (fastest option)."""
+    
+    def __init__(self, df, participants, image_base_path, label_type='binary', 
+                 num_augmentations=0, cache_images=True):
+        self.df = df[df['participant'].isin(participants)].reset_index(drop=True)
+        self.image_base_path = image_base_path
+        self.label_type = label_type
+        self.num_augmentations = num_augmentations
+        self.cache_images = cache_images
+        self.image_cache = {}
+        
+        # Augmentation for tensor data (if needed)
+        self.use_augmentation = num_augmentations > 0
+        if self.use_augmentation:
+            # Note: For tensor augmentation, we need different transforms
+            self.aug_transform = transforms.Compose([
+                transforms.RandomHorizontalFlip(p=0.5),
+                transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2, hue=0.1),
+            ])
+        
+        self.samples = []
+        for idx in range(len(self.df)):
+            row = self.df.iloc[idx]
+            participant = row['participant']
+            frame = int(row['frame'])
+            
+            if label_type == 'binary':
+                label = int(row['binary_label'])
+            else:
+                label = int(row['multiclass_label'])
+            
+            # Change extension to .npy
+            image_path = os.path.join(image_base_path, participant, f"{frame}.npy")
+            if os.path.exists(image_path):
+                self.samples.append((image_path, label, False))
+                for _ in range(num_augmentations):
+                    self.samples.append((image_path, label, True))
+        
+        if cache_images:
+            print("Caching NPY arrays in memory...")
+            unique_paths = set([s[0] for s in self.samples])
+            for i, image_path in enumerate(unique_paths):
+                img_array = np.load(image_path)  # Already normalized tensor format
+                self.image_cache[image_path] = img_array
+                if (i + 1) % 1000 == 0:
+                    print(f"Cached {i + 1}/{len(unique_paths)} unique arrays")
+            print(f"Cached {len(self.image_cache)} unique arrays")
+        
+        print(f"Dataset: {len(self.df)} original → {len(self.samples)} total samples")
+    
+    def __len__(self):
+        return len(self.samples)
+    
+    def __getitem__(self, idx):
+        image_path, label, is_augmented = self.samples[idx]
+        
+        # Load from cache or disk
+        if self.cache_images and image_path in self.image_cache:
+            img_array = self.image_cache[image_path].copy()
+        else:
+            img_array = np.load(image_path)
+        
+        # Convert to tensor
+        img_tensor = torch.from_numpy(img_array).float()
+        
+        # Apply augmentation if needed (limited for pre-normalized tensors)
+        if is_augmented and self.use_augmentation:
+            # For pre-normalized tensors, augmentation is limited
+            # You could denormalize, augment, renormalize, but it's complex
+            # Simpler: just do horizontal flip
+            if torch.rand(1) > 0.5:
+                img_tensor = torch.flip(img_tensor, dims=[2])  # Flip width dimension
+        
+        return img_tensor, label
 
 
 class BadNetCNN(nn.Module):
