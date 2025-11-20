@@ -66,7 +66,8 @@ def parse_args():
                         help="Participants to exclude")
     # Data format
     parser.add_argument("--use_npy", action="store_true", help="Use NPY files instead of JPG")
-    
+    parser.add_argument("--use_weighted_loss", default=False, action="store_true", help="Use weighted loss function")
+
     # Other
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--checkpoint_dir", type=str, default="./checkpoints", 
@@ -164,6 +165,7 @@ def main():
             "dropout": {"values": [0.3, 0.5, 0.7]},
             "use_npy": {"values": [True]},
             "cache_images": {"values": [True]},
+            "use_weighted_loss": {"values": [True, False]},
         },
     }
     
@@ -194,6 +196,7 @@ def main():
         args.dropout = config.dropout
         args.use_npy = config.use_npy
         args.cache_images = config.cache_images
+        args.use_weighted_loss = config.use_weighted_loss
         
         set_seed(args.seed)
         
@@ -272,7 +275,14 @@ def main():
             print(f"Trainable parameters: {trainable_params:,}")
             
             # Loss and optimizer
-            criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+            if args.use_weighted_loss:
+                # Compute class weights
+                label_counts = np.bincount(train_dataset.labels, minlength=num_classes)
+                class_weights = 1.0 / (label_counts + 1e-6)
+                class_weights = class_weights / class_weights.sum() * num_classes
+                class_weights_tensor = torch.tensor(class_weights, dtype=torch.float).to(device)
+                print(f"Using weighted loss with class weights: {class_weights}")
+            criterion = nn.CrossEntropyLoss(label_smoothing=0.1, weight=class_weights_tensor if args.use_weighted_loss else None)
             optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.001)
             scheduler = optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, mode='min', factor=0.5, patience=10, verbose=True
