@@ -227,7 +227,6 @@ def train_early_fusion(df, config):
             columns=[f"Pred {c}" for c in range(num_classes)]
         ))
 
-
         wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
 
         test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)

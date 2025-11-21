@@ -11,6 +11,7 @@ from keras.callbacks import ModelCheckpoint
 from keras.regularizers import l1_l2, l1, l2
 from keras.utils import to_categorical
 import tensorflow as tf
+from sklearn.metrics import confusion_matrix
 from create_data_splits import create_data_splits, create_data_splits_pca
 from get_metrics import get_test_metrics
 from lstm_single_modality import train_single_modality_model
@@ -71,15 +72,6 @@ def train_early_fusion(df, config):
         "test_f1_tolerant": []
     }
 
-    if optimizer == 'adam':
-        optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
-    elif optimizer == 'sgd':
-        optimizer = tf.keras.optimizers.legacy.SGD(learning_rate=learning_rate)
-    elif optimizer == 'adadelta':
-        optimizer = tf.keras.optimizers.legacy.Adadelta(learning_rate=learning_rate)
-    elif optimizer == 'rmsprop':
-        optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
-
     for fold in range(5):
 
         print("Fold ", fold)
@@ -130,6 +122,15 @@ def train_early_fusion(df, config):
         model.add(Dense(num_classes, activation="softmax"))
 
         model.summary()
+
+        if optimizer == 'adam':
+            optim = optimizers.Adam(learning_rate=learning_rate)
+        elif optimizer == 'sgd':
+            optim = optimizers.SGD(learning_rate=learning_rate)
+        elif optimizer == 'adadelta':
+            optim = optimizers.Adadelta(learning_rate=learning_rate)
+        elif optimizer == 'rmsprop':
+            optim = optimizers.RMSprop(learning_rate=learning_rate)
         
         model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
 
@@ -183,12 +184,32 @@ def train_early_fusion(df, config):
         y_pred = np.argmax(y_predict_probs_clean, axis=1)
         y_test_sequences = np.argmax(y_test_sequences, axis=1)
 
+        y_test_class_indices = y_test_sequences
+        
+        cm = confusion_matrix(y_test_class_indices, y_pred)
+
+        unique, counts = np.unique(y_test, return_counts=True)
+        print("\nTest label distribution:")
+        for label, count in zip(unique, counts):
+            print(f"Label {label}: {count}")
+
+        print("\nConfusion Matrix (Multiclass):")
+        #print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
+
+        print(pd.DataFrame(
+            cm,
+            index=[f"Actual {c}" for c in range(num_classes)],
+            columns=[f"Pred {c}" for c in range(num_classes)]
+        ))
+
+        wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
+
         test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
         for key in test_metrics_list.keys():
             test_metrics_list[key].append(test_metrics[key])
 
-        wandb.log({f"fold_{fold}_metrics": test_metrics})
-        print(f"Fold {fold} Test Metrics:", test_metrics)
+        wandb.log({f"participant_{participant}_metrics": test_metrics})
+        print(f"Fold {participant} Test Metrics:", test_metrics)
     
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
     wandb.run.summary.update(avg_test_metrics)
@@ -223,16 +244,6 @@ def train_intermediate_fusion(modality_dfs, config):
         "test_recall_tolerant": [],
         "test_f1_tolerant": []
     }
-
-    if optimizer == 'adam':
-        optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
-    elif optimizer == 'sgd':
-        optimizer = tf.keras.optimizers.legacy.SGD(learning_rate=learning_rate)
-    elif optimizer == 'adadelta':
-        optimizer = tf.keras.optimizers.legacy.Adadelta(learning_rate=learning_rate)
-    elif optimizer == 'rmsprop':
-        optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
-
     
     for fold in range(5):
         print("Fold ", fold)
@@ -260,7 +271,7 @@ def train_intermediate_fusion(modality_dfs, config):
             feature_input = Input(shape=(sequence_length, X_train_seq.shape[2]))
             feature_inputs.append(feature_input)
             
-            x = feature_input 
+            x = feature_input
             for _ in range(num_lstm_layers):
                 if use_bidirectional:
                     x = Bidirectional(LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer))(x)
@@ -283,6 +294,16 @@ def train_intermediate_fusion(modality_dfs, config):
         
         model = Model(inputs=feature_inputs, outputs=x)
         model.summary()
+
+        if optimizer == 'adam':
+            optim = optimizers.Adam(learning_rate=learning_rate)
+        elif optimizer == 'sgd':
+            optim = optimizers.SGD(learning_rate=learning_rate)
+        elif optimizer == 'adadelta':
+            optim = optimizers.Adadelta(learning_rate=learning_rate)
+        elif optimizer == 'rmsprop':
+            optim = optimizers.RMSprop(learning_rate=learning_rate)
+
         model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
         
         train_inputs = [splits[m][6] for m in modality_keys]
@@ -348,6 +369,26 @@ def train_intermediate_fusion(modality_dfs, config):
         else:
             y_test_class_indices = y_test_sequences
 
+        y_test_class_indices = y_test_sequences
+        
+        cm = confusion_matrix(y_test_class_indices, y_pred)
+
+        unique, counts = np.unique(y_test, return_counts=True)
+        print("\nTest label distribution:")
+        for label, count in zip(unique, counts):
+            print(f"Label {label}: {count}")
+
+        print("\nConfusion Matrix (Multiclass):")
+        #print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
+
+        print(pd.DataFrame(
+            cm,
+            index=[f"Actual {c}" for c in range(num_classes)],
+            columns=[f"Pred {c}" for c in range(num_classes)]
+        ))
+
+        wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
+
         test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
         
         for key in test_metrics_list.keys():
@@ -389,16 +430,6 @@ def train_late_fusion(modality_dfs, config):
         "test_recall_tolerant": [],
         "test_f1_tolerant": []
     }
-
-    if optimizer == 'adam':
-        optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate)
-    elif optimizer == 'sgd':
-        optimizer = tf.keras.optimizers.legacy.SGD(learning_rate=learning_rate)
-    elif optimizer == 'adadelta':
-        optimizer = tf.keras.optimizers.legacy.Adadelta(learning_rate=learning_rate)
-    elif optimizer == 'rmsprop':
-        optimizer = tf.keras.optimizers.legacy.RMSprop(learning_rate=learning_rate)
-
 
     for fold in range(5):
         print("Fold ", fold)
@@ -454,6 +485,16 @@ def train_late_fusion(modality_dfs, config):
         
         model = Model(inputs=input_layers, outputs=output_layer)
         model.summary()
+
+        if optimizer == 'adam':
+            optim = optimizers.Adam(learning_rate=learning_rate)
+        elif optimizer == 'sgd':
+            optim = optimizers.SGD(learning_rate=learning_rate)
+        elif optimizer == 'adadelta':
+            optim = optimizers.Adadelta(learning_rate=learning_rate)
+        elif optimizer == 'rmsprop':
+            optim = optimizers.RMSprop(learning_rate=learning_rate)
+
         model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
         
         train_inputs = [splits[m][6] for m in modality_keys]
@@ -517,6 +558,26 @@ def train_late_fusion(modality_dfs, config):
             y_test_class_indices = np.argmax(y_test_sequences, axis=1)
         else:
             y_test_class_indices = y_test_sequences
+
+        y_test_class_indices = y_test_sequences
+        
+        cm = confusion_matrix(y_test_class_indices, y_pred)
+
+        unique, counts = np.unique(y_test, return_counts=True)
+        print("\nTest label distribution:")
+        for label, count in zip(unique, counts):
+            print(f"Label {label}: {count}")
+
+        print("\nConfusion Matrix (Multiclass):")
+        #print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
+
+        print(pd.DataFrame(
+            cm,
+            index=[f"Actual {c}" for c in range(num_classes)],
+            columns=[f"Pred {c}" for c in range(num_classes)]
+        ))
+
+        wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
 
         test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
 
@@ -607,8 +668,8 @@ def train():
     df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
     df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_stats_0_3.csv")
     df_rf = pd.read_csv("../../preprocessing/rf_features/all_participants_rf_0_3_40.csv")
-    df_text = pd.read_csv("../../preprocessing/text_embeddings.csv")
-    df_text_pca = pd.read_csv("../../preprocessing/text_embeddings_pca.csv")
+    df_text = pd.read_csv("../../preprocessing/clip_text_embeddings.csv")
+    df_text_pca = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
 
     info = df.iloc[:, :4]
     df_pose_index = df.iloc[:, 4:28]
@@ -708,7 +769,7 @@ def main():
 
     sweep_config = {
         'method': 'random',
-        'name': 'lstm_multiclass_all_v4',
+        'name': 'multiclass_interparticipant',
         'parameters': {
             'feature_set': {'values': ['full', 'stats', 'rf']},
             'modality': {'values': [
@@ -737,7 +798,9 @@ def main():
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["categorical_crossentropy"]},
             
-            'sequence_length' : {'values' : [60, 100, 150, 300]}
+            'sequence_length' : {'values' : [5, 10, 15, 30, 60, 100, 150, 300]},
+
+            'model' : {'values': ['lstm']}
         }
         # feature set (full, stats, rf) -> modality selection (pose_facial_audio, pose, facial, etc.) -> (reg, norm, pca) -> fusion
     }
@@ -747,7 +810,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="lstm_multiclass_all_v4")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="multiclass_interparticipant")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':

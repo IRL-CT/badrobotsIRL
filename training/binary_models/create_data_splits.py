@@ -508,7 +508,7 @@ def create_data_splits(df, model, fold_no, num_folds=5, seed_value=42, sequence_
             raise ValueError("Number of sessions is less than the number of folds. Adjust the number of folds.")
     
         # 70-20-10 train-val-test split, make sure at least 1 sample per split
-        train_size = int(np.floor(0.7 * num_of_sessions))
+        train_size = int(np.floor(0.6 * num_of_sessions))
         val_size = int(np.ceil(0.2 * num_of_sessions))
         test_size = num_of_sessions - train_size - val_size
 
