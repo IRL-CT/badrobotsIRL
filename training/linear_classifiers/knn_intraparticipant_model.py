@@ -10,7 +10,7 @@ from sklearn.metrics import confusion_matrix
 import wandb
 from itertools import product
 from get_metrics import get_test_metrics
-from create_data_splits import create_data_splits
+from create_data_splits import make_split_indices
 
 
 def train():
@@ -32,7 +32,7 @@ def train():
     df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
     df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_stats_0_3.csv")
     df_rf = pd.read_csv("../../preprocessing/rf_features/all_participants_rf_0_3_40.csv")
-    df_text = pd.read_csv("../../preprocessing/clip_text_embeddings.csv")
+    df_text = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
     df_text_pca = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
 
     info = df.iloc[:, :4]
@@ -101,17 +101,26 @@ def train():
         if d.empty:
             continue
 
-        X = d.iloc[:, 4:]
-        y = d["binary_label"] if config.binary_multiclass == "binary" else d["multiclass_label"]
+        #X = d.iloc[:, 4:]
+        #y = d["binary_label"] if config.binary_multiclass == "binary" else d["multiclass_label"]
+
+        train_indices, train_labels, test_indices, test_labels = make_split_indices(
+            d, config.split_strategy, seed=seed_value
+        )
+
+        features = d.iloc[:, 4:].values
+        #labels = d[label_column].values.astype(int)
+
+        X_train_all = features[train_indices]
+        y_train_all = train_labels
+        X_test = features[test_indices]
+        y_test = test_labels
 
         # first split train vs (val+test)
-        X_train, X_temp, y_train, y_temp = train_test_split(
-            X, y, test_size=0.30, random_state=42, stratify=y
+        X_train, X_val, y_train, y_val = train_test_split(
+            X_train_all, y_train_all, train_size=config.train_ratio, random_state=42, stratify=y_train_all
         )
-        # then split remaining into val/test 1:2 ratio → 10% / 20%
-        X_val, X_test, y_val, y_test = train_test_split(
-            X_temp, y_temp, test_size=2/3, random_state=42, stratify=y_temp
-        )
+        
 
         # balance training
         X_train, y_train = SMOTE(random_state=42).fit_resample(X_train, y_train)
@@ -198,9 +207,9 @@ def main():
     # A single sweep with all possible feature sets
     sweep_config = {
         'method': 'random',
-        'name': 'knn_intraparticipant_tuning_all_features',
+        'name': 'brirl_linear_intra',
         'parameters': {
-            'binary_multiclass': {'values': ['binary', 'multiclass']},
+            'split_strategy': {'values': ['binary', 'multiclass', 'multiclass_exclude_neutral','multiclass_to_binary']},
             'feature_set': {'values': ['full', 'stats', 'rf']},
             'dataset': {'values': ['reg', 'norm', 'pca']},
             'n_neighbors': {'values': [3, 5, 7, 10, 15]},
@@ -213,13 +222,16 @@ def main():
                 'facial_audio_text',
                 'pose_facial_audio_text',
             ]},
+            'train_ratio': {'values': [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]},
+            'model_type': {'values': ['knn']}
         }
     }
     
     print(sweep_config)
     
-    sweep_id = wandb.sweep(sweep=sweep_config, project="knn_intraparticipant")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="brirl_linear_intra")
     wandb.agent(sweep_id, function=train)
 
 if __name__ == '__main__':
     main()
+    

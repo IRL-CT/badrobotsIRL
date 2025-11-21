@@ -9,7 +9,6 @@ from sklearn.metrics import confusion_matrix
 import wandb
 from itertools import product
 from get_metrics import get_test_metrics
-from create_data_splits import create_data_splits
 import random
 
 def train():

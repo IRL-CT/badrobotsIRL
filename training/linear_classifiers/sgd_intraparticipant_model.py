@@ -8,6 +8,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 import wandb
 from get_metrics import get_test_metrics
+from create_data_splits import make_split_indices
 
 def train():
     wandb.init()
@@ -26,11 +27,12 @@ def train():
     df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
     df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_stats_0_3.csv")
     df_rf = pd.read_csv("../../preprocessing/rf_features/all_participants_rf_0_3_40.csv")
-    df_text = pd.read_csv("../../preprocessing/clip_text_embeddings.csv")
+    df_text = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
+    df_text_pca = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
 
     info = df.iloc[:, :4]
     df_pose_index = df.iloc[:, 4:28]
-    df_facial_index = pd.concat([df.iloc[:, 28:63], df.iloc[:, 88:]], axis=1)
+    df_facial_index = pd.concat([df.iloc[:, 28:63], df.iloc[:, 88:]], axis=1) # action units, gaze
     df_audio_index = df.iloc[:, 63:88]
     df_text_index = df_text.iloc[:, 2:]
 
@@ -42,10 +44,15 @@ def train():
     df_audio_index_rf = df_rf.iloc[:, 28:38]
 
     modalities = {
-        "pose_full": df_pose_index, "pose_rf": df_pose_index_rf,
-        "facial_full": df_facial_index, "facial_stats": df_facial_index_stats, "facial_rf": df_facial_index_rf,
-        "audio_full": df_audio_index, "audio_stats": df_audio_index_stats, "audio_rf": df_audio_index_rf,
-        "text_full": df_text_index
+        "pose_full": df_pose_index,
+        "pose_rf": df_pose_index_rf,
+        "facial_full": df_facial_index,
+        "facial_stats": df_facial_index_stats,
+        "facial_rf": df_facial_index_rf,
+        "audio_full": df_audio_index,
+        "audio_stats": df_audio_index_stats,
+        "audio_rf": df_audio_index_rf,
+        "text_full": df_text_index,
     }
 
     # Select modalities
@@ -88,15 +95,24 @@ def train():
         if d.empty:
             continue
 
-        X = d.iloc[:, 4:]
-        y = d["binary_label"] if config.binary_multiclass == "binary" else d["multiclass_label"]
+        #X = d.iloc[:, 4:]
+        #y = d["binary_label"] if config.binary_multiclass == "binary" else d["multiclass_label"]
 
-        # 70/10/20 train/val/test split
-        X_train, X_temp, y_train, y_temp = train_test_split(
-            X, y, test_size=0.30, random_state=seed_value, stratify=y
+        train_indices, train_labels, test_indices, test_labels = make_split_indices(
+            d, config.split_strategy, seed=seed_value
         )
-        X_val, X_test, y_val, y_test = train_test_split(
-            X_temp, y_temp, test_size=2/3, random_state=seed_value, stratify=y_temp
+
+        features = d.iloc[:, 4:].values
+        #labels = d[label_column].values.astype(int)
+
+        X_train_all = features[train_indices]
+        y_train_all = train_labels
+        X_test = features[test_indices]
+        y_test = test_labels
+
+        # first split train vs (val+test)
+        X_train, X_val, y_train, y_val = train_test_split(
+            X_train_all, y_train_all, train_size=config.train_ratio, random_state=42, stratify=y_train_all
         )
 
         # SMOTE on training set
@@ -200,15 +216,15 @@ def create_norm_pca_df(df):
 def main():
     sweep_config = {
         'method': 'random',
-        'name': 'sgd_intraparticipant_tuning',
+        'name': 'brirl_linear_intra',
         'parameters': {
-            'binary_multiclass': {'values': ['binary', 'multiclass']},
+            'split_strategy': {'values': ['binary', 'multiclass', 'multiclass_exclude_neutral','multiclass_to_binary']},
             'feature_set': {'values': ["full", "stats", "rf"]},
             'dataset': {'values': ['reg', 'norm', 'pca']},
             'alpha': {'values': [0.00001, 0.0001, 0.001, 0.01, 0.1]},
             'max_iter': {'values': [100, 500, 1000, 2000]},
             'tol': {'values': [1e-4, 1e-3, 1e-2]},
-            'sequence_length': {'values': [30, 60, 90, 150, 300]},
+            'sequence_length': {'values': [5,10, 30, 60, 90, 150]},
             'modality': {'values': [
                 'pose', 'facial', 'audio', 'text',
                 'pose_facial', 'pose_audio', 'pose_text',
@@ -218,12 +234,14 @@ def main():
                 'facial_audio_text',
                 'pose_facial_audio_text',
             ]},
+            'train_ratio': {'values': [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]},
+            'model_type': {'values': ['sgd']}
         }
     }
 
     print(sweep_config)
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="sgd_intraparticipant")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="brirl_linear_intra")
     wandb.agent(sweep_id, function=train)
 
 
