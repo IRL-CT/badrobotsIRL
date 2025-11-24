@@ -29,6 +29,7 @@ preprocessing/clip_text_embeddings_pca.csv
 get-pip.py
 wandb/
 **/wandb/
+**/**/wandb/
 **/*.sub
 *.csv
 training/badnet/__pycache__
@@ -36,3 +37,13 @@ training/badnet/wandb
 training/badnet/output
 training/badnet/checkpoints
 training/badnet/badnet.sub
+training/linear_classifiers/__pycache__
+training/linear_classifiers/wandb
+training/linear_classifiers/training_outputs
+training/linear_classifiers/svm.sub
+training/linear_classifiers/sgd.sub
+training/linear_classifiers/rf.sub
+training/linear_classifiers/mlp.sub
+training/linear_classifiers/knn.sub
+training/binary_models/wandb/*.log
+training/binary_models/wandb/latest-run

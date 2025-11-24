@@ -10,6 +10,8 @@ import wandb
 from itertools import product
 from get_metrics import get_test_metrics
 from create_data_splits import create_data_splits
+from sklearn.model_selection import train_test_split
+
 
 
 def train():
@@ -31,8 +33,8 @@ def train():
     df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
     df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_stats_0_3.csv")
     df_rf = pd.read_csv("../../preprocessing/rf_features/all_participants_rf_0_3_40.csv")
-    df_text = pd.read_csv("../../preprocessing/text_embeddings.csv")
-    df_text_pca = pd.read_csv("../../preprocessing/text_embeddings_pca.csv")
+    df_text = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
+    df_text_pca = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
 
     info = df.iloc[:, :4]
     df_pose_index = df.iloc[:, 4:28]
@@ -42,10 +44,12 @@ def train():
 
     df_facial_index_stats = df_stats.iloc[:, 4:30]
     df_audio_index_stats = df_stats.iloc[:, 30:53]
+    df_all_stats = df_stats.iloc[:, 4:]
 
     df_facial_index_rf = df_rf.iloc[:, 38:]
     df_pose_index_rf = df_rf.iloc[:, 4:28]
     df_audio_index_rf = df_rf.iloc[:, 28:38]
+    df_all_rf = df_rf.iloc[:, 4:]
 
     # Select dataset and modalities
     modalities = {
@@ -58,6 +62,8 @@ def train():
         "audio_stats": df_audio_index_stats,
         "audio_rf": df_audio_index_rf,
         "text_full": df_text_index,
+        "all_stats": df_all_stats,
+        "all_rf": df_all_rf
     }
 
     modality_components = config.modality.split('_')
@@ -213,12 +219,12 @@ def main():
     # A single sweep with all possible feature sets
     sweep_config = {
         'method': 'random',
-        'name': 'knn_tuning_all_features',
+        'name': 'brirl_linear_inter',
         'parameters': {
             'binary_multiclass': {'values': ['binary', 'multiclass']},
             'feature_set': {'values': ['full', 'stats', 'rf']},
             'dataset': {'values': ['reg', 'norm', 'pca']},
-            'n_neighbors': {'values': [3, 5, 7, 10, 15]},
+            'n_neighbors': {'values': [3, 5, 7, 10, 15, 30]},
             'modality': {'values': [
                 'pose', 'facial', 'audio', 'text',
                 'pose_facial', 'pose_audio', 'pose_text',
@@ -228,12 +234,13 @@ def main():
                 'facial_audio_text',
                 'pose_facial_audio_text',
             ]},
+            'model_type': {'values': ['knn']}
         }
     }
     
     print(sweep_config)
     
-    sweep_id = wandb.sweep(sweep=sweep_config, project="knn")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="brirl_linear_inter")
     wandb.agent(sweep_id, function=train)
 
 if __name__ == '__main__':

@@ -499,6 +499,9 @@ def create_data_splits(df, model, fold_no, num_folds=5, seed_value=42, sequence_
 
         features = df.iloc[:, 4:]
         target = df.iloc[:, target_col].values.astype('int')
+        excluded_participants = ["p24nodbot"]
+        df = df[~df['participant'].isin(excluded_participants)].reset_index(drop=True)
+
         sessions = df['participant'].values
         
         fold_sessions = df['participant'].unique()
@@ -507,8 +510,8 @@ def create_data_splits(df, model, fold_no, num_folds=5, seed_value=42, sequence_
         if num_of_sessions < num_folds:
             raise ValueError("Number of sessions is less than the number of folds. Adjust the number of folds.")
     
-        # 70-20-10 train-val-test split, make sure at least 1 sample per split
-        train_size = int(np.floor(0.7 * num_of_sessions))
+        # 60-20-10 train-val-test split, make sure at least 1 sample per split
+        train_size = int(np.floor(0.6 * num_of_sessions))
         val_size = int(np.ceil(0.2 * num_of_sessions))
         test_size = num_of_sessions - train_size - val_size
 

@@ -29,8 +29,8 @@ def train():
     df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
     df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_stats_0_3.csv")
     df_rf = pd.read_csv("../../preprocessing/rf_features/all_participants_rf_0_3_40.csv")
-    df_text = pd.read_csv("../../preprocessing/text_embeddings.csv")
-    df_text_pca = pd.read_csv("../../preprocessing/text_embeddings_pca.csv")
+    df_text = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
+    df_text_pca = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
 
     info = df.iloc[:, :4]
     df_pose_index = df.iloc[:, 4:28]
@@ -203,7 +203,7 @@ def main():
     
     sweep_config = {
         'method': 'random',
-        'name': 'svm_tuning',
+        'name': 'brirl_linear_inter',
         'parameters': {
             'binary_multiclass': {'values': ['binary', 'multiclass']},
             'feature_set': {'values': ["full", "stats", "rf"]},
@@ -221,10 +221,13 @@ def main():
                 'facial_audio_text',
                 'pose_facial_audio_text',
             ]},
+            'model_type': {'values': ['svm']}
         }
     }
     
-    sweep_id = wandb.sweep(sweep=sweep_config, project="svm")
+    print(sweep_config)
+    
+    sweep_id = wandb.sweep(sweep=sweep_config, project="brirl_linear_inter")
     wandb.agent(sweep_id, function=train)
 
 if __name__ == '__main__':
