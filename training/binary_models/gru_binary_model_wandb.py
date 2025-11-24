@@ -6,6 +6,7 @@ import gc
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+from keras import optimizers
 from keras.models import Sequential, Model
 from keras.layers import GRU, Dense, Dropout, BatchNormalization, Input, Bidirectional, concatenate
 from keras.callbacks import ModelCheckpoint
@@ -100,7 +101,7 @@ def train_early_fusion(df, config):
         elif kernel_regularizer == "l2":
             reg = l2(0.01)
         elif kernel_regularizer == "l1_l2":
-            reg = l1_l2(0.01, 0.01)
+            reg = l1_l2(l1=0.01, l2=0.01)
         else:
             reg = None
         
@@ -196,7 +197,7 @@ def train_early_fusion(df, config):
         print("\nConfusion Matrix (Binary):")
         print(pd.DataFrame(cm, index=["Actual 0", "Actual 1"], columns=["Pred 0", "Pred 1"]))
 
-        wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
+        wandb.log({f"fold_{fold}_confusion_matrix": cm})
 
         test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
 
@@ -243,6 +244,15 @@ def train_intermediate_fusion(modality_dfs, config):
         "test_f1_tolerant": []
     }
 
+    if kernel_regularizer == "l1":
+        reg = l1(0.01)
+    elif kernel_regularizer == "l2":
+        reg = l2(0.01)
+    elif kernel_regularizer == "l1_l2":
+        reg = l1_l2(l1=0.01,l2=0.01)
+    else:
+        reg = None
+
     for fold in range(5):
         print("Fold ", fold)
         
@@ -268,16 +278,16 @@ def train_intermediate_fusion(modality_dfs, config):
             x = feature_input
             for _ in range(num_gru_layers):
                 if use_bidirectional:
-                    x = Bidirectional(GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer))(x)
+                    x = Bidirectional(GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=reg))(x)
                 else:
-                    x = GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer)(x)
+                    x = GRU(gru_units, return_sequences=True, activation=activation, kernel_regularizer=reg)(x)
                 x = Dropout(dropout)(x)
                 x = BatchNormalization()(x)
             feature_outputs.append(x)
         
         concatenated_features = concatenate(feature_outputs)
         
-        x = GRU(gru_units, activation=activation, kernel_regularizer=kernel_regularizer)(concatenated_features)
+        x = GRU(gru_units, activation=activation, kernel_regularizer=reg)(concatenated_features)
         x = Dropout(dropout)(x)
         x = BatchNormalization()(x)
 
@@ -373,7 +383,7 @@ def train_intermediate_fusion(modality_dfs, config):
         print("\nConfusion Matrix (Binary):")
         print(pd.DataFrame(cm, index=["Actual 0", "Actual 1"], columns=["Pred 0", "Pred 1"]))
 
-        wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
+        wandb.log({f"fold_{fold}_confusion_matrix": cm})
 
         test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
         
@@ -421,6 +431,15 @@ def train_late_fusion(modality_dfs, config):
         "test_f1_tolerant": []
     }
 
+    if kernel_regularizer == "l1":
+        reg = l1(0.01)
+    elif kernel_regularizer == "l2":
+        reg = l2(0.01)
+    elif kernel_regularizer == "l1_l2":
+        reg = l1_l2(l1=0.01,l2=0.01)
+    else:
+        reg = None
+
     for fold in range(5):
         print("Fold ", fold)
         
@@ -446,7 +465,7 @@ def train_late_fusion(modality_dfs, config):
                 activation, 
                 use_bidirectional, 
                 dropout, 
-                kernel_regularizer
+                reg
             )
             
             input_layers.append(input_layer)
@@ -554,7 +573,7 @@ def train_late_fusion(modality_dfs, config):
         print("\nConfusion Matrix (Binary):")
         print(pd.DataFrame(cm, index=["Actual 0", "Actual 1"], columns=["Pred 0", "Pred 1"]))
 
-        wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
+        wandb.log({f"fold_{fold}_confusion_matrix": cm})
 
         test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
 

@@ -5,6 +5,7 @@ import random
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+from keras import optimizers
 from keras.models import Sequential, Model
 from keras.layers import LSTM, Dense, Dropout, BatchNormalization, Input, Bidirectional, concatenate
 from keras.callbacks import ModelCheckpoint
@@ -15,6 +16,7 @@ from sklearn.metrics import confusion_matrix
 from create_data_splits import create_data_splits, create_data_splits_pca
 from get_metrics import get_test_metrics
 from lstm_single_modality import train_single_modality_model
+import gc
 
 def build_early_late_model(sequence_length, input_shape, num_lstm_layers, lstm_units, activation, use_bidirectional, dropout, reg):
     model = Sequential()
@@ -104,7 +106,7 @@ def train_early_fusion(df, config):
         elif kernel_regularizer == "l2":
             reg = l2(0.01)
         elif kernel_regularizer == "l1_l2":
-            reg = l1_l2(0.01, 0.01)
+            reg = l1_l2(l1=0.01, l2=0.01)
         else:
             reg = None
         
@@ -202,7 +204,7 @@ def train_early_fusion(df, config):
             columns=[f"Pred {c}" for c in range(num_classes)]
         ))
 
-        wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
+        wandb.log({f"fold_{fold}_confusion_matrix": cm})
 
         test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
         for key in test_metrics_list.keys():
@@ -244,6 +246,15 @@ def train_intermediate_fusion(modality_dfs, config):
         "test_recall_tolerant": [],
         "test_f1_tolerant": []
     }
+
+    if kernel_regularizer == "l1":
+        reg = l1(0.01)
+    elif kernel_regularizer == "l2":
+        reg = l2(0.01)
+    elif kernel_regularizer == "l1_l2":
+        reg = l1_l2(l1=0.01,l2=0.01)
+    else:
+        reg = None
     
     for fold in range(5):
         print("Fold ", fold)
@@ -274,16 +285,16 @@ def train_intermediate_fusion(modality_dfs, config):
             x = feature_input
             for _ in range(num_lstm_layers):
                 if use_bidirectional:
-                    x = Bidirectional(LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer))(x)
+                    x = Bidirectional(LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=reg))(x)
                 else:
-                    x = LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=kernel_regularizer)(x)
+                    x = LSTM(lstm_units, return_sequences=True, activation=activation, kernel_regularizer=reg)(x)
                 x = Dropout(dropout)(x)
                 x = BatchNormalization()(x)
             feature_outputs.append(x)
         
         concatenated_features = concatenate(feature_outputs)
         
-        x = LSTM(lstm_units, activation=activation, kernel_regularizer=kernel_regularizer)(concatenated_features)
+        x = LSTM(lstm_units, activation=activation, kernel_regularizer=reg)(concatenated_features)
         x = Dropout(dropout)(x)
         x = BatchNormalization()(x)
         
@@ -387,7 +398,7 @@ def train_intermediate_fusion(modality_dfs, config):
             columns=[f"Pred {c}" for c in range(num_classes)]
         ))
 
-        wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
+        wandb.log({f"fold_{fold}_confusion_matrix": cm})
 
         test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
         
@@ -431,6 +442,15 @@ def train_late_fusion(modality_dfs, config):
         "test_f1_tolerant": []
     }
 
+    if kernel_regularizer == "l1":
+        reg = l1(0.01)
+    elif kernel_regularizer == "l2":
+        reg = l2(0.01)
+    elif kernel_regularizer == "l1_l2":
+        reg = l1_l2(l1=0.01,l2=0.01)
+    else:
+        reg = None
+
     for fold in range(5):
         print("Fold ", fold)
         
@@ -456,7 +476,7 @@ def train_late_fusion(modality_dfs, config):
                 activation, 
                 use_bidirectional, 
                 dropout, 
-                kernel_regularizer
+                reg
             )
             
             input_layers.append(input_layer)
@@ -577,7 +597,7 @@ def train_late_fusion(modality_dfs, config):
             columns=[f"Pred {c}" for c in range(num_classes)]
         ))
 
-        wandb.log({f"fold_{fold_no}_confusion_matrix": cm})
+        wandb.log({f"fold_{fold}_confusion_matrix": cm})
 
         test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
 
