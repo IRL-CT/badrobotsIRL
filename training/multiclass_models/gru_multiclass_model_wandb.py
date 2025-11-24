@@ -134,7 +134,7 @@ def train_early_fusion(df, config):
         elif optimizer == 'rmsprop':
             optim = optimizers.RMSprop(learning_rate=learning_rate)
         
-        model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
+        model.compile(optimizer=optim, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
 
         model_checkpoint = ModelCheckpoint("../best_model.keras", monitor="val_accuracy", save_best_only=True)
         
@@ -210,8 +210,8 @@ def train_early_fusion(df, config):
         for key in test_metrics_list.keys():
             test_metrics_list[key].append(test_metrics[key])
 
-        wandb.log({f"participant_{participant}_metrics": test_metrics})
-        print(f"Fold {participant} Test Metrics:", test_metrics)
+        wandb.log({f"fold_{fold}_metrics": test_metrics})
+        print(f"Fold {fold} Test Metrics:", test_metrics)
     
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
     wandb.run.summary.update(avg_test_metrics)
@@ -315,7 +315,7 @@ def train_intermediate_fusion(modality_dfs, config):
         elif optimizer == 'rmsprop':
             optim = optimizers.RMSprop(learning_rate=learning_rate)
 
-        model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
+        model.compile(optimizer=optim, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
         
         train_inputs = [splits[m][6] for m in modality_keys]
         val_inputs = [splits[m][8] for m in modality_keys] 
@@ -515,7 +515,7 @@ def train_late_fusion(modality_dfs, config):
         elif optimizer == 'rmsprop':
             optim = optimizers.RMSprop(learning_rate=learning_rate)
 
-        model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
+        model.compile(optimizer=optim, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
         
         train_inputs = [splits[m][6] for m in modality_keys]
         val_inputs = [splits[m][8] for m in modality_keys]  

@@ -129,7 +129,7 @@ def train_early_fusion(df, config):
         elif optimizer == 'rmsprop':
             optim = optimizers.RMSprop(learning_rate=learning_rate)
         
-        model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
+        model.compile(optimizer=optim, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
 
         model_checkpoint = ModelCheckpoint("../best_model.keras", monitor="val_accuracy", save_best_only=True)
         
@@ -306,7 +306,7 @@ def train_intermediate_fusion(modality_dfs, config):
         elif optimizer == 'rmsprop':
             optim = optimizers.RMSprop(learning_rate=learning_rate)
 
-        model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
+        model.compile(optimizer=optim, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
         
         train_inputs = [splits[m][6] for m in modality_keys]
         val_inputs = [splits[m][8] for m in modality_keys] 
@@ -497,7 +497,7 @@ def train_late_fusion(modality_dfs, config):
         elif optimizer == 'rmsprop':
             optim = optimizers.RMSprop(learning_rate=learning_rate)
 
-        model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
+        model.compile(optimizer=optim, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
         
         train_inputs = [splits[m][6] for m in modality_keys]
         val_inputs = [splits[m][8] for m in modality_keys]  
