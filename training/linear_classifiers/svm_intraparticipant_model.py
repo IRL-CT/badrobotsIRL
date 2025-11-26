@@ -132,7 +132,7 @@ def train():
         df_probs = pd.DataFrame(y_proba, columns=[f"prob_class_{i}" for i in range(y_proba.shape[1])])
         df_probs["y_pred"] = y_pred
         df_probs["y_true"] = y_test
-        wandb.log({f"{pid}_probs": wandb.Histogram(y_proba)})
+        #wandb.log({f"{pid}_probs": wandb.Histogram(y_proba)})
 
         m = get_test_metrics(y_pred, y_test, tolerance=1)
         for k, v in m.items():

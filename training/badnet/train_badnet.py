@@ -49,7 +49,7 @@ def parse_args():
     # Training parameters
     parser.add_argument("--batch_size", type=int, default=64, help="Batch size")
     parser.add_argument("--epochs", type=int, default=100, help="Number of epochs")
-    parser.add_argument("--patience", type=int, default=40, help="Early stopping patience")
+    parser.add_argument("--patience", type=int, default=100, help="Early stopping patience")
     parser.add_argument("--num_workers", type=int, default=0, help="Number of data loader workers")
     
     # Cross-validation
@@ -277,6 +277,7 @@ def main():
             # Loss and optimizer
             if args.use_weighted_loss:
                 # Compute class weights
+
                 label_counts = np.bincount(train_dataset.labels, minlength=num_classes)
                 class_weights = 1.0 / (label_counts + 1e-6)
                 class_weights = class_weights / class_weights.sum() * num_classes

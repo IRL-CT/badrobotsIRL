@@ -151,7 +151,8 @@ class BadNetDatasetNPY(Dataset):
         self.num_augmentations = num_augmentations
         self.cache_images = cache_images
         self.image_cache = {}
-        
+        self.labels = []  # Store labels for each sample
+
         # Augmentation for tensor data (if needed)
         self.use_augmentation = num_augmentations > 0
         if self.use_augmentation:
@@ -175,10 +176,13 @@ class BadNetDatasetNPY(Dataset):
             # Change extension to .npy
             image_path = os.path.join(image_base_path, participant, f"{frame}.npy")
             if os.path.exists(image_path):
+
                 self.samples.append((image_path, label, False))
+                self.labels.append(label)
                 for _ in range(num_augmentations):
                     self.samples.append((image_path, label, True))
-        
+                    self.labels.append(label)
+
         if cache_images:
             print("Caching NPY arrays in memory...")
             unique_paths = set([s[0] for s in self.samples])
@@ -416,7 +420,6 @@ def create_model(model_type='original', num_classes=2, **kwargs):
 def create_interparticipant_folds(df, num_folds=5, exclude_participants=None, seed=42):
     """Create inter-participant folds for cross-validation."""
     np.random.seed(seed)
-    
     all_participants = df['participant'].unique().tolist()
     
     if exclude_participants:
@@ -425,32 +428,33 @@ def create_interparticipant_folds(df, num_folds=5, exclude_participants=None, se
     
     np.random.shuffle(all_participants)
     
+    # Fixed: Distribute remainder evenly across first folds
     fold_size = len(all_participants) // num_folds
+    remainder = len(all_participants) % num_folds
     participant_groups = []
     
+    start_idx = 0
     for i in range(num_folds):
-        if i == num_folds - 1:
-            participant_groups.append(all_participants[i * fold_size:])
-        else:
-            participant_groups.append(all_participants[i * fold_size:(i + 1) * fold_size])
+        # First 'remainder' folds get one extra participant
+        current_fold_size = fold_size + (1 if i < remainder else 0)
+        participant_groups.append(all_participants[start_idx:start_idx + current_fold_size])
+        start_idx += current_fold_size
     
     folds = []
     for fold_idx in range(num_folds):
         test_participants = participant_groups[fold_idx]
-        
         train_val_participants = []
+        
         for i in range(num_folds):
             if i != fold_idx:
                 train_val_participants.extend(participant_groups[i])
         
         np.random.shuffle(train_val_participants)
-        
         split_idx = int(len(train_val_participants) * 0.75)
         train_participants = train_val_participants[:split_idx]
         val_participants = train_val_participants[split_idx:]
         
         folds.append((train_participants, val_participants, test_participants))
-        
         print(f"Fold {fold_idx}: Train={len(train_participants)} participants, "
               f"Val={len(val_participants)} participants, "
               f"Test={len(test_participants)} participants")

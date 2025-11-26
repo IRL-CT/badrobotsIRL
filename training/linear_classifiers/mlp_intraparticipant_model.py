@@ -138,7 +138,7 @@ def train():
         y_pred = mlp.predict(X_test)
         y_proba = mlp.predict_proba(X_test)
 
-        wandb.log({f"{pid}_probs": wandb.Histogram(y_proba)})
+        #wandb.log({f"{pid}_probs": wandb.Histogram(y_proba)})
 
         m = get_test_metrics(y_pred, y_test, tolerance=1)
         for k, v in m.items():

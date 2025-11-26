@@ -133,12 +133,12 @@ def train():
         df_probs["y_pred"] = y_pred
         df_probs["y_true"] = y_test
 
-        table = wandb.Table(dataframe=df_probs)
+        #table = wandb.Table(dataframe=df_probs)
 
-        wandb.log({
-            f"fold_{fold}_prediction_probabilities": wandb.Histogram(y_pred_proba),
-            f"fold_{fold}_prediction_probabilities_table": table
-        })
+        #wandb.log({
+        #    f"fold_{fold}_prediction_probabilities": wandb.Histogram(y_pred_proba),
+        #    f"fold_{fold}_prediction_probabilities_table": table
+        #})
 
         test_metrics = get_test_metrics(y_pred, y_test, tolerance=1)
         for key in test_metrics:
