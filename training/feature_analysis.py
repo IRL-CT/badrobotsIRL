@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from create_data_splits import create_data_splits
 import wandb
 
-def log_metrics_and_features(file_name, feature_groups, X_train, X_test, y_train, y_test, grid_search, best_rf):
+def log_metrics_and_features(file_name, feature_groups, X_train, X_test, y_train, y_test, grid_search, best_rf, features):
     with open(file_name, 'w') as file:
         file.write("Best GridSearch Parameters:\n")
         file.write(str(grid_search.best_params_) + "\n\n")
@@ -51,17 +51,21 @@ def run_model_on_feature_subset(X_train, X_test, y_train, y_test, feature_subset
 
     return accuracy, f1, precision, recall
 
-df = pd.read_csv("../preprocessing/merged_features/all_participants_merged_correct.csv")
+df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
 
 participant_frames_labels = df.iloc[:, :4]
-df_pose = df.iloc[:, 4:28]
-df_facial = df.iloc[:, 28:63]
-df_audio = df.iloc[:, 63:]
 
-features = df.iloc[:, 4:]
+audio_features = df.iloc[:, 63:88]
+
+df_audio = pd.concat([participant_frames_labels, audio_features], axis=1)
+
+features = audio_features
 target = df.iloc[:, 2].values.astype('int')
 
-splits = create_data_splits(df, fold_no=0, num_folds=5, seed_value=42, sequence_length=5)
+#splits = create_data_splits(df, fold_no=0, num_folds=5, seed_value=42, sequence_length=5)
+
+# for audio only
+splits = create_data_splits(df_audio, model="binary", fold_no=0, num_folds=5, seed_value=42, sequence_length=5)
 X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length = splits
 
 param_grid = {
@@ -69,10 +73,10 @@ param_grid = {
     'max_depth': [None, 10, 20, 30],
     'min_samples_split': [2, 5, 10],
     'min_samples_leaf': [1, 2, 4],
-    'max_features': ['auto', 'sqrt'],
+    'max_features': ['sqrt'],
 }
 
-wandb.init(project="rf_feature_importance", config=param_grid)
+wandb.init(project="rf_feature_importance_audio", config=param_grid)
 
 rf = RandomForestClassifier(random_state=42)
 
@@ -81,19 +85,19 @@ grid_search.fit(X_train, y_train)
 
 best_rf = grid_search.best_estimator_
 
-wandb.config.update(grid_search.best_params_)
+wandb.config.update(grid_search.best_params_, allow_val_change=True)
 
 feature_groups = {
-    'All': features.columns.tolist(),
-    'No Pose': [col for col in features.columns if col not in df_pose.columns],
-    'No Facial': [col for col in features.columns if col not in df_facial.columns],
-    'No Audio': [col for col in features.columns if col not in df_audio.columns],
+    'All': features.columns.tolist()
+    # 'No Pose': [col for col in features.columns if col not in df_pose.columns],
+    # 'No Facial': [col for col in features.columns if col not in df_facial.columns],
+    # 'No Audio': [col for col in features.columns if col not in df_audio.columns],
 }
 
-log_metrics_and_features('model_results.txt', feature_groups, X_train, X_test, y_train, y_test, grid_search, best_rf)
+log_metrics_and_features('model_results.txt', feature_groups, X_train, X_test, y_train, y_test, grid_search, best_rf, features)
 
 
-# results_df = pd.DataFrame(results).T
+# results_df = pd.DataFrame(results)
 # metrics = ['Accuracy', 'F1 Score', 'Precision', 'Recall']
 # results_df[metrics].plot(kind='bar', figsize=(12, 6), title='Performance Comparison with Different Feature Exclusions')
 # plt.ylabel('Score')

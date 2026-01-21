@@ -234,7 +234,7 @@ def main():
 
     sweep_config = {
         'method': 'random',
-        'name': 'brirl_linear_inter',
+        'name': 'rf_audio',
         'parameters': {
             'binary_multiclass': {'values': ['binary', 'multiclass']},
             'feature_set': {'values': ['full', 'stats', 'rf']},
@@ -242,22 +242,23 @@ def main():
             'n_estimators': {'values': [100, 200, 300, 500, 700, 1000]},
             'max_depth': {'values': [5, 10, 15, 20, 25, 30]},
             'sequence_length' : {'values': [30, 60, 90, 150, 300]},
-            'modality': {'values': [
-                'pose', 'facial', 'audio', 'text',
-                'pose_facial', 'pose_audio', 'pose_text',
-                'facial_audio', 'facial_text',
-                'audio_text',
-                'pose_facial_audio', 'pose_facial_text', 'pose_audio_text',
-                'facial_audio_text',
-                'pose_facial_audio_text',
-            ]},
+            'modality': {'values': ['audio']},
+            # 'modality': {'values': [
+            #     'pose', 'facial', 'audio', 'text',
+            #     'pose_facial', 'pose_audio', 'pose_text',
+            #     'facial_audio', 'facial_text',
+            #     'audio_text',
+            #     'pose_facial_audio', 'pose_facial_text', 'pose_audio_text',
+            #     'facial_audio_text',
+            #     'pose_facial_audio_text',
+            # ]},
             'model_type': {'values': ['rf']}
         }
     }
         
     print(sweep_config)
     
-    sweep_id = wandb.sweep(sweep=sweep_config, project="brirl_linear_inter")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="rf_audio")
     wandb.agent(sweep_id, function=train)
 
 

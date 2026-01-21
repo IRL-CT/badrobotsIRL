@@ -188,10 +188,10 @@ def train_single_modality_model(df, config):
         y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
 
         df_probs = pd.DataFrame(y_predict_probs_clean)
-        table = wandb.Table(dataframe=df_probs)
+        # table = wandb.Table(dataframe=df_probs)
 
-        wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs_clean})
-        wandb.log({"fold_{}_prediction_probabilities_table".format(fold): table})
+        # wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs_clean})
+        # wandb.log({"fold_{}_prediction_probabilities_table".format(fold): table})
         
         if loss == "categorical_crossentropy":
             y_pred = np.argmax(y_predict_probs_clean, axis=1)

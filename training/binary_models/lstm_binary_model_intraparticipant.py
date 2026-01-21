@@ -166,9 +166,9 @@ def train_early_fusion(df, config):
         y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
 
         df_probs = pd.DataFrame(y_predict_probs_clean)
-        table = wandb.Table(dataframe=df_probs)
-        wandb.log({f"fold_{fold_no}_prediction_probabilities": y_predict_probs_clean})
-        wandb.log({f"fold_{fold_no}_prediction_probabilities_table": table})
+        # table = wandb.Table(dataframe=df_probs)
+        # wandb.log({f"fold_{fold_no}_prediction_probabilities": y_predict_probs_clean})
+        # wandb.log({f"fold_{fold_no}_prediction_probabilities_table": table})
 
         y_pred = (y_predict_probs_clean > 0.5).astype(int).flatten()
 
@@ -356,9 +356,9 @@ def train_intermediate_fusion(modality_dfs, config):
         y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
         
         df_probs = pd.DataFrame(y_predict_probs_clean)
-        table = wandb.Table(dataframe=df_probs)
-        wandb.log({f"fold_{fold_no}_prediction_probabilities": y_predict_probs_clean})
-        wandb.log({f"fold_{fold_no}_prediction_probabilities_table": table})
+        # table = wandb.Table(dataframe=df_probs)
+        # wandb.log({f"fold_{fold_no}_prediction_probabilities": y_predict_probs_clean})
+        # wandb.log({f"fold_{fold_no}_prediction_probabilities_table": table})
         
         y_pred = (y_predict_probs_clean > 0.5).astype(int).flatten()
 
@@ -547,8 +547,8 @@ def train_late_fusion(modality_dfs, config):
         y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
 
         df_probs = pd.DataFrame(y_predict_probs_clean)
-        wandb.log({f"fold_{fold_no}_prediction_probabilities": y_predict_probs_clean})
-        wandb.log({f"fold_{fold_no}_prediction_probabilities_table": wandb.Table(dataframe=df_probs)})
+        # wandb.log({f"fold_{fold_no}_prediction_probabilities": y_predict_probs_clean})
+        # wandb.log({f"fold_{fold_no}_prediction_probabilities_table": wandb.Table(dataframe=df_probs)})
 
         y_pred = (y_predict_probs_clean > 0.5).astype(int).flatten()
 

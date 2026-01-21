@@ -173,10 +173,10 @@ def train_early_fusion(df, config):
 
         df_probs = pd.DataFrame(y_predict_probs_clean)
 
-        table = wandb.Table(dataframe=df_probs)
+        # table = wandb.Table(dataframe=df_probs)
 
-        wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs_clean})
-        wandb.log({"fold_{}_prediction_probabilities_table".format(fold): table})
+        # wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs_clean})
+        # wandb.log({"fold_{}_prediction_probabilities_table".format(fold): table})
         
         y_pred = (y_predict_probs_clean > 0.5).astype(int).flatten()
 
@@ -360,9 +360,9 @@ def train_intermediate_fusion(modality_dfs, config):
         y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
         
         df_probs = pd.DataFrame(y_predict_probs_clean)
-        table = wandb.Table(dataframe=df_probs)
-        wandb.log({f"fold_{fold}_prediction_probabilities": y_predict_probs_clean})
-        wandb.log({f"fold_{fold}_prediction_probabilities_table": table})
+        # table = wandb.Table(dataframe=df_probs)
+        # wandb.log({f"fold_{fold}_prediction_probabilities": y_predict_probs_clean})
+        # wandb.log({f"fold_{fold}_prediction_probabilities_table": table})
         
         y_pred = (y_predict_probs_clean > 0.5).astype(int).flatten()
 
@@ -551,8 +551,8 @@ def train_late_fusion(modality_dfs, config):
         y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
 
         df_probs = pd.DataFrame(y_predict_probs_clean)
-        wandb.log({f"fold_{fold}_prediction_probabilities": y_predict_probs_clean})
-        wandb.log({f"fold_{fold}_prediction_probabilities_table": wandb.Table(dataframe=df_probs)})
+        # wandb.log({f"fold_{fold}_prediction_probabilities": y_predict_probs_clean})
+        # wandb.log({f"fold_{fold}_prediction_probabilities_table": wandb.Table(dataframe=df_probs)})
 
         y_pred = (y_predict_probs_clean > 0.5).astype(int).flatten()
 
@@ -769,7 +769,7 @@ def main():
 
     sweep_config = {
         'method': 'random',
-        'name': 'binary_interparticipant',
+        'name': 'interparticipant',
         'parameters': {
             'feature_set': {'values': ['full', 'stats', 'rf']},
             'modality': {'values': [
@@ -800,7 +800,8 @@ def main():
             
             'sequence_length' : {'values' : [5, 10, 15, 30, 60, 100, 150, 300]},
 
-            'model' : {'values': ['lstm']}
+            'model' : {'values': ['lstm']},
+            'class': {'values': ['binary']}
         }
         # feature set (full, stats, rf) -> modality selection (pose_facial_audio, pose, facial, etc.) -> (reg, norm, pca) -> fusion
     }
@@ -810,7 +811,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="binary_interparticipant")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="interparticipant")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':

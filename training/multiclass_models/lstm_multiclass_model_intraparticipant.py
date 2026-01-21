@@ -202,10 +202,10 @@ def train_early_fusion(df, config):
 
         df_probs = pd.DataFrame(y_predict_probs_clean)
 
-        table = wandb.Table(dataframe=df_probs)
+        # table = wandb.Table(dataframe=df_probs)
 
-        wandb.log({"participant_{}_prediction_probabilities".format(fold_no): y_predict_probs_clean})
-        wandb.log({"participant_{}_prediction_probabilities_table".format(fold_no): table})
+        # wandb.log({"participant_{}_prediction_probabilities".format(fold_no): y_predict_probs_clean})
+        # wandb.log({"participant_{}_prediction_probabilities_table".format(fold_no): table})
         
         y_pred = np.argmax(y_predict_probs_clean, axis=1)
 
@@ -454,9 +454,9 @@ def train_intermediate_fusion(modality_dfs, config):
         print("y_test_sequences shape:", y_test_sequences.shape)
         
         df_probs = pd.DataFrame(y_predict_probs_clean)
-        table = wandb.Table(dataframe=df_probs)
-        wandb.log({f"participant_{participant}_prediction_probabilities": y_predict_probs_clean})
-        wandb.log({f"participant_{participant}_prediction_probabilities_table": table})
+        # table = wandb.Table(dataframe=df_probs)
+        # wandb.log({f"participant_{participant}_prediction_probabilities": y_predict_probs_clean})
+        # wandb.log({f"participant_{participant}_prediction_probabilities_table": table})
         
         y_pred = np.argmax(y_predict_probs_clean, axis=1)
 
@@ -728,8 +728,8 @@ def train_late_fusion(modality_dfs, config):
         print("y_test_sequences shape:", y_test_sequences.shape)
 
         df_probs = pd.DataFrame(y_predict_probs_clean)
-        wandb.log({f"participant_{participant}_prediction_probabilities": y_predict_probs_clean})
-        wandb.log({f"participant_{participant}_prediction_probabilities_table": wandb.Table(dataframe=df_probs)})
+        # wandb.log({f"participant_{participant}_prediction_probabilities": y_predict_probs_clean})
+        # wandb.log({f"participant_{participant}_prediction_probabilities_table": wandb.Table(dataframe=df_probs)})
 
         y_pred = np.argmax(y_predict_probs_clean, axis=1)
 
