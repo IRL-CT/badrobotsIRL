@@ -87,5 +87,3 @@ for participant, g in df.groupby('participant'):
 df['has_vrt'] = df['verbal_response_time'].notna().astype(int)
 
 print(df)
-
-df.to_csv("all_participants_0_3_with_vrt.csv", index=False)

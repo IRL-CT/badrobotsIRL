@@ -18,5 +18,3 @@ df['gaze_y'] = (df['gaze_0_y'] + df['gaze_1_y']) / 2
 df['gaze_z'] = (df['gaze_0_z'] + df['gaze_1_z']) / 2
 
 print(df)
-
-df.to_csv("all_participants_0_3_with_avg_gaze.csv", index=False)
