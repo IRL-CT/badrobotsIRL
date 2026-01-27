@@ -7,7 +7,23 @@ df = pd.read_csv("preprocessing/curated_features/all_participants_0_3.csv")
 curated_features_df = pd.DataFrame()
 
 # original columns to retain
-curated_features_df = df[['frame', 'participant', 'binary_label', 'multiclass_label']].copy()
+'''
+
+Loudness_sma3                       overall energy of speech
+F0semitoneFrom27.5Hz_sma3nz         pitch of speech
+alphaRatio_sma3nz                   ratio of high to low frequencies
+hammarbergIndex_sma3nz              spectral balance of speech
+spectralFlux_sma3nz                 rate of change in the power spectrum
+mfcc1_sma3nz                        first MFCC coefficient
+mfcc2_sma3nz                        second MFCC coefficient
+mfcc3_sma3nz                        third MFCC coefficient
+F2frequency_sma3nz                  second formant frequency, most emotionally relevant
+F2bandwidth_sma3nz                  second formant bandwidth
+'''
+
+curated_features_df = df[['frame', 'participant', 'binary_label', 'multiclass_label', 
+'Loudness_sma3', 'F0semitoneFrom27.5Hz_sma3nz', 'alphaRatio_sma3', 'hammarbergIndex_sma3', 'spectralFlux_sma3',
+'mfcc1_sma3', 'mfcc2_sma3', 'mfcc3_sma3', 'F2frequency_sma3nz', 'F2bandwidth_sma3nz']].copy()
 
 
 # average gaze
@@ -104,6 +120,11 @@ curated_features_df = curated_features_df[
     [
         'frame', 'participant',
         'binary_label', 'multiclass_label',
+
+        'Loudness_sma3', 'F0semitoneFrom27.5Hz_sma3nz', 
+        'alphaRatio_sma3', 'hammarbergIndex_sma3', 'spectralFlux_sma3',
+        'mfcc1_sma3', 'mfcc2_sma3', 'mfcc3_sma3', 'F2frequency_sma3nz', 'F2bandwidth_sma3nz',
+
         'gaze_x', 'gaze_y', 'gaze_z',
         'gaze_angle_mag', 'gaze_shift',
         'head_movement_energy',
@@ -111,4 +132,7 @@ curated_features_df = curated_features_df[
     ]
 ]
 
+
+
+print(curated_features_df.head())
 curated_features_df.to_csv("preprocessing/curated_features/curated_features_dataset.csv", index=False)

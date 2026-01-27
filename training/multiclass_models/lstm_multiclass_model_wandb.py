@@ -664,7 +664,11 @@ def create_norm_pca_df(df):
 
 def train():
 
-    wandb.init()
+    wandb.init(
+        project="curated_v0",
+        config={"curated_dataset_version": "v1"},
+        tags=["curated_dataset_v1"]
+    )
     config = wandb.config
     print(config)
 
