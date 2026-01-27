@@ -653,125 +653,137 @@ def train():
     random.seed(seed_value)
     tf.random.set_seed(seed_value)
 
-    # Validate modality and feature_set combination
-    is_valid_combination = validate_modality_feature_combination(config.modality, config.feature_set)
-    
-    if not is_valid_combination:
-        print(f"Skipping invalid combination: feature_set={config.feature_set}, modality={config.modality}")
-        # Log that this was skipped
-        wandb.log({"status": "skipped_invalid_combination"})
-        return
-
-    data = config.dataset
-    fusion_type = config.fusion_type
-
-    df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
-    df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_stats_0_3.csv")
-    df_rf = pd.read_csv("../../preprocessing/rf_features/all_participants_rf_0_3_40.csv")
-    df_text = pd.read_csv("../../preprocessing/clip_text_embeddings.csv")
-    df_text_pca = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
-
-    info = df.iloc[:, :4]
-    df_pose_index = df.iloc[:, 4:28]
-    df_facial_index = pd.concat([df.iloc[:, 28:63], df.iloc[:, 88:]], axis=1) # action units, gaze
-    df_audio_index = df.iloc[:, 63:88]
-    df_text_index = df_text.iloc[:, 2:]
-
-    df_facial_index_stats = df_stats.iloc[:, 4:30]
-    df_audio_index_stats = df_stats.iloc[:, 30:53]
-
-    df_facial_index_rf = df_rf.iloc[:, 38:]
-    df_pose_index_rf = df_rf.iloc[:, 4:28]
-    df_audio_index_rf = df_rf.iloc[:, 28:38]
-
-    modalities = {
-        "pose_full": df_pose_index,
-        "pose_rf": df_pose_index_rf,
-        "facial_full": df_facial_index,
-        "facial_stats": df_facial_index_stats,
-        "facial_rf": df_facial_index_rf,
-        "audio_full": df_audio_index,
-        "audio_stats": df_audio_index_stats,
-        "audio_rf": df_audio_index_rf,
-        "text_full": df_text_index,
-    }
-
-    modality_components = config.modality.split('_')
-    selected_modalities = {}
-
     feature_set = config.feature_set
+    data = config.dataset
 
-    if "pose" in modality_components:
-        selected_modalities["pose_" + feature_set] = modalities["pose_" + feature_set]
-    
-    if "facial" in modality_components:
-        selected_modalities["facial_" + feature_set] = modalities["facial_" + feature_set]
+    if feature_set != "curated":
 
-    if "audio" in modality_components:
-        selected_modalities["audio_" + feature_set] = modalities["audio_" + feature_set]
-
-    if "text" in modality_components:
-        selected_modalities["text_full"] = modalities["text_full"]
-
-    df = info
-    
-    # for m in selected_modalities.values():
-    #     df = pd.concat([df, m], axis=1)
-
-    # if config.dataset == "norm":
-    #     df = create_normalized_df(df)
-    # elif config.dataset == "pca":
-    #     df = create_norm_pca_df(df)
-    
-    if fusion_type == "early":
-        df = info
-        for m in selected_modalities.values():
-            df = pd.concat([df, m], axis=1)
+        # Validate modality and feature_set combination
+        is_valid_combination = validate_modality_feature_combination(config.modality, config.feature_set)
         
+        if not is_valid_combination:
+            print(f"Skipping invalid combination: feature_set={config.feature_set}, modality={config.modality}")
+            # Log that this was skipped
+            wandb.log({"status": "skipped_invalid_combination"})
+            return
+
+        data = config.dataset
+        fusion_type = config.fusion_type
+
+        df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
+        df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_stats_0_3.csv")
+        df_rf = pd.read_csv("../../preprocessing/rf_features/all_participants_rf_0_3_40.csv")
+        df_text = pd.read_csv("../../preprocessing/clip_text_embeddings.csv")
+        df_text_pca = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
+
+        info = df.iloc[:, :4]
+        df_pose_index = df.iloc[:, 4:28]
+        df_facial_index = pd.concat([df.iloc[:, 28:63], df.iloc[:, 88:]], axis=1) # action units, gaze
+        df_audio_index = df.iloc[:, 63:88]
+        df_text_index = df_text.iloc[:, 2:]
+
+        df_facial_index_stats = df_stats.iloc[:, 4:30]
+        df_audio_index_stats = df_stats.iloc[:, 30:53]
+
+        df_facial_index_rf = df_rf.iloc[:, 38:]
+        df_pose_index_rf = df_rf.iloc[:, 4:28]
+        df_audio_index_rf = df_rf.iloc[:, 28:38]
+
+        modalities = {
+            "pose_full": df_pose_index,
+            "pose_rf": df_pose_index_rf,
+            "facial_full": df_facial_index,
+            "facial_stats": df_facial_index_stats,
+            "facial_rf": df_facial_index_rf,
+            "audio_full": df_audio_index,
+            "audio_stats": df_audio_index_stats,
+            "audio_rf": df_audio_index_rf,
+            "text_full": df_text_index,
+        }
+
+        modality_components = config.modality.split('_')
+        selected_modalities = {}
+
+        feature_set = config.feature_set
+
+        if "pose" in modality_components:
+            selected_modalities["pose_" + feature_set] = modalities["pose_" + feature_set]
+        
+        if "facial" in modality_components:
+            selected_modalities["facial_" + feature_set] = modalities["facial_" + feature_set]
+
+        if "audio" in modality_components:
+            selected_modalities["audio_" + feature_set] = modalities["audio_" + feature_set]
+
+        if "text" in modality_components:
+            selected_modalities["text_full"] = modalities["text_full"]
+
+        df = info
+        
+        # for m in selected_modalities.values():
+        #     df = pd.concat([df, m], axis=1)
+
+        # if config.dataset == "norm":
+        #     df = create_normalized_df(df)
+        # elif config.dataset == "pca":
+        #     df = create_norm_pca_df(df)
+        
+        if fusion_type == "early":
+            df = info
+            for m in selected_modalities.values():
+                df = pd.concat([df, m], axis=1)
+            
+            if data == "norm":
+                df = create_normalized_df(df)
+            elif data == "pca":
+                df = create_norm_pca_df(create_normalized_df(df))
+
+            print(df)
+            print(df.shape)
+            
+            train_early_fusion(df, config)
+        
+        if fusion_type == "intermediate" or fusion_type == "late":
+            dfs = {}
+
+            if data == "norm":
+                for modality_name, m in selected_modalities.items():
+                    df_temp = pd.concat([info.copy(), m], axis=1)
+                    dfs[modality_name] = create_normalized_df(df_temp)
+            elif data == "pca":
+                for modality_name, m in selected_modalities.items():
+                    if modality_name == "text_full":
+                        dfs[modality_name] = df_text_pca
+                    else:
+                        df_temp = pd.concat([info.copy(), m], axis=1)
+                        dfs[modality_name] = create_norm_pca_df(create_normalized_df(df_temp))
+            elif data == "reg":
+                for modality_name, m in selected_modalities.items():
+                    df_temp = pd.concat([info.copy(), m], axis=1)
+                    dfs[modality_name] = create_normalized_df(df_temp)
+
+            print(dfs)
+
+            if fusion_type == "intermediate":
+                train_intermediate_fusion(dfs, config)
+            elif fusion_type == "late":
+                train_late_fusion(dfs, config)
+    else:
+        df = pd.read_csv("../../preprocessing/curated_features/curated_features_dataset.csv")
         if data == "norm":
             df = create_normalized_df(df)
         elif data == "pca":
             df = create_norm_pca_df(create_normalized_df(df))
-
-        print(df)
-        print(df.shape)
-        
         train_early_fusion(df, config)
-    
-    if fusion_type == "intermediate" or fusion_type == "late":
-        dfs = {}
-
-        if data == "norm":
-            for modality_name, m in selected_modalities.items():
-                df_temp = pd.concat([info.copy(), m], axis=1)
-                dfs[modality_name] = create_normalized_df(df_temp)
-        elif data == "pca":
-            for modality_name, m in selected_modalities.items():
-                if modality_name == "text_full":
-                    dfs[modality_name] = df_text_pca
-                else:
-                    df_temp = pd.concat([info.copy(), m], axis=1)
-                    dfs[modality_name] = create_norm_pca_df(create_normalized_df(df_temp))
-        elif data == "reg":
-            for modality_name, m in selected_modalities.items():
-                df_temp = pd.concat([info.copy(), m], axis=1)
-                dfs[modality_name] = create_normalized_df(df_temp)
-
-        print(dfs)
-
-        if fusion_type == "intermediate":
-            train_intermediate_fusion(dfs, config)
-        elif fusion_type == "late":
-            train_late_fusion(dfs, config)
 
 
 def main():
 
     sweep_config = {
         'method': 'random',
-        'name': 'interparticipant',
+        'name': 'curated_v0',
         'parameters': {
-            'feature_set': {'values': ['full', 'stats', 'rf']},
+            'feature_set': {'values': ['curated']}, # ['full', 'stats', 'rf']},
             'modality': {'values': [
                 'pose', 'facial', 'audio', 'text',
                 'pose_facial', 'pose_audio', 'pose_text',
@@ -812,7 +824,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="interparticipant")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="curated_v0")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':
