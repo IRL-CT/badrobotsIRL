@@ -646,8 +646,8 @@ def train():
 
     wandb.init(
         project="curated_v0",
-        config={"curated_dataset_version": "v1"},
-        tags=["curated_dataset_v1"]
+        config={"curated_dataset_version": "v2"},
+        tags=["curated_dataset_v2"]
     )
     config = wandb.config
     print(config)
@@ -773,7 +773,7 @@ def train():
             elif fusion_type == "late":
                 train_late_fusion(dfs, config)
     else:
-        df = pd.read_csv("../../preprocessing/curated_features/curated_features_dataset.csv")
+        df = pd.read_csv("../../preprocessing/curated_features/curated_features_dataset_v2.csv")
         if data == "norm":
             df = create_normalized_df(df)
         elif data == "pca":

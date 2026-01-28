@@ -8,7 +8,6 @@ curated_features_df = pd.DataFrame()
 
 # original columns to retain
 '''
-
 Loudness_sma3                       overall energy of speech
 F0semitoneFrom27.5Hz_sma3nz         pitch of speech
 alphaRatio_sma3nz                   ratio of high to low frequencies
@@ -113,6 +112,15 @@ for participant, g in curated_features_df.groupby('participant'):
 
 curated_features_df['has_vrt'] = curated_features_df['verbal_response_time'].notna().astype(int)
 
+# cosine distance
+
+df_cosine_dist = pd.read_csv("preprocessing/curated_features/clip_text_cosine_similarity.csv")
+
+curated_features_df = pd.merge(
+    curated_features_df,
+    df_cosine_dist,
+    on=['frame', 'participant'],
+    how='inner')
 
 # finalize the curated features dataset
 
@@ -128,11 +136,11 @@ curated_features_df = curated_features_df[
         'gaze_x', 'gaze_y', 'gaze_z',
         'gaze_angle_mag', 'gaze_shift',
         'head_movement_energy',
-        'VAD_binary', 'verbal_response_time', 'has_vrt'
+        'VAD_binary', 'verbal_response_time', 'has_vrt',
+        'Distance'
     ]
 ]
 
 
-
 print(curated_features_df.head())
-curated_features_df.to_csv("preprocessing/curated_features/curated_features_dataset.csv", index=False)
+curated_features_df.to_csv("preprocessing/curated_features/curated_features_dataset_v2.csv", index=False)
