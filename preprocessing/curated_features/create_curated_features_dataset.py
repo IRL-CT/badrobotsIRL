@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 
-df = pd.read_csv("preprocessing/curated_features/all_participants_0_3.csv")
+df = pd.read_csv("all_participants_0_3.csv")
 
 curated_features_df = pd.DataFrame()
 
@@ -48,7 +48,9 @@ for participant, g in curated_features_df.groupby('participant'):
         g['gaze_x'].diff()**2 +
         g['gaze_y'].diff()**2 +
         g['gaze_z'].diff()**2
-    )
+    ) 
+# Handle NaN values in gaze_shift - replace with 0 (first frame of each participant)
+curated_features_df['gaze_shift'] = curated_features_df['gaze_shift'].fillna(0)
 
 
 # movement energy
@@ -68,53 +70,61 @@ for kp in head_kps:
 curated_features_df['VAD_binary'] = 0
 curated_features_df['verbal_response_time'] = np.nan
 
-for participant, g in df.groupby('participant'):
+for participant, g in curated_features_df.groupby('participant'):
     threshold = (
         g['Loudness_sma3'].mean() +
         1.5 * g['Loudness_sma3'].std()
     )
 
-    df.loc[g.index, 'VAD_binary'] = (
+    curated_features_df.loc[g.index, 'VAD_binary'] = (
         g['Loudness_sma3'] > threshold
     ).astype(int)
 
 for participant, g in curated_features_df.groupby('participant'):
-    g = g.sort_index()
+    g = g.sort_values('frame').reset_index(drop=True)  # Sort by frame, not index
 
     labels = g['multiclass_label']
     vad = g['VAD_binary']
 
-    error_onsets = g.index[
-        labels == labels.shift(1) + 1
-    ]
+    # find error onsets - look for label transitions
+    label_changes = labels != labels.shift(1)
+    error_onsets = g.index[label_changes & (g.index > 0)]  # Skip first frame
 
-    for error_frame in error_onsets:
-        error_label = labels.loc[error_frame]
+    # compute verbal response time for each error
+    for error_frame_idx in error_onsets:
+        error_label = labels.loc[error_frame_idx]
+        actual_frame = g.loc[error_frame_idx, 'frame']
 
-        error_segment = g.index[
-            labels == error_label
-        ]
+        # frames belonging to this error segment
+        error_segment_mask = (labels == error_label)
+        error_segment = g.index[error_segment_mask]
 
-        vad_window = vad.loc[error_segment]
-        speech_frames = vad_window[vad_window == 1]
+        # find first frame with voice activity after error onset
+        vad_after_error = vad.loc[error_frame_idx:]  # Look from error frame onwards
+        speech_frames = vad_after_error[vad_after_error == 1]
 
         if len(speech_frames) == 0:
-            continue
+            continue  # participant never verbally responded
 
-        verbal_frame = speech_frames.index[0]
+        verbal_frame_idx = speech_frames.index[0]
 
-        verbal_response_time = verbal_frame - error_frame
+        # response time in frames (using actual frame numbers, not indices)
+        verbal_response_time = g.loc[verbal_frame_idx, 'frame'] - actual_frame
 
-        curated_features_df.loc[
-            error_segment,
-            'verbal_response_time'
-        ] = verbal_response_time
+        # assign the same response time to all frames belonging to this error
+        curated_features_df.loc[g.iloc[error_segment].index, 'verbal_response_time'] = verbal_response_time
 
 curated_features_df['has_vrt'] = curated_features_df['verbal_response_time'].notna().astype(int)
 
+# Handle NaN values in verbal_response_time - replace with 0
+curated_features_df['verbal_response_time'] = curated_features_df['verbal_response_time'].fillna(0)
+
+# Handle NaN values in verbal_response_time - replace with 0
+curated_features_df['verbal_response_time'] = curated_features_df['verbal_response_time'].fillna(0)
+
 # cosine distance
 
-df_cosine_dist = pd.read_csv("preprocessing/curated_features/clip_text_cosine_similarity.csv")
+df_cosine_dist = pd.read_csv("../clip_text_cosine_similarity.csv")
 
 curated_features_df = pd.merge(
     curated_features_df,
@@ -143,4 +153,4 @@ curated_features_df = curated_features_df[
 
 
 print(curated_features_df.head())
-curated_features_df.to_csv("preprocessing/curated_features/curated_features_dataset_v2.csv", index=False)
+curated_features_df.to_csv("curated_features_dataset_v3.csv", index=False)

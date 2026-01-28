@@ -20,7 +20,7 @@ def train():
     print(config)
     
     # Skip validation for curated feature sets
-    if config.feature_set not in ["curated_v0", "curated_v1"]:
+    if config.feature_set not in ["curated_v0", "curated_v1", "curated_v3"]:
         # Validate modality and feature_set combination
         is_valid_combination = validate_modality_feature_combination(config.modality, config.feature_set)
         
@@ -41,6 +41,12 @@ def train():
             df = create_norm_pca_df(create_normalized_df(df))
     elif config.feature_set == "curated_v1":
         df = pd.read_csv("../../preprocessing/curated_features/curated_features_dataset_v1.csv")
+        if config.dataset == "norm":
+            df = create_normalized_df(df)
+        elif config.dataset == "pca":
+            df = create_norm_pca_df(create_normalized_df(df))
+    elif config.feature_set == "curated_v3":
+        df = pd.read_csv("../../preprocessing/curated_features/curated_features_dataset_v3.csv")
         if config.dataset == "norm":
             df = create_normalized_df(df)
         elif config.dataset == "pca":
@@ -244,7 +250,7 @@ def main():
         'name': 'brirl_linear_inter',
         'parameters': {
             'binary_multiclass': {'values': ['binary', 'multiclass']},
-            'feature_set': {'values': ['full', 'stats', 'rf', 'curated_v0', 'curated_v1']},
+            'feature_set': {'values': ['full', 'stats', 'rf', 'curated_v3', 'curated_v1']},
             'dataset': {'values': ['reg', 'norm', 'pca']},
             'n_neighbors': {'values': [3, 5, 7, 10, 15, 30]},
             'modality': {'values': [
