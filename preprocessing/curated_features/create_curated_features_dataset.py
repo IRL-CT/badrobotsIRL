@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 
-df = pd.read_csv("all_participants_0_3.csv")
+df = pd.read_csv("preprocessing/curated_features/all_participants_0_3.csv")
 
 curated_features_df = pd.DataFrame()
 
@@ -81,7 +81,9 @@ for participant, g in curated_features_df.groupby('participant'):
     ).astype(int)
 
 for participant, g in curated_features_df.groupby('participant'):
-    g = g.sort_values('frame').reset_index(drop=True)  # Sort by frame, not index
+    g = g.sort_values('frame')
+    orig_idx = g.index
+    g = g.reset_index(drop=True)
 
     labels = g['multiclass_label']
     vad = g['VAD_binary']
@@ -96,8 +98,9 @@ for participant, g in curated_features_df.groupby('participant'):
         actual_frame = g.loc[error_frame_idx, 'frame']
 
         # frames belonging to this error segment
-        error_segment_mask = (labels == error_label)
-        error_segment = g.index[error_segment_mask]
+        error_segment = g.index[
+            (labels == error_label) & (g.index >= error_frame_idx)
+        ]
 
         # find first frame with voice activity after error onset
         vad_after_error = vad.loc[error_frame_idx:]  # Look from error frame onwards
@@ -124,7 +127,7 @@ curated_features_df['verbal_response_time'] = curated_features_df['verbal_respon
 
 # cosine distance
 
-df_cosine_dist = pd.read_csv("../clip_text_cosine_similarity.csv")
+df_cosine_dist = pd.read_csv("preprocessing/curated_features/clip_text_cosine_similarity.csv")
 
 curated_features_df = pd.merge(
     curated_features_df,
@@ -152,5 +155,5 @@ curated_features_df = curated_features_df[
 ]
 
 
-print(curated_features_df.head())
-curated_features_df.to_csv("curated_features_dataset_v3.csv", index=False)
+print(curated_features_df)
+#curated_features_df.to_csv("curated_features_dataset_v3.csv", index=False)
