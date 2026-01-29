@@ -120,6 +120,45 @@ def train():
     print(df)
     print(df.shape)
 
+    # Feature randomization (if enabled)
+    if config.feature_randomizer == 1:
+        # Get available features (columns 4 onwards: excluding participant, frame, binary_label, multiclass_label)
+        available_features = df.columns[4:].tolist()
+        max_features = len(available_features)
+        
+        if max_features > 0:
+            # Randomly select number of features (1 to max_features)
+            n_features = np.random.randint(1, max_features + 1)
+            
+            # Randomly select n features
+            selected_features = np.random.choice(available_features, size=n_features, replace=False).tolist()
+            
+            # Keep only the first 4 columns + selected features
+            df = df[df.columns[:4].tolist() + selected_features]
+            
+            # Log selected features to wandb
+            wandb.log({
+                "features_included": selected_features,
+                "n_features_selected": n_features,
+                "total_available_features": max_features
+            })
+            
+            print(f"Feature randomization enabled: Selected {n_features} out of {max_features} features")
+            print(f"Selected features: {selected_features}")
+        else:
+            print("Warning: No features available for randomization")
+            wandb.log({"features_included": [], "n_features_selected": 0, "total_available_features": 0})
+    else:
+        # Log all features when randomization is disabled
+        all_features = df.columns[4:].tolist()
+        wandb.log({
+            "features_included": all_features,
+            "n_features_selected": len(all_features),
+            "total_available_features": len(all_features)
+        })
+        print(f"Feature randomization disabled: Using all {len(all_features)} features")
+    
+
     test_metrics_list = {
         "test_accuracy": [],
         "test_precision": [],
@@ -238,12 +277,14 @@ def main():
         'name': 'brirl_linear_inter',
         'parameters': {
             'binary_multiclass': {'values': ['binary', 'multiclass']},
-            'feature_set': {'values': ['full', 'stats', 'rf', 'curated_v3', 'curated_v1']},
+            'feature_set': {'values': [ 'curated_v3', 'curated_v1']}, #'full', 'stats', 'rf',
             'dataset': {'values': ['reg', 'norm', 'pca']},
             'C': {'values': [0.1, 1, 10, 100]},
             'kernel': {'values': ['linear', 'rbf', 'poly']},
             'gamma': {'values': ['scale', 'auto']},
             'sequence_length': {'values': [30, 60, 90, 150, 300]},
+            'n_neighbors': {'values': [3, 5, 7, 10, 15, 30]},
+            'feature_randomizer': {'values': [0, 1]},
             'modality': {'values': [
                 'pose', 'facial', 'audio', 'text', 'cosine',
                 'pose_facial', 'pose_audio', 'pose_text', 'pose_cosine', 
