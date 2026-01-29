@@ -284,7 +284,7 @@ def main():
             'gamma': {'values': ['scale', 'auto']},
             'sequence_length': {'values': [30, 60, 90, 150, 300]},
             'n_neighbors': {'values': [3, 5, 7, 10, 15, 30]},
-            'feature_randomizer': {'values': [0, 1]},
+            'feature_randomizer': {'values': [1]},
             'modality': {'values': [
                 'pose', 'facial', 'audio', 'text', 'cosine',
                 'pose_facial', 'pose_audio', 'pose_text', 'pose_cosine', 

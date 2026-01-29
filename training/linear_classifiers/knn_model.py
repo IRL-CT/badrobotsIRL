@@ -291,7 +291,7 @@ def main():
             'feature_set': {'values': ['curated_v3', 'curated_v1']},  #'full', 'stats', 'rf',
             'dataset': {'values': ['reg', 'norm', 'pca']},
             'n_neighbors': {'values': [3, 5, 7, 10, 15, 30]},
-            'feature_randomizer': {'values': [0, 1]},
+            'feature_randomizer': {'values': [1]},
             'modality': {'values': [
                 'pose', 'facial', 'audio', 'text', 'cosine',
                 'pose_facial', 'pose_audio', 'pose_text', 'pose_cosine', 

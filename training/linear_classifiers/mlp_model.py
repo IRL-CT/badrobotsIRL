@@ -298,7 +298,7 @@ def main():
             'mlp_hidden_layer_sizes': {'values': [(100,), (64, 64), (128, 64)]},
             'mlp_activation': {'values': ['relu', 'tanh']},
             'n_neighbors': {'values': [3, 5, 7, 10, 15, 30]},
-            'feature_randomizer': {'values': [0, 1]},
+            'feature_randomizer': {'values': [1]},
             'modality': {'values': [
                 'pose', 'facial', 'audio', 'text', 'cosine',
                 'pose_facial', 'pose_audio', 'pose_text', 'pose_cosine', 
