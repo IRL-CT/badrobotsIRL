@@ -666,8 +666,8 @@ def train():
 
     wandb.init(
         project="curated_v0",
-        config={"curated_dataset_version": "v2"},
-        tags=["curated_dataset_v2"]
+        config={"curated_dataset_version": "v3"},
+        tags=["curated_dataset_v3"]
     )
     config = wandb.config
     print(config)
@@ -794,11 +794,55 @@ def train():
                 train_late_fusion(dfs, config)
     
     else:
-        df = pd.read_csv("../../preprocessing/curated_features/curated_features_dataset_v2.csv")
+        df = pd.read_csv("../../preprocessing/curated_features/curated_features_dataset_v3.csv")
         if data == "norm":
             df = create_normalized_df(df)
         elif data == "pca":
             df = create_norm_pca_df(create_normalized_df(df))
+
+        if config.feature_randomizer == 1:
+
+            # participant, frame, binary_label, multiclass_label
+            available_features = df.columns[4:].tolist()
+            max_features = len(available_features)
+
+            if max_features > 0:
+                n_features = np.random.randint(1, max_features + 1)
+
+                selected_features = np.random.choice(
+                    available_features,
+                    size=n_features,
+                    replace=False
+                ).tolist()
+
+                df = df[df.columns[:4].tolist() + selected_features]
+
+                wandb.log({
+                    "features_included": selected_features,
+                    "n_features_selected": n_features,
+                    "total_available_features": max_features
+                })
+
+                print(f"Feature randomization enabled: selected {n_features}/{max_features}")
+                print(f"Selected features: {selected_features}")
+
+            else:
+                print("Warning: No features available for randomization")
+                wandb.log({
+                    "features_included": [],
+                    "n_features_selected": 0,
+                    "total_available_features": 0
+                })
+
+        else:
+            # randomization off
+            all_features = df.columns[4:].tolist()
+            wandb.log({
+                "features_included": all_features,
+                "n_features_selected": len(all_features),
+                "total_available_features": len(all_features)
+            })
+
         train_early_fusion(df, config)
 
 
@@ -821,6 +865,7 @@ def main():
 
             'data' : {'values' : ["reg", "norm", "pca"]},
             'fusion_type': {'values': ['early', 'intermediate', 'late']},
+            'feature_randomizer': {'values': [1]},
 
             'use_bidirectional': {'values': [True, False]},
             'num_lstm_layers': {'values': [1, 2, 3]},
@@ -831,7 +876,7 @@ def main():
             'optimizer': {'values': ['adam', 'sgd', 'adadelta', 'rmsprop']},
             'learning_rate': {'values': [0.001, 0.01, 0.005]},
             'batch_size': {'values': [32, 64, 128]},
-            'epochs': {'value': 100},
+            'epochs': {'values': [100, 150, 200, 250]},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss' : {'values' : ["categorical_crossentropy"]},
             

@@ -155,5 +155,5 @@ curated_features_df = curated_features_df[
 ]
 
 
-print(curated_features_df)
-#curated_features_df.to_csv("curated_features_dataset_v3.csv", index=False)
+#print(curated_features_df)
+curated_features_df.to_csv("curated_features_dataset_v3.csv", index=False)
