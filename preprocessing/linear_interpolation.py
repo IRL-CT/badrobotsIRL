@@ -13,7 +13,11 @@ def linear_interpolate(df, original_fps, new_fps):
         idx = g.index
 
         t_original = g['frame'].values / original_fps
-        t_new = np.arange(t_original[0], t_original[-1], 1 / new_fps)
+        t_new = np.arange(
+            t_original[0],
+            t_original[-1] + 1e-8,
+            1 / new_fps
+        )
 
         interpolated_data = {col: np.interp(t_new, t_original, g[col].values) for col in feature_columns}
 
@@ -23,7 +27,7 @@ def linear_interpolate(df, original_fps, new_fps):
         nearest_idx = np.clip(nearest_idx, 0, len(g) - 1)
 
         new_participant_df['participant'] = participant
-        new_participant_df['frame'] = (t_new * new_fps).astype(int)
+        new_participant_df['frame'] = np.arange(len(t_new))
         new_participant_df['binary_label'] = g['binary_label'].values[nearest_idx]
         new_participant_df['multiclass_label'] = g['multiclass_label'].values[nearest_idx]
 
