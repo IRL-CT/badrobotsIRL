@@ -9,7 +9,7 @@ from sklearn.metrics import accuracy_score, classification_report
 from sklearn.metrics import confusion_matrix
 import wandb
 from itertools import product
-from get_metrics import get_test_metrics
+from get_all_metrics import get_all_metrics
 from create_data_splits import make_split_indices
 
 
@@ -91,9 +91,13 @@ def train():
     print(df.shape)
     
     metrics_all = {k: [] for k in [
-        "test_accuracy","test_precision","test_recall","test_f1",
-        "test_accuracy_tolerant","test_precision_tolerant",
-        "test_recall_tolerant","test_f1_tolerant"
+        "test_accuracy", "test_precision", "test_recall", "test_f1",
+        "test_accuracy_tolerant", "test_precision_tolerant",
+        "test_recall_tolerant", "test_f1_tolerant",
+        "test_auc", "test_fnr",
+        "test_windowed_accuracy", "test_windowed_precision",
+        "test_windowed_recall", "test_windowed_f1",
+        "test_earliest_detection_time",
     ]}
 
     for pid in sorted(df["participant"].unique()):
@@ -133,10 +137,14 @@ def train():
 
         #wandb.log({f"{pid}_probs": wandb.Histogram(y_proba)})
 
-        m = get_test_metrics(y_pred, y_test, tolerance=1)
-        for k,v in m.items():
-            metrics_all[k].append(v)
-        wandb.log({f"{pid}_{k}": v for k,v in m.items()})
+        m = get_all_metrics(y_pred, y_test, y_pred_proba=y_proba,
+                            sessions=np.full(len(y_test), pid),
+                            window_size=None, tolerance=1)
+        m.pop("test_edt_per_session", None)
+        for k, v in m.items():
+            if k in metrics_all:
+                metrics_all[k].append(v)
+        wandb.log({f"{pid}_{k}": v for k, v in m.items()})
         print(pid, m)
         print(confusion_matrix(y_test, y_pred))
 

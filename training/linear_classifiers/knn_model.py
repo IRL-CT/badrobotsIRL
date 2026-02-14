@@ -8,7 +8,7 @@ from sklearn.metrics import accuracy_score, classification_report
 from sklearn.metrics import confusion_matrix
 import wandb
 from itertools import product
-from get_metrics import get_test_metrics
+from get_all_metrics import get_all_metrics
 from create_data_splits import create_data_splits
 from sklearn.model_selection import train_test_split
 
@@ -170,7 +170,14 @@ def train():
         "test_accuracy_tolerant": [],
         "test_precision_tolerant": [],
         "test_recall_tolerant": [],
-        "test_f1_tolerant": []
+        "test_f1_tolerant": [],
+        "test_auc": [],
+        "test_fnr": [],
+        "test_windowed_accuracy": [],
+        "test_windowed_precision": [],
+        "test_windowed_recall": [],
+        "test_windowed_f1": [],
+        "test_earliest_detection_time": [],
     }
 
     for fold in range(5):
@@ -206,11 +213,13 @@ def train():
         #    f"fold_{fold}_prediction_probabilities_table": table
         #})
 
-        test_metrics = get_test_metrics(y_pred, y_test, tolerance=1)
+        test_metrics = get_all_metrics(y_pred, y_test, y_pred_proba=y_pred_proba,
+                                       sessions=None, window_size=None, tolerance=1)
+        test_metrics.pop("test_edt_per_session", None)
         for key in test_metrics:
-            test_metrics_list[key].append(test_metrics[key])
-        test_metrics = {f"t{fold}_{k}": v for k, v in test_metrics.items()}
-        wandb.log(test_metrics)
+            if key in test_metrics_list:
+                test_metrics_list[key].append(test_metrics[key])
+        wandb.log({f"t{fold}_{k}": v for k, v in test_metrics.items()})
         print(test_metrics)
 
         print(confusion_matrix(y_test, y_pred))
