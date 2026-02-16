@@ -589,7 +589,7 @@ def create_data_splits(df, model, fold_no, num_folds=5, seed_value=42, sequence_
             print(f"Sequences for fold {fold_no} are empty. Skipping this fold.")
             return None
 
-        return X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length
+        return X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length, session_train, session_val, session_test
 
     except Exception as e:
         print(f"An error occurred: {e}")

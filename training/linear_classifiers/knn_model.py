@@ -10,8 +10,6 @@ import wandb
 from itertools import product
 from get_all_metrics import get_all_metrics
 from create_data_splits import create_data_splits
-from sklearn.model_selection import train_test_split
-
 
 
 def train():
@@ -187,7 +185,7 @@ def train():
             num_folds=5,
             seed_value=42,
             sequence_length=1)
-        X_train, X_val, X_test, y_train, y_val, y_test, _, _, _, _, _, _, _ = splits
+        X_train, X_val, X_test, y_train, y_val, y_test, _, _, _, _, _, _, _, session_train, session_val, session_test = splits
             
         # Balance training dataset
         smote = SMOTE(random_state=42) 
@@ -214,7 +212,8 @@ def train():
         #})
 
         test_metrics = get_all_metrics(y_pred, y_test, y_pred_proba=y_pred_proba,
-                                       sessions=None, window_size=None, tolerance=1)
+                                       sessions=session_test, window_size=config.window_size,
+                                       stride=config.stride, tolerance=1)
         test_metrics.pop("test_edt_per_session", None)
         for key in test_metrics:
             if key in test_metrics_list:
@@ -299,6 +298,8 @@ def main():
             'binary_multiclass': {'values': ['binary', 'multiclass']},
             'feature_set': {'values': ['curated_v3', 'curated_v1']},  #'full', 'stats', 'rf',
             'dataset': {'values': ['reg', 'norm', 'pca']},
+            'window_size': {'values': [1,5,10,15,30]},
+            'stride': {'values': [1,3,5,10]},
             'n_neighbors': {'values': [3, 5, 7, 10, 15, 30]},
             'feature_randomizer': {'values': [1]},
             'modality': {'values': [

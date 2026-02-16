@@ -7,7 +7,7 @@ from sklearn.metrics import (
 
 
 def get_all_metrics(y_pred, y_true, y_pred_proba=None, sessions=None,
-                    window_size=None, tolerance=0):
+                    window_size=None, stride=None, tolerance=0):
     """
     Compute extended evaluation metrics for frame-level predictions.
 
@@ -25,6 +25,9 @@ def get_all_metrics(y_pred, y_true, y_pred_proba=None, sessions=None,
     window_size : int or None
         Fixed window length for windowed predictions (mode voting).
         Passed from the model training script.
+    stride : int or None
+        Step size between consecutive windows. Defaults to window_size
+        (non-overlapping). Set stride < window_size for overlapping windows.
     tolerance : int
         Tolerance window for tolerant metrics (same as original get_metrics).
 
@@ -140,13 +143,14 @@ def get_all_metrics(y_pred, y_true, y_pred_proba=None, sessions=None,
 
     # ------------------------------------------------------------------
     # 4. Windowed Predictions (fixed-length, mode voting)
-    #    Splits each session into non-overlapping windows of `window_size`
+    #    Splits each session into windows of `window_size`
     #    frames.  The window-level prediction is the statistical mode of
     #    the per-frame predictions inside that window; likewise for labels.
     # ------------------------------------------------------------------
     if window_size is not None and window_size > 0 and sessions is not None:
+        effective_stride = stride if stride is not None else window_size
         win_preds, win_trues = _windowed_predictions(
-            y_pred, y_true, sessions, window_size
+            y_pred, y_true, sessions, window_size, effective_stride
         )
         if len(win_preds) > 0:
             win_classes = np.unique(np.concatenate([win_trues, win_preds]))
@@ -198,8 +202,16 @@ def get_all_metrics(y_pred, y_true, y_pred_proba=None, sessions=None,
 # Helper functions
 # ======================================================================
 
-def _windowed_predictions(y_pred, y_true, sessions, window_size):
-    """Return window-level mode predictions and labels."""
+def _windowed_predictions(y_pred, y_true, sessions, window_size, stride):
+    """Return window-level mode predictions and labels.
+
+    Parameters
+    ----------
+    stride : int
+        Step size between consecutive windows. When stride == window_size
+        the windows are non-overlapping; when stride < window_size they
+        overlap.
+    """
     win_preds = []
     win_trues = []
 
@@ -207,19 +219,20 @@ def _windowed_predictions(y_pred, y_true, sessions, window_size):
         mask = sessions == session
         sess_pred = y_pred[mask]
         sess_true = y_true[mask]
+        n_frames = len(sess_pred)
 
-        n_windows = len(sess_pred) // window_size
-        for w in range(n_windows):
-            start = w * window_size
+        start = 0
+        while start + window_size <= n_frames:
             end = start + window_size
             win_preds.append(stats.mode(sess_pred[start:end], keepdims=False).mode)
             win_trues.append(stats.mode(sess_true[start:end], keepdims=False).mode)
+            start += stride
 
         # Handle remaining frames if they form at least half a window
-        remainder = len(sess_pred) % window_size
+        remainder = n_frames - start
         if remainder >= window_size // 2:
-            win_preds.append(stats.mode(sess_pred[-remainder:], keepdims=False).mode)
-            win_trues.append(stats.mode(sess_true[-remainder:], keepdims=False).mode)
+            win_preds.append(stats.mode(sess_pred[start:], keepdims=False).mode)
+            win_trues.append(stats.mode(sess_true[start:], keepdims=False).mode)
 
     return np.array(win_preds), np.array(win_trues)
 
