@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 
-df = pd.read_csv("preprocessing/curated_features/all_participants_0_3.csv")
+df = pd.read_csv("allparticipants_100fps.csv")
 
 curated_features_df = pd.DataFrame()
 
@@ -27,14 +27,14 @@ curated_features_df = df[['frame', 'participant', 'binary_label', 'multiclass_la
 
 # average gaze
 
-curated_features_df['gaze_x'] = (df[' gaze_0_x'] + df[' gaze_1_x']) / 2
-curated_features_df['gaze_y'] = (df[' gaze_0_y'] + df[' gaze_1_y']) / 2
-curated_features_df['gaze_z'] = (df[' gaze_0_z'] + df[' gaze_1_z']) / 2
+curated_features_df['gaze_x'] = (df['gaze_0_x'] + df['gaze_1_x']) / 2
+curated_features_df['gaze_y'] = (df['gaze_0_y'] + df['gaze_1_y']) / 2
+curated_features_df['gaze_z'] = (df['gaze_0_z'] + df['gaze_1_z']) / 2
 
 
 # gaze magnitude
 
-curated_features_df['gaze_angle_mag'] = np.sqrt(df[' gaze_angle_x']**2 + df[' gaze_angle_y']**2)
+curated_features_df['gaze_angle_mag'] = np.sqrt(df['gaze_angle_x']**2 + df['gaze_angle_y']**2)
 
 
 # gaze shift
@@ -127,7 +127,7 @@ curated_features_df['verbal_response_time'] = curated_features_df['verbal_respon
 
 # cosine distance
 
-df_cosine_dist = pd.read_csv("preprocessing/curated_features/clip_text_cosine_similarity.csv")
+df_cosine_dist = pd.read_csv("clip_text_cosine_similarity.csv")
 
 curated_features_df = pd.merge(
     curated_features_df,
@@ -156,4 +156,4 @@ curated_features_df = curated_features_df[
 
 
 #print(curated_features_df)
-curated_features_df.to_csv("curated_features_dataset_v3.csv", index=False)
+curated_features_df.to_csv("curated_features_dataset_v4.csv", index=False)

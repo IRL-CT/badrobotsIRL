@@ -94,12 +94,8 @@ def main():
     # Define datasets to check
     datasets = [
         {
-            'name': 'Curated Features Dataset v3',
-            'path': 'curated_features_dataset_v3.csv'
-        },
-        {
-            'name': 'Curated Features Dataset V1',
-            'path': 'curated_features_dataset_v1.csv'
+            'name': 'Curated Features Dataset v4',
+            'path': 'curated_features_dataset_v4.csv'
         },
         {
             'name': 'Full Features',
