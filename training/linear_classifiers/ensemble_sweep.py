@@ -233,7 +233,7 @@ def main():
         description="Launch a wandb sweep over ensemble configurations.",
     )
     parser.add_argument("--project", required=True,
-                        help="wandb project name (e.g. brirl_linear_inter)")
+                        help="wandb project name (e.g. brirl_linear_inter_2).")
     parser.add_argument("--entity", default=None,
                         help="wandb entity. Defaults to your wandb default.")
     parser.add_argument("--count", type=int, default=None,
