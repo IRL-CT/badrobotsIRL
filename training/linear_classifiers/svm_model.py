@@ -13,7 +13,7 @@ from registry_utils import append_to_registry
 
 
 # Feature sets that use the full dataset without modality selection
-NO_MODALITY_SELECTION_SETS = {"catch22", "tsfresh", "curated_v1", "curated_v3", "rf"}
+NO_MODALITY_SELECTION_SETS = {"catch22", "tsfresh", "curated_v4", "rf"}
 
 
 def apply_windowing(df, window_size, stride, aggregation):
@@ -33,7 +33,7 @@ def apply_windowing(df, window_size, stride, aggregation):
         of each window — used to align auxiliary DataFrames (e.g. text embeddings).
     """
     df_reset = df.reset_index(drop=True)
-    participant_col = df_reset.columns[0]
+    participant_col = df_reset.columns[1]
     info_cols = df_reset.columns[:4].tolist()
     feature_cols = df_reset.columns[4:].tolist()
     binary_col = info_cols[2]
@@ -82,6 +82,10 @@ def apply_windowing(df, window_size, stride, aggregation):
             start += stride
 
     windowed_df = pd.DataFrame(rows, columns=df.columns).reset_index(drop=True)
+    windowed_df = windowed_df.dropna(axis=1, how="any").dropna(axis=0, how="any").reset_index(drop=True)
+
+    print(f"Applied windowing: window_size={window_size}, stride={stride}, aggregation={aggregation}")
+    print(f"Original samples: {len(df)}, Windowed samples: {len(windowed_df)}")
     return windowed_df, last_positions
 
 
@@ -99,7 +103,7 @@ def apply_catch22_windowing(df, window_size, stride):
     import pycatch22
 
     df_reset = df.reset_index(drop=True)
-    participant_col = df_reset.columns[0]
+    participant_col = df_reset.columns[1]
     info_cols = df_reset.columns[:4].tolist()
     feature_cols = df_reset.columns[4:].tolist()
     binary_col = info_cols[2]
@@ -132,7 +136,9 @@ def apply_catch22_windowing(df, window_size, stride):
             rows.append(row)
             start += stride
 
-    return pd.DataFrame(rows).reset_index(drop=True)
+    result = pd.DataFrame(rows).reset_index(drop=True)
+    result = result.dropna(axis=1, how="any").dropna(axis=0, how="any").reset_index(drop=True)
+    return result
 
 
 def apply_tsfresh_windowing(df, window_size, stride):
@@ -150,7 +156,7 @@ def apply_tsfresh_windowing(df, window_size, stride):
     from tsfresh.feature_extraction import EfficientFCParameters
 
     df_reset = df.reset_index(drop=True)
-    participant_col = df_reset.columns[0]
+    participant_col = df_reset.columns[1]
     info_cols = df_reset.columns[:4].tolist()
     feature_cols = df_reset.columns[4:].tolist()
     binary_col = info_cols[2]
@@ -200,7 +206,8 @@ def apply_tsfresh_windowing(df, window_size, stride):
     extracted = extracted.reset_index(drop=True)
 
     info_df = pd.DataFrame(info_rows).drop(columns=["_window_id"]).reset_index(drop=True)
-    return pd.concat([info_df, extracted], axis=1)
+    result = pd.concat([info_df, extracted], axis=1)
+    return result.dropna(axis=0, how="any").reset_index(drop=True)
 
 
 def train():
@@ -221,19 +228,22 @@ def train():
     # ------------------------------------------------------------------
     # Load base 100fps dataset
     # ------------------------------------------------------------------
-    if config.feature_set == "curated_v4":
+    if config.feature_set in ["curated_v4", "tsfresh", "catch22"]:
         df_base = pd.read_csv("../../preprocessing/curated_features/curated_features_dataset_v4.csv")
     elif config.feature_set == "rf":
         df_base = pd.read_csv("../../preprocessing/rf_features/allparticipants_rf_100fps.csv")
     else:
-        # 'full', 'catch22', 'tsfresh' — all start from the full 100fps feature set
+        # 'full' — all start from the full 100fps feature set
         df_base = pd.read_csv("../../preprocessing/full_features/allparticipants_100fps.csv")
+        #see unique participants
+        print("Unique participants in base dataset:", df_base.iloc[:, 1].unique())
 
     # ------------------------------------------------------------------
     # Apply windowing / on-the-fly feature extraction
     # ------------------------------------------------------------------
     window = config.window
-    win_stride = config.stride
+    win_stride = min(config.stride, window)
+    wandb.log({"effective_stride": win_stride, "effective_window": window})
 
     if config.feature_set == "catch22":
         df = apply_catch22_windowing(df_base, window, win_stride)
@@ -345,7 +355,8 @@ def train():
             df, config.binary_multiclass,
             fold_no=fold,
             num_folds=5,
-            seed_value=seed_value)
+            seed_value=42,
+            sequence_length=1)
         X_train, X_val, X_test, y_train, y_val, y_test, _, _, _, _, _, _, _, session_train, session_val, session_test = splits
 
         smote = SMOTE(random_state=seed_value)
@@ -367,14 +378,17 @@ def train():
         df_probs["y_pred"] = y_pred
         df_probs["y_true"] = y_test
 
+        effective_test_stride = min(config.test_stride, config.test_window_size)
+        wandb.log({"effective_test_stride": effective_test_stride, "effective_test_window_size": config.test_window_size})
         test_metrics = get_all_metrics(y_pred, y_test, y_pred_proba=y_pred_proba,
                                        sessions=session_test, window_size=config.test_window_size,
-                                       stride=config.test_stride, tolerance=1)
+                                       stride=effective_test_stride, tolerance=1)
         test_metrics.pop("test_edt_per_session", None)
         for key in test_metrics:
             if key in test_metrics_list:
                 test_metrics_list[key].append(test_metrics[key])
         wandb.log({f"t{fold}_{k}": v for k, v in test_metrics.items()})
+        print(test_metrics)
 
         print(confusion_matrix(y_test, y_pred))
 
