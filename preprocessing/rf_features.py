@@ -1,19 +1,114 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# config: {'dataset': 'reg', 'feature_set_tag': 'full', 'max_depth': 10, 'modality': 'pose_audio', 'n_estimators': 700, 'sequence_length': 60}
-
-# sorted_feature_importance = {' gaze_0_x': 0.0934678107680719, ' gaze_angle_x': 0.09205608815235256, ' gaze_0_z': 0.08945923141801461, ' gaze_1_x': 0.07717008921231835, ' gaze_1_z': 0.07489642580139956, ' gaze_1_y': 0.05762968653486568, ' gaze_angle_y': 0.05665992794155753, ' gaze_0_y': 0.04574451662721789, 'rightwrist_x_delta': 0.032715717174726586, 'rightwrist_y_delta': 0.03168249504282124, 'righteye_x_delta': 0.023323216396240288, 'nose_x_delta': 0.01902331284840967, 'rightelbow_x_delta': 0.017893654252662306, 'leftwrist_x_delta': 0.017854977945023092, 'lefteye_x_delta': 0.01710334290045413, 'leftwrist_y_delta': 0.016607431577211958, 'righteye_y_delta': 0.01274176456860272, 'nose_y_delta': 0.012509596219323038, 'lefteye_y_delta': 0.012273781881492085, 'leftear_x_delta': 0.010250917653578879, 'leftear_y_delta': 0.00968113431526955, 'rightear_y_delta': 0.00903537257252873, 'leftshoulder_x_delta': 0.008592058310500333, 'rightear_x_delta': 0.008589196158966228, 'Loudness_sma3': 0.008508735262623838, 'leftelbow_x_delta': 0.008128193411007897, 'spectralFlux_sma3': 0.007753620388874243, 'rightelbow_y_delta': 0.007660221305741616, 'leftelbow_y_delta': 0.007397109318156248, 'F2bandwidth_sma3nz': 0.007360531872791136, 'F2frequency_sma3nz': 0.007149718689873937, 'F3frequency_sma3nz': 0.007034615039310135, 'F1bandwidth_sma3nz': 0.006826888019229163, 'F1frequency_sma3nz': 0.006659871796300884, 'neck_x_delta': 0.006611675349416953, 'leftshoulder_y_delta': 0.0062734848828473935, 'rightshoulder_y_delta': 0.00604479931159928, 'neck_y_delta': 0.00577888801389634, 'F3bandwidth_sma3nz': 0.005696432604928998, 'rightshoulder_x_delta': 0.0052636592890351625, 'F0semitoneFrom27.5Hz_sma3nz': 0.005107156716755595, 'hammarbergIndex_sma3': 0.00470901251142633, 'F3amplitudeLogRelF0_sma3nz': 0.004362121539991881, 'alphaRatio_sma3': 0.0030878969823307546, 'F2amplitudeLogRelF0_sma3nz': 0.0025176384656811724, 'mfcc3_sma3': 0.002503816540873007, 'mfcc1_sma3': 0.0024604270052123126, 'slope0-500_sma3': 0.002191604642571896, 'logRelF0-H1-A3_sma3nz': 0.0020085247411951884, 'jitterLocal_sma3nz': 0.0020084643131262777, 'slope500-1500_sma3': 0.001944264058291286, 'HNRdBACF_sma3nz': 0.001877996796154912, 'mfcc4_sma3': 0.0018089769640084973, 'shimmerLocaldB_sma3nz': 0.0017124181116974571, 'F1amplitudeLogRelF0_sma3nz': 0.0017069126845952118, 'mfcc2_sma3': 0.001545928941392508, 'logRelF0-H1-H2_sma3nz': 0.0013366481554535933}
-# feature_importance_df = pd.DataFrame.from_dict(sorted_feature_importance, orient='index')
-# feature_importance_df.to_csv(f"feature_importances.csv")
-# fig = plt.figure(figsize=(20, 10))
-# plt.bar(sorted_feature_importance.keys(), sorted_feature_importance.values())
-# plt.show()
-# fig.savefig(f"feature_importances.png")
-
+# config: {'max_depth': 20, 'max_features': 'sqrt', 'min_samples_leaf': 2, 'min_samples_split': 2, 'n_estimators': 100}
+'''
+sorted_feature_importance = {
+                    "gaze_0_z": 0.053123,
+                    "gaze_angle_x": 0.045321,
+                    "gaze_0_x": 0.044280,
+                    "AU10_r": 0.042298,
+                    "gaze_1_z": 0.037489,
+                    "AU06_r": 0.034638,
+                    "AU12_r": 0.034578,
+                   "gaze_1_x": 0.033643,
+                     "AU20_r": 0.031100,
+                     "AU25_r": 0.029510,
+               "gaze_angle_y": 0.028523,
+                     "AU04_r": 0.028517,
+                   "gaze_1_y": 0.028384,
+                     "AU15_r": 0.027472,
+                     "AU09_r": 0.026516,
+                   "gaze_0_y": 0.025261,
+                     "AU14_r": 0.023301,
+                     "AU17_r": 0.022754,
+                     "AU07_r": 0.020920,
+                     "AU01_r": 0.020713,
+                     "AU02_r": 0.020392,
+                     "AU26_r": 0.019713,
+                     "AU23_r": 0.014268,
+                     "AU45_r": 0.012195,
+                     "AU23_c": 0.010358,
+         "rightwrist_x_delta": 0.010124,
+           "righteye_x_delta": 0.010065,
+         "rightwrist_y_delta": 0.009779,
+                     "AU14_c": 0.009390,
+               "nose_x_delta": 0.009371,
+                     "AU05_r": 0.009277,
+            "lefteye_x_delta": 0.009012,
+            "lefteye_y_delta": 0.008293,
+                     "AU10_c": 0.008202,
+               "nose_y_delta": 0.007760,
+                     "AU02_c": 0.007367,
+                     "AU01_c": 0.007301,
+          "leftwrist_x_delta": 0.006629,
+          "leftwrist_y_delta": 0.006408,
+                     "AU06_c": 0.006403,
+                     "AU12_c": 0.006237,
+                     "AU17_c": 0.006232,
+           "righteye_y_delta": 0.006161,
+                     "AU15_c": 0.006134,
+                     "AU09_c": 0.005873,
+           "rightear_x_delta": 0.005616,
+                     "AU04_c": 0.005547,
+          "spectralFlux_sma3": 0.005062,
+            "leftear_x_delta": 0.004926,
+         "rightelbow_x_delta": 0.004892,
+                     "AU26_c": 0.004563,
+                     "AU45_c": 0.004495,
+                     "AU25_c": 0.004457,
+                     "AU05_c": 0.004413,
+                     "AU20_c": 0.004279,
+         "F3frequency_sma3nz": 0.004274,
+            "leftear_y_delta": 0.003847,
+                     "AU07_c": 0.003726,
+              "Loudness_sma3": 0.003724,
+           "rightear_y_delta": 0.003624,
+         "F1frequency_sma3nz": 0.003526,
+          "leftelbow_x_delta": 0.003437,
+         "F1bandwidth_sma3nz": 0.003272,
+         "rightelbow_y_delta": 0.003245,
+               "neck_x_delta": 0.003194,
+       "leftshoulder_x_delta": 0.002857,
+          "leftelbow_y_delta": 0.002855,
+      "rightshoulder_x_delta": 0.002795,
+         "F2frequency_sma3nz": 0.002629,
+"F0semitoneFrom27.5Hz_sma3nz": 0.002588,
+               "neck_y_delta": 0.002562,
+ "F2amplitudeLogRelF0_sma3nz": 0.002536,
+         "F3bandwidth_sma3nz": 0.002511,
+       "leftshoulder_y_delta": 0.002495,
+      "rightshoulder_y_delta": 0.002257,
+                 "mfcc3_sma3": 0.001965,
+         "F2bandwidth_sma3nz": 0.001923,
+       "hammarbergIndex_sma3": 0.001887,
+            "alphaRatio_sma3": 0.001569,
+ "F3amplitudeLogRelF0_sma3nz": 0.001555,
+         "slope500-1500_sma3": 0.001266,
+                 "mfcc1_sma3": 0.001218,
+            "slope0-500_sma3": 0.000967,
+                     "AU28_c": 0.000939,
+                 "mfcc2_sma3": 0.000826,
+      "shimmerLocaldB_sma3nz":  0.000822,
+      "logRelF0-H1-A3_sma3nz": 0.000794,
+                 "mfcc4_sma3": 0.000747,
+ "F1amplitudeLogRelF0_sma3nz": 0.000661,
+            "HNRdBACF_sma3nz": 0.000554,
+      "logRelF0-H1-H2_sma3nz": 0.000445,
+         "jitterLocal_sma3nz":  0.000370
+}
+feature_importance_df = pd.DataFrame.from_dict(sorted_feature_importance, orient='index')
+feature_importance_df.to_csv(f"feature_importances.csv")
+fig = plt.figure(figsize=(20, 10))
+plt.bar(sorted_feature_importance.keys(), sorted_feature_importance.values())
+plt.xticks(rotation=90)
+plt.tight_layout()
+plt.show()
+fig.savefig(f"feature_importances.png")
+'''
 # cutoff at 30% drop --> if feature drop % from previous is over 30%, cut off that feature and all features with lesser importance
 
-raw_data = '../preprocessing/merged_features/all_participants_0_3.csv'
+raw_data = '../preprocessing/interpolation/allparticipants_100fps.csv'
 data = pd.read_csv(raw_data)
 features_rf = pd.read_csv('../preprocessing/feature_importances.csv')
 
@@ -21,12 +116,12 @@ features_rf['importance_drop'] = features_rf['importance'].pct_change(periods=-1
 features_rf.to_csv("feature_importance_percentage_drop.csv")
 
 print(features_rf)
-cutoff_index = features_rf[features_rf['importance_drop'] > 0.4].index.min()
+cutoff_index = features_rf[features_rf['importance_drop'] > 0.3].index.min()
 
 if pd.notna(cutoff_index):
     cutoff_feature = features_rf.iloc[cutoff_index]['feature']
-    print(f"cutoff feature > 0.4 : {cutoff_feature}")
-    features_to_keep = features_rf.iloc[:cutoff_index]['feature'].tolist()
+    print(f"cutoff feature > 0.3 : after {cutoff_feature}")
+    features_to_keep = features_rf.iloc[:cutoff_index+1]['feature'].tolist()
 else:
     features_to_keep = features_rf['feature'].tolist()
 
@@ -38,6 +133,7 @@ columns_to_select = non_feature_columns + [feature for feature in feature_column
 filtered_df = data[columns_to_select]
 
 print(features_to_keep)
-print(filtered_df)
+print(data.columns)
+print(filtered_df.columns)
 
-filtered_df.to_csv('../preprocessing/all_participants_rf_0_3_40.csv', index=False)
+filtered_df.to_csv('../preprocessing/interpolation/rf_allparticipants_100fps.csv', index=False)

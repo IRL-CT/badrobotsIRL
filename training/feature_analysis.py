@@ -4,6 +4,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 import matplotlib.pyplot as plt
+from sklearn.base import clone
 from create_data_splits import create_data_splits
 import wandb
 
@@ -38,11 +39,16 @@ def log_metrics_and_features(file_name, feature_groups, X_train, X_test, y_train
             })
 
 def run_model_on_feature_subset(X_train, X_test, y_train, y_test, feature_subset, best_rf):
+    # Subset features FIRST
     X_train_sub = X_train[feature_subset]
     X_test_sub = X_test[feature_subset]
 
-    best_rf.fit(X_train_sub, y_train)
-    y_pred = best_rf.predict(X_test_sub)
+    # Clone the tuned model (fresh, unfitted copy)
+    rf_clone = clone(best_rf)
+
+    # Train + evaluate
+    rf_clone.fit(X_train_sub, y_train)
+    y_pred = rf_clone.predict(X_test_sub)
 
     accuracy = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred, average='macro')
@@ -51,21 +57,20 @@ def run_model_on_feature_subset(X_train, X_test, y_train, y_test, feature_subset
 
     return accuracy, f1, precision, recall
 
-df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
+df = pd.read_csv("../preprocessing/interpolation/opensmile_interpolated.csv")
 
 participant_frames_labels = df.iloc[:, :4]
 
-audio_features = df.iloc[:, 63:88]
+# audio_features = df.iloc[:, 63:88]
 
-df_audio = pd.concat([participant_frames_labels, audio_features], axis=1)
+# df_audio = pd.concat([participant_frames_labels, audio_features], axis=1)
 
-features = audio_features
+features = df.iloc[:, 4:]
 target = df.iloc[:, 2].values.astype('int')
 
 #splits = create_data_splits(df, fold_no=0, num_folds=5, seed_value=42, sequence_length=5)
 
-# for audio only
-splits = create_data_splits(df_audio, model="binary", fold_no=0, num_folds=5, seed_value=42, sequence_length=5)
+splits = create_data_splits(df, model="binary", fold_no=0, num_folds=5, seed_value=42, sequence_length=5)
 X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length = splits
 
 param_grid = {
@@ -76,7 +81,7 @@ param_grid = {
     'max_features': ['sqrt'],
 }
 
-wandb.init(project="rf_feature_importance_audio", config=param_grid)
+wandb.init(project="rf_feature_importance_interpolated", config=param_grid)
 
 rf = RandomForestClassifier(random_state=42)
 
