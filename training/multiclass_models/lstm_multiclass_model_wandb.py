@@ -972,7 +972,8 @@ def train():
         df, last_positions = apply_windowing(df_base, window, win_stride, config.aggregation)
 
     # ------------------------------------------------------------------
-    # Feature / modality selection (only for 'full' feature set)
+    # Feature / modality selection (only for 'full' and 'selectkbest' feature sets)
+    # rf is all facial features
     # ------------------------------------------------------------------
     data = config.dataset
     fusion_type = config.fusion_type

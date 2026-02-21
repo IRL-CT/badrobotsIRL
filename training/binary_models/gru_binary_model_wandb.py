@@ -1018,7 +1018,8 @@ def train():
         df, last_positions = apply_windowing(df_base, window, win_stride, config.aggregation)
 
     # ------------------------------------------------------------------
-    # Feature / modality selection (only for 'full' feature set)
+    # Feature / modality selection (only for 'full' and 'selectkbest' feature sets)
+    # rf is all facial features
     # ------------------------------------------------------------------
     data = config.dataset
     fusion_type = config.fusion_type
@@ -1119,7 +1120,7 @@ def train():
             elif fusion_type == "late":
                 train_late_fusion(dfs, config)
     else:
-        # curated / curated_v4 / catch22 / tsfresh / rf feature sets
+        # curated_v4 / catch22 / tsfresh / rf feature sets
         if data == "norm":
             df = create_normalized_df(df)
         elif data == "pca":
