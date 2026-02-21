@@ -2,6 +2,7 @@ import wandb
 import numpy as np
 import pandas as pd
 import random
+import gc
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
@@ -14,9 +15,188 @@ from keras.utils import to_categorical
 import tensorflow as tf
 from sklearn.metrics import confusion_matrix
 from create_data_splits import create_data_splits, create_data_splits_pca
-from get_metrics import get_test_metrics
+from get_all_metrics import get_all_metrics
 from lstm_single_modality import train_single_modality_model
-import gc
+
+
+# Feature sets that use the full dataset without modality selection
+NO_MODALITY_SELECTION_SETS = {"catch22", "tsfresh", "curated_v4", "rf"}
+
+
+def apply_windowing(df, window_size, stride, aggregation):
+    """Aggregate a per-frame DataFrame into windowed samples.
+
+    Windowing is applied per participant (column 0). Features (columns 4+)
+    are aggregated with the specified method. Labels follow:
+      - 'average' / 'last'  → last frame of the window
+      - 'mode'              → statistical mode of the window
+
+    Returns
+    -------
+    windowed_df : pd.DataFrame
+        New DataFrame with one row per window.
+    last_positions : list[int]
+        Positional indices (in the reset-index view of df) of the last frame
+        of each window — used to align auxiliary DataFrames (e.g. text embeddings).
+    """
+    df_reset = df.reset_index(drop=True)
+    participant_col = df_reset.columns[1]
+    info_cols = df_reset.columns[:4].tolist()
+    feature_cols = df_reset.columns[4:].tolist()
+    binary_col = info_cols[2]
+    multiclass_col = info_cols[3]
+
+    rows = []
+    last_positions = []
+
+    for participant in df_reset[participant_col].unique():
+        p_positions = np.where(df_reset[participant_col] == participant)[0]
+        n = len(p_positions)
+        start = 0
+        while start + window_size <= n:
+            end = start + window_size
+            window_pos = p_positions[start:end]
+            last_pos = int(p_positions[end - 1])
+            window = df_reset.iloc[window_pos]
+            last_row = df_reset.iloc[last_pos]
+            last_positions.append(last_pos)
+
+            row = {
+                info_cols[0]: last_row[info_cols[0]],
+                info_cols[1]: last_row[info_cols[1]],
+            }
+
+            # Labels
+            if aggregation == "mode":
+                row[binary_col] = window[binary_col].mode().iloc[0]
+                row[multiclass_col] = window[multiclass_col].mode().iloc[0]
+            else:  # 'average' or 'last'
+                row[binary_col] = last_row[binary_col]
+                row[multiclass_col] = last_row[multiclass_col]
+
+            # Features
+            if aggregation == "average":
+                for col in feature_cols:
+                    row[col] = window[col].mean()
+            elif aggregation == "mode":
+                for col in feature_cols:
+                    row[col] = window[col].mode().iloc[0]
+            else:  # 'last'
+                for col in feature_cols:
+                    row[col] = last_row[col]
+
+            rows.append(row)
+            start += stride
+
+    windowed_df = pd.DataFrame(rows, columns=df.columns).reset_index(drop=True)
+    windowed_df = windowed_df.dropna(axis=1, how="any").dropna(axis=0, how="any").reset_index(drop=True)
+
+    print(f"Applied windowing: window_size={window_size}, stride={stride}, aggregation={aggregation}")
+    print(f"Original samples: {len(df)}, Windowed samples: {len(windowed_df)}")
+    return windowed_df, last_positions
+
+
+def apply_catch22_windowing(df, window_size, stride):
+    """Apply catch22 feature extraction on sliding windows per participant."""
+    import pycatch22
+
+    df_reset = df.reset_index(drop=True)
+    participant_col = df_reset.columns[1]
+    info_cols = df_reset.columns[:4].tolist()
+    feature_cols = df_reset.columns[4:].tolist()
+    binary_col = info_cols[2]
+    multiclass_col = info_cols[3]
+
+    rows = []
+    for participant in df_reset[participant_col].unique():
+        p_positions = np.where(df_reset[participant_col] == participant)[0]
+        n = len(p_positions)
+        start = 0
+        while start + window_size <= n:
+            end = start + window_size
+            window_pos = p_positions[start:end]
+            window = df_reset.iloc[window_pos]
+            last_row = df_reset.iloc[int(p_positions[end - 1])]
+
+            row = {
+                info_cols[0]: last_row[info_cols[0]],
+                info_cols[1]: last_row[info_cols[1]],
+                binary_col: last_row[binary_col],
+                multiclass_col: last_row[multiclass_col],
+            }
+
+            for col in feature_cols:
+                series = window[col].values.tolist()
+                result = pycatch22.catch22_all(series)
+                for name, val in zip(result["names"], result["values"]):
+                    row[f"{col}__{name}"] = val
+
+            rows.append(row)
+            start += stride
+
+    result = pd.DataFrame(rows).reset_index(drop=True)
+    result = result.dropna(axis=1, how="any").dropna(axis=0, how="any").reset_index(drop=True)
+    return result
+
+
+def apply_tsfresh_windowing(df, window_size, stride):
+    """Apply tsfresh feature extraction on sliding windows per participant."""
+    from tsfresh import extract_features
+    from tsfresh.feature_extraction import EfficientFCParameters
+
+    df_reset = df.reset_index(drop=True)
+    participant_col = df_reset.columns[1]
+    info_cols = df_reset.columns[:4].tolist()
+    feature_cols = df_reset.columns[4:].tolist()
+    binary_col = info_cols[2]
+    multiclass_col = info_cols[3]
+
+    info_rows = []
+    window_slices = []
+    window_id = 0
+
+    for participant in df_reset[participant_col].unique():
+        p_positions = np.where(df_reset[participant_col] == participant)[0]
+        n = len(p_positions)
+        start = 0
+        while start + window_size <= n:
+            end = start + window_size
+            window_pos = p_positions[start:end]
+            window = df_reset.iloc[window_pos]
+            last_row = df_reset.iloc[int(p_positions[end - 1])]
+
+            info_rows.append({
+                info_cols[0]: last_row[info_cols[0]],
+                info_cols[1]: last_row[info_cols[1]],
+                binary_col: last_row[binary_col],
+                multiclass_col: last_row[multiclass_col],
+                "_window_id": window_id,
+            })
+
+            slice_df = window[feature_cols].copy()
+            slice_df = slice_df.reset_index(drop=True)
+            slice_df["_window_id"] = window_id
+            slice_df["_time"] = range(window_size)
+            window_slices.append(slice_df)
+
+            window_id += 1
+            start += stride
+
+    tsfresh_input = pd.concat(window_slices, ignore_index=True)
+    extracted = extract_features(
+        tsfresh_input,
+        column_id="_window_id",
+        column_sort="_time",
+        default_fc_parameters=EfficientFCParameters(),
+        disable_progressbar=True,
+    )
+    extracted = extracted.dropna(axis=1, how="any")
+    extracted = extracted.reset_index(drop=True)
+
+    info_df = pd.DataFrame(info_rows).drop(columns=["_window_id"]).reset_index(drop=True)
+    result = pd.concat([info_df, extracted], axis=1)
+    return result.dropna(axis=0, how="any").reset_index(drop=True)
+
 
 def build_early_late_model(sequence_length, input_shape, num_lstm_layers, lstm_units, activation, use_bidirectional, dropout, reg):
     model = Sequential()
@@ -47,6 +227,41 @@ def build_early_late_model(sequence_length, input_shape, num_lstm_layers, lstm_u
 
     return model
 
+
+def _extract_session_test(df, fold):
+    """Reconstruct the test-fold session array for get_all_metrics.
+
+    Replays the same fold-splitting logic used by create_data_splits
+    so that session_test aligns with the test predictions.
+    """
+    excluded_participants = ["p24nodbot"]
+    df_filtered = df[~df['participant'].isin(excluded_participants)].reset_index(drop=True)
+    all_sessions = df_filtered['participant'].values
+    fold_sessions = df_filtered['participant'].unique()
+    np.random.seed(42)
+    np.random.shuffle(fold_sessions)
+    num_of_sessions = len(fold_sessions)
+    train_size = int(np.floor(0.6 * num_of_sessions))
+    val_size = int(np.ceil(0.2 * num_of_sessions))
+    start_train_index = fold * val_size
+    end_train_index = (start_train_index + train_size if start_train_index + train_size <= len(fold_sessions)
+                       else start_train_index + train_size - len(fold_sessions))
+    if start_train_index >= end_train_index:
+        train_fold = np.concatenate((fold_sessions[start_train_index:], fold_sessions[:end_train_index]))
+    else:
+        train_fold = fold_sessions[start_train_index:end_train_index]
+    val_train_index = end_train_index
+    val_end_index = (val_train_index + val_size if val_train_index + val_size <= len(fold_sessions)
+                     else val_train_index + val_size - len(fold_sessions))
+    if val_train_index >= val_end_index:
+        val_fold = np.concatenate((fold_sessions[val_train_index:], fold_sessions[:val_end_index]))
+    else:
+        val_fold = fold_sessions[val_train_index:val_end_index]
+    test_fold = np.setdiff1d(fold_sessions, np.concatenate((train_fold, val_fold)))
+    test_idx = df_filtered[df_filtered['participant'].isin(test_fold)].index
+    return all_sessions[test_idx]
+
+
 def train_early_fusion(df, config):
 
     num_lstm_layers = config.num_lstm_layers
@@ -71,7 +286,14 @@ def train_early_fusion(df, config):
         "test_accuracy_tolerant": [],
         "test_precision_tolerant": [],
         "test_recall_tolerant": [],
-        "test_f1_tolerant": []
+        "test_f1_tolerant": [],
+        "test_auc": [],
+        "test_fnr": [],
+        "test_windowed_accuracy": [],
+        "test_windowed_precision": [],
+        "test_windowed_recall": [],
+        "test_windowed_f1": [],
+        "test_earliest_detection_time": [],
     }
 
     for fold in range(5):
@@ -91,14 +313,17 @@ def train_early_fusion(df, config):
 
         y_train_sequences = to_categorical(y_train_sequences, num_classes=4)
         y_val_sequences = to_categorical(y_val_sequences, num_classes=4)
-        y_test_sequences = to_categorical(y_test_sequences, num_classes=4)
+        y_test_sequences_cat = to_categorical(y_test_sequences, num_classes=4)
+
+        # Extract session info for get_all_metrics
+        session_test = _extract_session_test(df, fold)
 
         print("X_train_sequences shape:", X_train_sequences.shape)
         print("X_val_sequences shape:", X_val_sequences.shape)
         print("X_test_sequences shape:", X_test_sequences.shape)
         print("y_train_sequences shape:", y_train_sequences.shape)
         print("y_val_sequences shape:", y_val_sequences.shape)
-        print("y_test_sequences shape:", y_test_sequences.shape)
+        print("y_test_sequences shape:", y_test_sequences_cat.shape)
 
 
         if kernel_regularizer == "l1":
@@ -178,16 +403,9 @@ def train_early_fusion(df, config):
 
         df_probs = pd.DataFrame(y_predict_probs_clean)
 
-        # table = wandb.Table(dataframe=df_probs)
-
-        # wandb.log({"fold_{}_prediction_probabilities".format(fold): y_predict_probs_clean})
-        # wandb.log({"fold_{}_prediction_probabilities_table".format(fold): table})
-        
         y_pred = np.argmax(y_predict_probs_clean, axis=1)
-        y_test_sequences = np.argmax(y_test_sequences, axis=1)
-
         y_test_class_indices = y_test_sequences
-        
+
         cm = confusion_matrix(y_test_class_indices, y_pred)
 
         unique, counts = np.unique(y_test, return_counts=True)
@@ -196,8 +414,6 @@ def train_early_fusion(df, config):
             print(f"Label {label}: {count}")
 
         print("\nConfusion Matrix (Multiclass):")
-        #print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
-
         print(pd.DataFrame(
             cm,
             index=[f"Actual {c}" for c in range(num_classes)],
@@ -206,12 +422,22 @@ def train_early_fusion(df, config):
 
         wandb.log({f"fold_{fold}_confusion_matrix": cm})
 
-        test_metrics = get_test_metrics(y_pred, y_test_sequences, tolerance=1)
-        for key in test_metrics_list.keys():
-            test_metrics_list[key].append(test_metrics[key])
+        effective_test_stride = min(config.test_stride, config.test_window_size)
+        wandb.log({"effective_test_stride": effective_test_stride, "effective_test_window_size": config.test_window_size})
+        test_metrics = get_all_metrics(y_pred, y_test_class_indices, y_pred_proba=y_predict_probs_clean,
+                                       sessions=session_test, window_size=config.test_window_size,
+                                       stride=effective_test_stride, tolerance=1)
+        test_metrics.pop("test_edt_per_session", None)
+
+        for key in test_metrics:
+            if key in test_metrics_list:
+                test_metrics_list[key].append(test_metrics[key])
 
         wandb.log({f"fold_{fold}_metrics": test_metrics})
         print(f"Fold {fold} Test Metrics:", test_metrics)
+
+        tf.keras.backend.clear_session()
+        gc.collect()
     
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
     wandb.run.summary.update(avg_test_metrics)
@@ -244,7 +470,14 @@ def train_intermediate_fusion(modality_dfs, config):
         "test_accuracy_tolerant": [],
         "test_precision_tolerant": [],
         "test_recall_tolerant": [],
-        "test_f1_tolerant": []
+        "test_f1_tolerant": [],
+        "test_auc": [],
+        "test_fnr": [],
+        "test_windowed_accuracy": [],
+        "test_windowed_precision": [],
+        "test_windowed_recall": [],
+        "test_windowed_f1": [],
+        "test_earliest_detection_time": [],
     }
 
     if kernel_regularizer == "l1":
@@ -255,7 +488,7 @@ def train_intermediate_fusion(modality_dfs, config):
         reg = l1_l2(l1=0.01,l2=0.01)
     else:
         reg = None
-    
+
     for fold in range(5):
         print("Fold ", fold)
         
@@ -263,15 +496,18 @@ def train_intermediate_fusion(modality_dfs, config):
         for modality_key in modality_keys:
             df = modality_dfs[modality_key]
             splits[modality_key] = create_data_splits(df, "multiclass", fold_no=fold, num_folds=5, seed_value=42, sequence_length=sequence_length)
+
+        # Extract session info for get_all_metrics from first modality df
+        session_test = _extract_session_test(modality_dfs[modality_keys[0]], fold)
         
         first_modality = modality_keys[0]
         y_train_sequences = splits[first_modality][7] 
         y_val_sequences = splits[first_modality][9] 
         y_test_sequences = splits[first_modality][11] 
-        
+
         y_train_sequences = to_categorical(y_train_sequences, num_classes=4)
         y_val_sequences = to_categorical(y_val_sequences, num_classes=4)
-        y_test_sequences = to_categorical(y_test_sequences, num_classes=4)
+        y_test_sequences_cat = to_categorical(y_test_sequences, num_classes=4)
         
         feature_inputs = []
         feature_outputs = []
@@ -297,7 +533,7 @@ def train_intermediate_fusion(modality_dfs, config):
         x = LSTM(lstm_units, activation=activation, kernel_regularizer=reg)(concatenated_features)
         x = Dropout(dropout)(x)
         x = BatchNormalization()(x)
-        
+
         num_classes = y_train_sequences.shape[1] if len(y_train_sequences.shape) > 1 else len(np.unique(y_train_sequences))
         print("Num classes: ", num_classes)
         x = Dense(dense_units, activation=activation)(x)
@@ -369,29 +605,18 @@ def train_intermediate_fusion(modality_dfs, config):
         y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
         
         df_probs = pd.DataFrame(y_predict_probs_clean)
-        # table = wandb.Table(dataframe=df_probs)
-        # wandb.log({f"fold_{fold}_prediction_probabilities": y_predict_probs_clean})
-        # wandb.log({f"fold_{fold}_prediction_probabilities_table": table})
-
-        y_pred = np.argmax(y_predict_probs_clean, axis=1)
-
-        if len(y_test_sequences.shape) > 1 and y_test_sequences.shape[1] > 1:
-            y_test_class_indices = np.argmax(y_test_sequences, axis=1)
-        else:
-            y_test_class_indices = y_test_sequences
-
-        y_test_class_indices = y_test_sequences
         
+        y_pred = np.argmax(y_predict_probs_clean, axis=1)
+        y_test_class_indices = y_test_sequences
+
         cm = confusion_matrix(y_test_class_indices, y_pred)
 
-        unique, counts = np.unique(y_test, return_counts=True)
+        unique, counts = np.unique(y_test_class_indices, return_counts=True)
         print("\nTest label distribution:")
         for label, count in zip(unique, counts):
             print(f"Label {label}: {count}")
 
         print("\nConfusion Matrix (Multiclass):")
-        #print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
-
         print(pd.DataFrame(
             cm,
             index=[f"Actual {c}" for c in range(num_classes)],
@@ -400,13 +625,23 @@ def train_intermediate_fusion(modality_dfs, config):
 
         wandb.log({f"fold_{fold}_confusion_matrix": cm})
 
-        test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
+        effective_test_stride = min(config.test_stride, config.test_window_size)
+        wandb.log({"effective_test_stride": effective_test_stride, "effective_test_window_size": config.test_window_size})
+        test_metrics = get_all_metrics(y_pred, y_test_class_indices, y_pred_proba=y_predict_probs_clean,
+                                       sessions=session_test, window_size=config.test_window_size,
+                                       stride=effective_test_stride, tolerance=1)
+        test_metrics.pop("test_edt_per_session", None)
         
-        for key in test_metrics_list.keys():
-            test_metrics_list[key].append(test_metrics[key])
+        for key in test_metrics:
+            if key in test_metrics_list:
+                test_metrics_list[key].append(test_metrics[key])
         
         wandb.log({f"fold_{fold}_metrics": test_metrics})
         print(f"Fold {fold} Test Metrics:", test_metrics)
+
+        tf.keras.backend.clear_session()
+        gc.collect()
+
     
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
     wandb.run.summary.update(avg_test_metrics)
@@ -439,7 +674,14 @@ def train_late_fusion(modality_dfs, config):
         "test_accuracy_tolerant": [],
         "test_precision_tolerant": [],
         "test_recall_tolerant": [],
-        "test_f1_tolerant": []
+        "test_f1_tolerant": [],
+        "test_auc": [],
+        "test_fnr": [],
+        "test_windowed_accuracy": [],
+        "test_windowed_precision": [],
+        "test_windowed_recall": [],
+        "test_windowed_f1": [],
+        "test_earliest_detection_time": [],
     }
 
     if kernel_regularizer == "l1":
@@ -459,6 +701,9 @@ def train_late_fusion(modality_dfs, config):
         for modality_key in modality_keys:
             df = modality_dfs[modality_key]
             splits[modality_key] = create_data_splits(df, "multiclass", fold_no=fold, num_folds=5, seed_value=42, sequence_length=sequence_length)
+
+        # Extract session info for get_all_metrics from first modality df
+        session_test = _extract_session_test(modality_dfs[modality_keys[0]], fold)
 
         input_layers = []
         outputs = []
@@ -494,16 +739,20 @@ def train_late_fusion(modality_dfs, config):
 
         if len(y_train_sequences.shape) == 1 or y_train_sequences.shape[1] == 1:
             num_classes = len(np.unique(y_train_sequences))
-            y_train_sequences = to_categorical(y_train_sequences, num_classes=num_classes)
-            y_val_sequences = to_categorical(y_val_sequences, num_classes=num_classes)
-            y_test_sequences = to_categorical(y_test_sequences, num_classes=num_classes)
+            y_train_sequences_cat = to_categorical(y_train_sequences, num_classes=num_classes)
+            y_val_sequences_cat = to_categorical(y_val_sequences, num_classes=num_classes)
+            y_test_sequences_cat = to_categorical(y_test_sequences, num_classes=num_classes)
         else:
             num_classes = y_train_sequences.shape[1]
+            y_train_sequences_cat = y_train_sequences
+            y_val_sequences_cat = y_val_sequences
+            y_test_sequences_cat = y_test_sequences
 
         x = Dense(dense_units, activation=activation)(concatenated)
         output_layer = Dense(num_classes, activation="softmax")(x)
         
         model = Model(inputs=input_layers, outputs=output_layer)
+
         model.summary()
 
         if optimizer == 'adam':
@@ -522,10 +771,10 @@ def train_late_fusion(modality_dfs, config):
         test_inputs = [splits[m][10] for m in modality_keys]
         
         model_history = model.fit(
-            train_inputs, y_train_sequences,
+            train_inputs, y_train_sequences_cat,
             epochs=epochs,
             batch_size=batch_size,
-            validation_data=(val_inputs, y_val_sequences),
+            validation_data=(val_inputs, y_val_sequences_cat),
             verbose=2
         )
         
@@ -569,28 +818,18 @@ def train_late_fusion(modality_dfs, config):
         y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
 
         df_probs = pd.DataFrame(y_predict_probs_clean)
-        # wandb.log({f"fold_{fold}_prediction_probabilities": y_predict_probs_clean})
-        # wandb.log({f"fold_{fold}_prediction_probabilities_table": wandb.Table(dataframe=df_probs)})
 
         y_pred = np.argmax(y_predict_probs_clean, axis=1)
-
-        if len(y_test_sequences.shape) > 1 and y_test_sequences.shape[1] > 1:
-            y_test_class_indices = np.argmax(y_test_sequences, axis=1)
-        else:
-            y_test_class_indices = y_test_sequences
-
         y_test_class_indices = y_test_sequences
-        
+
         cm = confusion_matrix(y_test_class_indices, y_pred)
 
-        unique, counts = np.unique(y_test, return_counts=True)
+        unique, counts = np.unique(y_test_class_indices, return_counts=True)
         print("\nTest label distribution:")
         for label, count in zip(unique, counts):
             print(f"Label {label}: {count}")
 
         print("\nConfusion Matrix (Multiclass):")
-        #print(pd.DataFrame(cm, index=["Actual 0", "Actual 1", "Actual 2", "Actual 3"], columns=["Pred 0", "Pred 1", "Pred2 2", "Pred 3"]))
-
         print(pd.DataFrame(
             cm,
             index=[f"Actual {c}" for c in range(num_classes)],
@@ -599,13 +838,23 @@ def train_late_fusion(modality_dfs, config):
 
         wandb.log({f"fold_{fold}_confusion_matrix": cm})
 
-        test_metrics = get_test_metrics(y_pred, y_test_class_indices, tolerance=1)
+        effective_test_stride = min(config.test_stride, config.test_window_size)
+        wandb.log({"effective_test_stride": effective_test_stride, "effective_test_window_size": config.test_window_size})
+        test_metrics = get_all_metrics(y_pred, y_test_class_indices, y_pred_proba=y_predict_probs_clean,
+                                       sessions=session_test, window_size=config.test_window_size,
+                                       stride=effective_test_stride, tolerance=1)
+        test_metrics.pop("test_edt_per_session", None)
 
-        for key in test_metrics_list.keys():
-            test_metrics_list[key].append(test_metrics[key])
+        for key in test_metrics:
+            if key in test_metrics_list:
+                test_metrics_list[key].append(test_metrics[key])
 
         wandb.log({f"fold_{fold}_metrics": test_metrics})
         print(f"Fold {fold} Test Metrics:", test_metrics)
+
+        tf.keras.backend.clear_session()
+        gc.collect()
+
 
     avg_test_metrics = {f"avg_{key}": np.mean(values) for key, values in test_metrics_list.items()}
     wandb.run.summary.update(avg_test_metrics)
@@ -630,6 +879,13 @@ def validate_modality_feature_combination(modality, feature_set):
     if feature_set == 'rf' and 'text' in modality_components:
         return False
     
+    # 'selectkbest' only has facial and audio features
+    if feature_set == 'selectkbest':
+        valid_components = ['facial', 'audio']
+        for component in modality_components:
+            if component not in valid_components:
+                return False
+    
     return True
 
 def create_normalized_df(df):
@@ -648,6 +904,8 @@ def create_normalized_df(df):
     return norm_df
 
 def create_norm_pca_df(df):
+    if df.empty:
+        raise ValueError("create_norm_pca_df: Input DataFrame is empty.")
     participant_frames_labels = df.iloc[:, :4]
 
     x = df.iloc[:, 4:]
@@ -664,11 +922,7 @@ def create_norm_pca_df(df):
 
 def train():
 
-    wandb.init(
-        project="curated_v0",
-        config={"curated_dataset_version": "v3"},
-        tags=["curated_dataset_v3"]
-    )
+    wandb.init()
     config = wandb.config
     print(config)
 
@@ -678,85 +932,94 @@ def train():
     tf.random.set_seed(seed_value)
 
     feature_set = config.feature_set
-    data = config.data
 
-    if feature_set != "curated":
-
-        # Validate modality and feature_set combination
+    # Skip modality validation for feature sets that ignore modality selection
+    if feature_set not in NO_MODALITY_SELECTION_SETS:
         is_valid_combination = validate_modality_feature_combination(config.modality, config.feature_set)
-        
         if not is_valid_combination:
             print(f"Skipping invalid combination: feature_set={config.feature_set}, modality={config.modality}")
-            # Log that this was skipped
             wandb.log({"status": "skipped_invalid_combination"})
             return
 
-        data = config.data
-        fusion_type = config.fusion_type
+    # ------------------------------------------------------------------
+    # Load base 100fps dataset
+    # ------------------------------------------------------------------
+    if feature_set in ["curated_v4", "tsfresh", "catch22"]:
+        df_base = pd.read_csv("../../preprocessing/interpolation/curated_features_dataset_v4.csv")
+    elif feature_set == "rf":
+        df_base = pd.read_csv("../../preprocessing/rf_features/allparticipants_rf_100fps.csv")
+    elif feature_set == "selectkbest":
+        df_base = pd.read_csv("../../preprocessing/interpolation/select_k_best_allparticipants_100fps_multiclass_label.csv")
+    else:
+        # 'full' — all start from the full 100fps feature set
+        df_base = pd.read_csv("../../preprocessing/interpolation/allparticipants_100fps.csv")
+        print("Unique participants in base dataset:", df_base.iloc[:, 1].unique())
 
-        df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
-        df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_stats_0_3.csv")
-        df_rf = pd.read_csv("../../preprocessing/rf_features/all_participants_rf_0_3_40.csv")
-        df_text = pd.read_csv("../../preprocessing/clip_text_embeddings.csv")
-        df_text_pca = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
+    # ------------------------------------------------------------------
+    # Apply windowing / on-the-fly feature extraction
+    # ------------------------------------------------------------------
+    window = config.window
+    win_stride = min(config.stride, window)
+    wandb.log({"effective_stride": win_stride, "effective_window": window})
 
+    if feature_set == "catch22":
+        df = apply_catch22_windowing(df_base, window, win_stride)
+        last_positions = None
+    elif feature_set == "tsfresh":
+        df = apply_tsfresh_windowing(df_base, window, win_stride)
+        last_positions = None
+    else:
+        df, last_positions = apply_windowing(df_base, window, win_stride, config.aggregation)
+
+    # ------------------------------------------------------------------
+    # Feature / modality selection (only for 'full' feature set)
+    # ------------------------------------------------------------------
+    data = config.dataset
+    fusion_type = config.fusion_type
+
+    if feature_set not in NO_MODALITY_SELECTION_SETS:
         info = df.iloc[:, :4]
-        df_pose_index = df.iloc[:, 4:28]
-        df_facial_index = pd.concat([df.iloc[:, 28:63], df.iloc[:, 88:]], axis=1) # action units, gaze
-        df_audio_index = df.iloc[:, 63:88]
-        df_text_index = df_text.iloc[:, 2:]
 
-        df_facial_index_stats = df_stats.iloc[:, 4:30]
-        df_audio_index_stats = df_stats.iloc[:, 30:53]
-
-        df_facial_index_rf = df_rf.iloc[:, 38:]
-        df_pose_index_rf = df_rf.iloc[:, 4:28]
-        df_audio_index_rf = df_rf.iloc[:, 28:38]
-
-        modalities = {
-            "pose_full": df_pose_index,
-            "pose_rf": df_pose_index_rf,
-            "facial_full": df_facial_index,
-            "facial_stats": df_facial_index_stats,
-            "facial_rf": df_facial_index_rf,
-            "audio_full": df_audio_index,
-            "audio_stats": df_audio_index_stats,
-            "audio_rf": df_audio_index_rf,
-            "text_full": df_text_index,
-        }
+        if feature_set == "selectkbest":
+            # Name-based modality splitting for selectkbest
+            feature_cols = df.columns[4:]
+            facial_cols = [c for c in feature_cols if c.startswith('AU') or c.startswith('gaze_')]
+            audio_cols = [c for c in feature_cols if c not in facial_cols]
+            df_pose_index = pd.DataFrame(index=df.index)  # no pose features
+            df_facial_index = df[facial_cols]
+            df_audio_index = df[audio_cols]
+        else:
+            # Index-based modality splitting for 'full' feature set
+            df_pose_index = df.iloc[:, 4:28]
+            df_facial_index = pd.concat([df.iloc[:, 28:63], df.iloc[:, 88:]], axis=1)
+            df_audio_index = df.iloc[:, 63:88]
 
         modality_components = config.modality.split('_')
+
+        # Text embeddings must be aligned to the windowed rows via last_positions
+        if "text" in modality_components or "cosine" in modality_components:
+            df_text_raw = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
+            df_text_cos_raw = pd.read_csv("../../preprocessing/clip_text_cosine_similarity.csv")
+            df_text_index = df_text_raw.iloc[last_positions, 2:].reset_index(drop=True)
+            df_text_distance = df_text_cos_raw.iloc[last_positions, 2:].reset_index(drop=True)
+
         selected_modalities = {}
-
-        feature_set = config.feature_set
-
         if "pose" in modality_components:
-            selected_modalities["pose_" + feature_set] = modalities["pose_" + feature_set]
-        
+            selected_modalities["pose_full"] = df_pose_index
         if "facial" in modality_components:
-            selected_modalities["facial_" + feature_set] = modalities["facial_" + feature_set]
-
+            selected_modalities["facial_full"] = df_facial_index
         if "audio" in modality_components:
-            selected_modalities["audio_" + feature_set] = modalities["audio_" + feature_set]
-
+            selected_modalities["audio_full"] = df_audio_index
         if "text" in modality_components:
-            selected_modalities["text_full"] = modalities["text_full"]
+            selected_modalities["text_full"] = df_text_index
+        if "cosine" in modality_components:
+            selected_modalities["text_distance"] = df_text_distance
 
-        df = info
-        
-        # for m in selected_modalities.values():
-        #     df = pd.concat([df, m], axis=1)
-
-        # if config.dataset == "norm":
-        #     df = create_normalized_df(df)
-        # elif config.dataset == "pca":
-        #     df = create_norm_pca_df(df)
-        
         if fusion_type == "early":
             df = info
             for m in selected_modalities.values():
-                df = pd.concat([df, m], axis=1)
-            
+                df = pd.concat([df, m.reset_index(drop=True)], axis=1)
+
             if data == "norm":
                 df = create_normalized_df(df)
             elif data == "pca":
@@ -764,9 +1027,25 @@ def train():
 
             print(df)
             print(df.shape)
-            
+
+            # Feature randomization (if enabled)
+            if config.feature_randomizer == 1:
+                available_features = df.columns[4:].tolist()
+                max_features = len(available_features)
+                if max_features > 0:
+                    n_features = np.random.randint(1, max_features + 1)
+                    selected_features = np.random.choice(available_features, size=n_features, replace=False).tolist()
+                    df = df[df.columns[:4].tolist() + selected_features]
+                    wandb.log({"features_included": selected_features, "n_features_selected": n_features, "total_available_features": max_features})
+                    print(f"Feature randomization enabled: Selected {n_features} out of {max_features} features")
+                else:
+                    wandb.log({"features_included": [], "n_features_selected": 0, "total_available_features": 0})
+            else:
+                all_features = df.columns[4:].tolist()
+                wandb.log({"features_included": all_features, "n_features_selected": len(all_features), "total_available_features": len(all_features)})
+
             train_early_fusion(df, config)
-        
+
         if fusion_type == "intermediate" or fusion_type == "late":
             dfs = {}
 
@@ -777,6 +1056,7 @@ def train():
             elif data == "pca":
                 for modality_name, m in selected_modalities.items():
                     if modality_name == "text_full":
+                        df_text_pca = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
                         dfs[modality_name] = df_text_pca
                     else:
                         df_temp = pd.concat([info.copy(), m], axis=1)
@@ -792,40 +1072,32 @@ def train():
                 train_intermediate_fusion(dfs, config)
             elif fusion_type == "late":
                 train_late_fusion(dfs, config)
-    
     else:
-        df = pd.read_csv("../../preprocessing/curated_features/curated_features_dataset_v3.csv")
+        # curated_v4 / catch22 / tsfresh / rf feature sets
         if data == "norm":
             df = create_normalized_df(df)
         elif data == "pca":
             df = create_norm_pca_df(create_normalized_df(df))
 
         if config.feature_randomizer == 1:
-
-            # participant, frame, binary_label, multiclass_label
             available_features = df.columns[4:].tolist()
             max_features = len(available_features)
 
             if max_features > 0:
                 n_features = np.random.randint(1, max_features + 1)
-
                 selected_features = np.random.choice(
                     available_features,
                     size=n_features,
                     replace=False
                 ).tolist()
-
                 df = df[df.columns[:4].tolist() + selected_features]
-
                 wandb.log({
                     "features_included": selected_features,
                     "n_features_selected": n_features,
                     "total_available_features": max_features
                 })
-
                 print(f"Feature randomization enabled: selected {n_features}/{max_features}")
                 print(f"Selected features: {selected_features}")
-
             else:
                 print("Warning: No features available for randomization")
                 wandb.log({
@@ -833,15 +1105,16 @@ def train():
                     "n_features_selected": 0,
                     "total_available_features": 0
                 })
-
         else:
-            # randomization off
             all_features = df.columns[4:].tolist()
             wandb.log({
                 "features_included": all_features,
                 "n_features_selected": len(all_features),
                 "total_available_features": len(all_features)
             })
+
+        print(df)
+        print(df.shape)
 
         train_early_fusion(df, config)
 
@@ -850,22 +1123,30 @@ def main():
 
     sweep_config = {
         'method': 'random',
-        'name': 'curated_v0',
+        'name': 'brirl_lstm_multiclass_inter',
         'parameters': {
-            'feature_set': {'values': ['curated']}, #['full', 'stats', 'rf']},
+            'feature_set': {'values': ['full', 'curated_v4', 'catch22', 'tsfresh', 'rf', 'selectkbest']},
             'modality': {'values': [
-                'pose', 'facial', 'audio', 'text',
-                'pose_facial', 'pose_audio', 'pose_text',
-                'facial_audio', 'facial_text',
-                'audio_text',
+                'pose', 'facial', 'audio', 'text', 'cosine',
+                'pose_facial', 'pose_audio', 'pose_text', 'pose_cosine',
+                'facial_audio', 'facial_text', 'facial_cosine',
+                'audio_text', 'audio_cosine',
                 'pose_facial_audio', 'pose_facial_text', 'pose_audio_text',
-                'facial_audio_text',
-                'pose_facial_audio_text',
+                'facial_audio_text', 'facial_audio_cosine', 'pose_facial_audio_cosine',
+                'pose_facial_audio_text', 'pose_audio_cosine',
             ]},
 
-            'data' : {'values' : ["reg", "norm", "pca"]},
+            'dataset': {'values': ["reg", "norm", "pca"]},
             'fusion_type': {'values': ['early', 'intermediate', 'late']},
             'feature_randomizer': {'values': [1]},
+
+            # Dataset-level windowing (applied to 100fps data before training)
+            'window': {'values': [1, 5, 10, 15, 30]},
+            'stride': {'values': [1, 3, 5, 10]},
+            'aggregation': {'values': ['average', 'mode', 'last']},
+            # Test-time windowed metrics parameters
+            'test_window_size': {'values': [1, 5, 10, 15, 30]},
+            'test_stride': {'values': [1, 3, 5, 10]},
 
             'use_bidirectional': {'values': [True, False]},
             'num_lstm_layers': {'values': [1, 2, 3]},
@@ -878,14 +1159,14 @@ def main():
             'batch_size': {'values': [32, 64, 128]},
             'epochs': {'values': [100, 150, 200, 250]},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
-            'loss' : {'values' : ["categorical_crossentropy"]},
+            'loss': {'values': ["categorical_crossentropy"]},
             
-            'sequence_length' : {'values' : [5, 10, 15, 30, 60, 100, 150, 300]},
+            'sequence_length': {'values': [5, 10, 15, 30, 60, 100, 150, 300]},
 
-            'model' : {'values': ['lstm']},
+            'model': {'values': ['lstm']},
             'class': {'value': 'multiclass'}
+            
         }
-        # feature set (full, stats, rf) -> modality selection (pose_facial_audio, pose, facial, etc.) -> (reg, norm, pca) -> fusion
     }
 
     print(sweep_config)
@@ -893,7 +1174,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="curated_v0")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="brirl_lstm_multiclass_inter")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':

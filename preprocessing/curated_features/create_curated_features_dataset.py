@@ -2,7 +2,12 @@ import numpy as np
 import pandas as pd
 
 
-df = pd.read_csv("allparticipants_100fps.csv")
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PREPROC_DIR = os.path.dirname(BASE_DIR)  # preprocessing/
+
+df = pd.read_csv(os.path.join(PREPROC_DIR, "interpolation", "allparticipants_100fps.csv"))
 
 curated_features_df = pd.DataFrame()
 
@@ -127,13 +132,21 @@ curated_features_df['verbal_response_time'] = curated_features_df['verbal_respon
 
 # cosine distance
 
-df_cosine_dist = pd.read_csv("clip_text_cosine_similarity.csv")
+df_cosine_dist = pd.read_csv(os.path.join(BASE_DIR, "clip_text_cosine_similarity.csv"))
 
 curated_features_df = pd.merge(
     curated_features_df,
     df_cosine_dist,
     on=['frame', 'participant'],
-    how='inner')
+    how='left')
+
+# Forward-fill Distance per participant for interpolated frames,
+# then fill any remaining NaNs (e.g. first frame) with 0
+curated_features_df['Distance'] = (
+    curated_features_df
+    .groupby('participant')['Distance']
+    .transform(lambda s: s.ffill().fillna(0))
+)
 
 # finalize the curated features dataset
 
@@ -156,4 +169,7 @@ curated_features_df = curated_features_df[
 
 
 #print(curated_features_df)
-curated_features_df.to_csv("curated_features_dataset_v4.csv", index=False)
+output_path = os.path.join(PREPROC_DIR, "interpolation", "curated_features_dataset_v4.csv")
+curated_features_df.to_csv(output_path, index=False)
+print(f"Saved curated_features_dataset_v4.csv to {output_path}")
+print(f"Shape: {curated_features_df.shape}")

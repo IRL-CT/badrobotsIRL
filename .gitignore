@@ -47,3 +47,4 @@ training/linear_classifiers/mlp.sub
 training/linear_classifiers/knn.sub
 training/binary_models/wandb/*.log
 training/binary_models/wandb/latest-run
+*.txt
