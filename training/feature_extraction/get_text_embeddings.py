@@ -1,6 +1,6 @@
 import webvtt
 import torch
-from transformers import BertTokenizer, BertModel
+from transformers import CLIPTokenizer, CLIPTextModel
 import pandas as pd
 from datetime import datetime
 import numpy as np
@@ -11,178 +11,130 @@ def parse_vtt_timestamp(timestamp):
     return time_obj.hour * 3600 + time_obj.minute * 60 + time_obj.second + time_obj.microsecond/1000000
 
 class VTTEmbeddingProcessor:
-    def __init__(self, model_name='bert-base-uncased'):
-        self.tokenizer = BertTokenizer.from_pretrained(model_name)
-        self.model = BertModel.from_pretrained(model_name)
+    def __init__(self, model_name='openai/clip-vit-base-patch32'):
+        self.tokenizer = CLIPTokenizer.from_pretrained(model_name)
+        self.model = CLIPTextModel.from_pretrained(model_name)
         self.model.eval()
-    
+
     def process_vtt_file(self, vtt_file_path):
         """
-        Process a VTT file and return timestamps with BERT embeddings
+        Process a VTT file and return timestamps with CLIP text embeddings
         """
-        # Read VTT file
         captions = webvtt.read(vtt_file_path)
-        
-        # Store results
         results = []
-        
-        # Process each caption
+
         for caption in captions:
-            # Get start and end times in seconds
             start_time = parse_vtt_timestamp(caption.start)
             end_time = parse_vtt_timestamp(caption.end)
 
             print('caption text:', caption.text)
-            #remove SPEAKER XX: from the text
+            # Remove SPEAKER XX: prefix
             caption.text = caption.text.split(':')[-1]
             print('caption text:', caption.text)
-            
-            # Get BERT embedding for the text
+
+            # Get CLIP text embedding
             with torch.no_grad():
-                inputs = self.tokenizer(caption.text, 
-                                      return_tensors="pt",
-                                      padding=True,
-                                      truncation=True,
-                                      max_length=512)
+                inputs = self.tokenizer(caption.text,
+                                        return_tensors="pt",
+                                        padding=True,
+                                        truncation=True,
+                                        max_length=77)  # CLIP max token length
                 outputs = self.model(**inputs)
-                # Use [CLS] token embedding as sentence embedding
-                embedding = outputs.last_hidden_state[:, 0, :].numpy()[0]
+                # Use pooler_output (EOS token representation) as sentence embedding
+                embedding = outputs.pooler_output[0].numpy()
 
                 print('shape embedding:', embedding.shape)
-            
+
             results.append({
-                'participant':vtt_file_path.split('/')[-1].split('.')[0],
+                'participant': vtt_file_path.split('/')[-1].split('.')[0],
                 'start_time': start_time,
                 'end_time': end_time,
                 'text': caption.text,
                 'embedding': embedding
             })
-        
-        # Convert to DataFrame
-        df = pd.DataFrame(results)
-        return df
-    
-    def save_embeddings(self, df, label_path, output_path):
-        """
-        Save the embeddings and metadata to files
-        """
-        # Save embeddings as numpy array
-        #embeddings = np.stack(df['embedding'].values)
-        #np.save(f"{output_path}_embeddings.npy", embeddings)
-        
-        # Save metadata (timestamps and text) as CSV
-        #metadata = df[['start_time', 'end_time', 'text']]
-        #metadata.to_csv(f"{output_path}_metadata.csv", index=False)
 
-        new_df = pd.DataFrame()
-        features_df = pd.DataFrame()
+        return pd.DataFrame(results)
 
-        #open label file as dataframe
+    def save_embeddings(self, df, label_path, output_path, fps=100):
+        """
+        For each row in label_path CSV, find the matching VTT caption by timestamp
+        and append its CLIP embedding.
+        Output columns: first 4 columns of label CSV (frame, participant,
+        binary_label, multiclass_label) followed by embedding dimensions.
+        """
         label_df = pd.read_csv(label_path)
+        # Columns 0-3: frame, participant, binary_label, multiclass_label
+        meta_cols = label_df.columns[:4].tolist()
+
         embeds_shape = df['embedding'].values[0].shape
-        #print(label_df['participant'].unique())
-        #get timestamps, for each timestamp match with the df start_time and end_time
+        embedding_rows = []
+        meta_rows = []
+
         for participant in label_df['participant'].unique():
-            #get the label df for the participant
-            label_df_participant = label_df[label_df['participant'] == participant]
-            #get the df for the participant
-            df_participant = df[df['participant'] == participant]
-            timestamps = label_df_participant['frame'].values/30
-            print('timestamps:', timestamps)
-            print(label_df_participant.shape)
-            print(df_participant.shape)
-            print(df['participant'].unique())
-            for ind, row in label_df_participant.iterrows():
-                timestamp = row['frame']/30
-                #get the df with the closest start_time and before the end_time
-                df_filtered = df_participant[(df_participant['end_time'] >= timestamp) & (df_participant['start_time'] <= timestamp)]
-                
+            label_df_part = label_df[label_df['participant'] == participant]
+            df_part = df[df['participant'] == participant]
+            print(f"participant: {participant} | label rows: {len(label_df_part)} | captions: {len(df_part)}")
+
+            for _, row in label_df_part.iterrows():
+                timestamp = row['frame'] / fps
+                df_filtered = df_part[
+                    (df_part['end_time'] >= timestamp) &
+                    (df_part['start_time'] <= timestamp)
+                ]
+
                 if len(df_filtered) == 0:
-                    #print('no caption found for timestamp:', timestamp)
-                    #continue
-                    #add a series of zeros, in the same shape as the embeddings
-                    #add each embedding as a column in fearues_df
-                    features_df = pd.concat([features_df, pd.DataFrame(np.zeros(embeds_shape).reshape(1,-1))], ignore_index=True)
-                    new_df = pd.concat([new_df, pd.DataFrame({'participant': row['participant'], 'frame': row['frame']}, index=[0])], ignore_index=True)
+                    embedding_rows.append(np.zeros(embeds_shape))
                 else:
-                    print(timestamp)
-                    #print(df_participant['end_time'].values[-1])
-                    print(df_filtered)
-                    #get the first caption found
-                    df_filtered = df_filtered.iloc[-1]
-                    #add each embedding as a column in fearues_df
-                    features_df = pd.concat([features_df, pd.DataFrame(df_filtered['embedding'].reshape(1,-1))], ignore_index=True)
-                    #get timestamp and embedding as a row and append to new_df
-                    new_df = pd.concat([new_df, pd.DataFrame({'participant': row['participant'], 'frame': row['frame']}, index=[0])], ignore_index=True)
-                #check if we added a nan
-               
-                #if nan, print the timestamp
-                if features_df.isnull().values.any():
-                    print('nan values found')
-                    print(timestamp)
-                   
-                    #break
+                    embedding_rows.append(df_filtered.iloc[-1]['embedding'])
 
-        #add the embeddings as columns to the new_df
-        new_df = pd.concat([new_df, features_df], axis=1)
-        print(new_df.head())
-        #check if it's got nan values
-        print('checking for nan values')
-        print(new_df.isnull().sum())
-        print(new_df.shape)
-        #remove rows with nan values
-        new_df = new_df.dropna()
-        print(new_df.shape)
+                meta_rows.append(row[meta_cols].values)
 
-        #see if label_df [frames] is the same as new_df [frames]
-        print('checking if label_df and new_df match')
-        print([' ' if label_df['frame'].values[i] == new_df['frame'].values[i] else 'false' for i in range(len(label_df))])
-        #check if the length of new_df and label_df match
-        print('checking if label_df and new_df match')
-        print('label_df:', label_df.shape)
-        print('new_df:', new_df.shape)
+        meta_df = pd.DataFrame(meta_rows, columns=meta_cols)
+        embed_df = pd.DataFrame(np.stack(embedding_rows))
+        result_df = pd.concat([meta_df, embed_df], axis=1)
 
+        print(result_df.head())
+        print('nan values:', result_df.isnull().sum().sum())
+        print('shape:', result_df.shape)
 
+        result_df = result_df.dropna()
+        print('shape after dropna:', result_df.shape)
 
-        #save new_df as a csv file
-        new_df.to_csv(f"{output_path}text_embeddings.csv", index=False)
+        result_df.to_csv(f"{output_path}text_embeddings.csv", index=False)
 
 
 def main():
     import argparse
     import os
-    parser = argparse.ArgumentParser(description='Process VTT file to BERT embeddings')
+    parser = argparse.ArgumentParser(description='Process VTT files to CLIP text embeddings')
     parser.add_argument('vtt_folder', help='Path to the VTT folder')
-    parser.add_argument('label_csv', help='Path to the label csv file')
     parser.add_argument('output_prefix', help='Prefix for output files')
-    parser.add_argument('--model', default='bert-base-uncased', 
-                        help='BERT model to use (default: bert-base-uncased)')
-    
+    parser.add_argument('--label_csv',
+                        default='../../preprocessing/curated_features/allparticipants_100fps.csv',
+                        help='Path to the label CSV (default: allparticipants_100fps.csv)')
+    parser.add_argument('--model', default='openai/clip-vit-base-patch32',
+                        help='CLIP model to use (default: openai/clip-vit-base-patch32)')
+    parser.add_argument('--fps', type=int, default=100,
+                        help='Frames per second of the label CSV (default: 100)')
+
     args = parser.parse_args()
 
+    processor = VTTEmbeddingProcessor(model_name=args.model)
     big_df = pd.DataFrame()
 
     for vtt_file in os.listdir(args.vtt_folder):
         if vtt_file.endswith(".vtt"):
             print(f"Processing {vtt_file}")
-            # Initialize processor
-            processor = VTTEmbeddingProcessor(model_name=args.model)
-
-            # Process VTT file
             df = processor.process_vtt_file(os.path.join(args.vtt_folder, vtt_file))
             print(df.head())
-
             big_df = pd.concat([big_df, df], ignore_index=True)
 
-    # Save results
-    processor.save_embeddings(big_df, args.label_csv, args.output_prefix)
-    print(f"Processed {len(df)} captions")
-    #print(f"Saved embeddings to {os.path.join(args.output_prefix, vtt_file[:-4])}_embeddings.npy")
-    #print(f"Saved metadata to {os.path.join(args.output_prefix, vtt_file[:-4])}_metadata.csv")
-
+    processor.save_embeddings(big_df, args.label_csv, args.output_prefix, fps=args.fps)
+    print(f"Processed {len(big_df)} captions")
 
 
 if __name__ == "__main__":
     main()
 
-    #default command: python3 get_text_embeddings.py ../../data/transcripts/ ../../data/all_participants_0_3.csv ../../data/text_embeddings/
+    # default command:
+    # python3 get_text_embeddings.py ../../data/transcripts/ ../../data/text_embeddings/
