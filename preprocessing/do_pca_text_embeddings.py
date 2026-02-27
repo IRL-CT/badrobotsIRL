@@ -10,7 +10,7 @@ from sklearn.decomposition import PCA
 def main():
         
     #load the csv file
-    df = pd.read_csv('./clip_text_embeddings.csv')
+    df = pd.read_csv('../data/clip_text_embeddings.csv')
     print(df.head())
 
     #select only columsn 2:end
@@ -51,7 +51,7 @@ def main():
 
     #now, back in the original df, get the cosine distance between every two rows, start with a zero row so it's the same shape
     #reload original df for cosine similarity calculation
-    df_orig = pd.read_csv('./clip_text_embeddings.csv')
+    df_orig = pd.read_csv('../data/clip_text_embeddings.csv')
     df_orig_cols_first = df_orig.iloc[:,0:2]
     df_orig_feats = df_orig.iloc[:,2:]
     
@@ -76,7 +76,7 @@ def main():
     
 
     #save cosine df and df
-    cosine_df.to_csv('clip_text_cosine_similarity.csv', index=False)
+    cosine_df.to_csv('../data/clip_text_cosine_similarity.csv', index=False)
     #save the cosine similarity model
 
 if __name__ == '__main__':
