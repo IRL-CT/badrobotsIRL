@@ -15,8 +15,8 @@ def main():
 
     #select only columsn 2:end
     
-    df_cols_first = df.iloc[:,0:2]
-    df_feats = df.iloc[:,2:]
+    df_cols_first = df.iloc[:,0:4]
+    df_feats = df.iloc[:,4:]
     print('DF COLS FIRST', df_cols_first.head())
 
     #do PCA to keep 95% of the variance
@@ -33,7 +33,7 @@ def main():
     #save the pca data as csv
     full_df = pd.concat([df_cols_first, pd.DataFrame(df_pca)], axis=1, ignore_index=True)
     #rename the columns
-    new_cols = ['participant', 'frame'] + [f'PC{i}' for i in range(1, df_pca.shape[1] + 1)]
+    new_cols = ['participant', 'frame', 'binary_label', 'multiclass_label'] + [f'PC{i}' for i in range(1, df_pca.shape[1] + 1)]
     full_df.columns = new_cols
     #check for nan
     print('checking for nan values')
@@ -43,17 +43,17 @@ def main():
     #full_df = full_df.dropna()
     #new index
     full_df = full_df.reset_index(drop=True)
-    full_df.to_csv('clip_text_embeddings_pca.csv', index=False)
+    full_df.to_csv('../data/clip_text_embeddings_pca.csv', index=False)
 
     #save the pca model
     import joblib
-    joblib.dump(pca, 'pca_model.pkl')
+    joblib.dump(pca, '../data/pca_model.pkl')
 
     #now, back in the original df, get the cosine distance between every two rows, start with a zero row so it's the same shape
     #reload original df for cosine similarity calculation
     df_orig = pd.read_csv('../data/clip_text_embeddings.csv')
-    df_orig_cols_first = df_orig.iloc[:,0:2]
-    df_orig_feats = df_orig.iloc[:,2:]
+    df_orig_cols_first = df_orig.iloc[:,0:4]
+    df_orig_feats = df_orig.iloc[:,4:]
     
     #now, calculate cosine distance
     from sklearn.metrics.pairwise import cosine_similarity
@@ -69,7 +69,7 @@ def main():
     print('similarity list length', len(similarity_list))
     # Add similarity values to DataFrame
     cosine_df = df_orig_cols_first.copy()
-    cosine_df.columns = ['participant', 'frame']
+    cosine_df.columns = ['participant', 'frame', 'binary_label', 'multiclass_label']
     cosine_df['Distance'] = [np.nan] + similarity_list
     print(cosine_df.head())
     print(cosine_df.shape)
