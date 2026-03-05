@@ -17,6 +17,39 @@ from registry_utils import append_to_registry
 NO_MODALITY_SELECTION_SETS = {"catch22", "tsfresh", "curated_v4", "rf", "selectkbest"}
 
 
+def apply_aux_windowing(df_aux, participant_col_idx, feature_start_col, window_size, stride, aggregation):
+    """Apply windowing to an auxiliary DataFrame (e.g. text embeddings, cosine similarity).
+
+    Groups by participant, slides windows of size `window_size` with `stride`,
+    and aggregates feature columns using the same aggregation as the main DF.
+
+    Returns a DataFrame of aggregated feature columns only (equivalent to .iloc[:, feature_start_col:]).
+    """
+    df_aux = df_aux.reset_index(drop=True)
+    participant_col = df_aux.columns[participant_col_idx]
+    feature_cols = df_aux.columns[feature_start_col:].tolist()
+
+    rows = []
+    for participant in df_aux[participant_col].unique():
+        p_positions = np.where(df_aux[participant_col] == participant)[0]
+        n = len(p_positions)
+        start = 0
+        while start + window_size <= n:
+            end = start + window_size
+            window_pos = p_positions[start:end]
+            window = df_aux.iloc[window_pos]
+            if aggregation == "average":
+                row = window[feature_cols].mean().to_dict()
+            elif aggregation == "mode":
+                row = window[feature_cols].mode().iloc[0].to_dict()
+            else:  # 'last'
+                row = window[feature_cols].iloc[-1].to_dict()
+            rows.append(row)
+            start += stride
+
+    return pd.DataFrame(rows, columns=feature_cols).reset_index(drop=True)
+
+
 def apply_windowing(df, window_size, stride, aggregation):
     """Aggregate a per-frame DataFrame into windowed samples.
 
@@ -233,7 +266,7 @@ def train():
     elif config.feature_set == "rf":
         df_base = pd.read_csv("../../preprocessing/rf_features/allparticipants_rf_100fps.csv")
     elif config.feature_set == "selectkbest":
-        if config.label_type == "binary":
+        if config.binary_multiclass == "binary":
             df_base = pd.read_csv("../../preprocessing/interpolation/select_k_best_allparticipants_100fps_binary_label.csv")
         else:
             df_base = pd.read_csv("../../preprocessing/interpolation/select_k_best_allparticipants_100fps_multiclass_label.csv")
@@ -375,7 +408,9 @@ def train():
         X_train, X_val, X_test, y_train, y_val, y_test, _, _, _, _, _, _, _, session_train, session_val, session_test = splits
 
         # Balance training dataset
-        smote = SMOTE(random_state=42)
+        min_class_count = min(np.bincount(y_train))
+        smote_k = min(5, min_class_count - 1)
+        smote = SMOTE(random_state=42, k_neighbors=smote_k)
         X_train_balanced, y_train_balanced = smote.fit_resample(X_train, y_train)
 
         # Initialize KNN classifier
