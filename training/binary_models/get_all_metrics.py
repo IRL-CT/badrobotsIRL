@@ -106,9 +106,13 @@ def get_all_metrics(y_pred, y_true, y_pred_proba=None, sessions=None,
         try:
             if is_binary:
                 # Use probability of positive class (column 1)
-                proba_pos = (y_pred_proba[:, 1]
-                             if y_pred_proba.ndim == 2
-                             else y_pred_proba)
+                if y_pred_proba.ndim == 2 and y_pred_proba.shape[1] >= 2:
+                    proba_pos = y_pred_proba[:, 1]
+                elif y_pred_proba.ndim == 2:
+                    # Binary sigmoid output: single column IS the positive-class prob
+                    proba_pos = y_pred_proba.ravel()
+                else:
+                    proba_pos = y_pred_proba
                 auc = roc_auc_score(y_true, proba_pos)
             else:
                 auc = roc_auc_score(y_true, y_pred_proba,

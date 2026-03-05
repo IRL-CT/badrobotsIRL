@@ -1,3 +1,4 @@
+import os
 import wandb
 import numpy as np
 import pandas as pd
@@ -18,8 +19,12 @@ from get_all_metrics import get_all_metrics
 from gru_single_modality import train_single_modality_model
 
 
+# Resolve absolute paths so the script works regardless of CWD (e.g. SLURM)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PREPROCESSING_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "..", "preprocessing"))
+
 # Feature sets that use the full dataset without modality selection
-NO_MODALITY_SELECTION_SETS = {"catch22", "tsfresh", "curated_v4", "rf"}
+NO_MODALITY_SELECTION_SETS = {"catch22", "tsfresh", "curated_v4", "rf", "selectkbest"}
 
 
 def apply_windowing(df, window_size, stride, aggregation):
@@ -913,24 +918,6 @@ def validate_modality_feature_combination(modality, feature_set):
     # Text only works with 'full' feature set
     if 'text' in modality_components and feature_set != 'full':
         return False
-        
-    # 'stats' feature set only works with 'facial', 'audio', and their combination
-    if feature_set == 'stats':
-        valid_components = ['facial', 'audio']
-        for component in modality_components:
-            if component not in valid_components:
-                return False
-    
-    # 'rf' feature set doesn't work with 'text'
-    if feature_set == 'rf' and 'text' in modality_components:
-        return False
-    
-    # 'selectkbest' only has facial and audio features
-    if feature_set == 'selectkbest':
-        valid_components = ['facial', 'audio']
-        for component in modality_components:
-            if component not in valid_components:
-                return False
     
     return True
 
@@ -991,14 +978,14 @@ def train():
     # Load base 100fps dataset
     # ------------------------------------------------------------------
     if feature_set in ["curated_v4", "tsfresh", "catch22"]:
-        df_base = pd.read_csv("../../preprocessing/interpolation/curated_features_dataset_v4.csv")
+        df_base = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "curated_features_dataset_v4.csv"))
     elif feature_set == "rf":
-        df_base = pd.read_csv("../../preprocessing/rf_features/allparticipants_rf_100fps.csv")
+        df_base = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "rf_allparticipants_100fps.csv"))
     elif feature_set == "selectkbest":
-        df_base = pd.read_csv("../../preprocessing/interpolation/select_k_best_allparticipants_100fps_binary_label.csv")
+        df_base = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "select_k_best_allparticipants_100fps_binary_label.csv"))
     else:
         # 'full' — all start from the full 100fps feature set
-        df_base = pd.read_csv("../../preprocessing/interpolation/allparticipants_100fps.csv")
+        df_base = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "allparticipants_100fps.csv"))
         print("Unique participants in base dataset:", df_base.iloc[:, 1].unique())
 
     # ------------------------------------------------------------------
@@ -1017,6 +1004,13 @@ def train():
     else:
         df, last_positions = apply_windowing(df_base, window, win_stride, config.aggregation)
 
+    # Skip text/cosine modality when last_positions is unavailable (catch22/tsfresh)
+    modality_components = config.modality.split('_')
+    if last_positions is None and ("text" in modality_components or "cosine" in modality_components):
+        print(f"Skipping: text/cosine modality not supported with {feature_set} (no last_positions)")
+        wandb.log({"status": "skipped_invalid_combination"})
+        return
+
     # ------------------------------------------------------------------
     # Feature / modality selection (only for 'full' and 'selectkbest' feature sets)
     # rf is all facial features
@@ -1027,26 +1021,17 @@ def train():
     if feature_set not in NO_MODALITY_SELECTION_SETS:
         info = df.iloc[:, :4]
 
-        if feature_set == "selectkbest":
-            # Name-based modality splitting for selectkbest
-            feature_cols = df.columns[4:]
-            facial_cols = [c for c in feature_cols if c.startswith('AU') or c.startswith('gaze_')]
-            audio_cols = [c for c in feature_cols if c not in facial_cols]
-            df_pose_index = pd.DataFrame(index=df.index)  # no pose features
-            df_facial_index = df[facial_cols]
-            df_audio_index = df[audio_cols]
-        else:
-            # Index-based modality splitting for 'full' feature set
-            df_pose_index = df.iloc[:, 4:28]
-            df_facial_index = pd.concat([df.iloc[:, 28:63], df.iloc[:, 88:]], axis=1)
-            df_audio_index = df.iloc[:, 63:88]
+        # Index-based modality splitting for 'full' feature set
+        df_pose_index = df.iloc[:, 4:28]
+        df_facial_index = pd.concat([df.iloc[:, 28:63], df.iloc[:, 88:]], axis=1)
+        df_audio_index = df.iloc[:, 63:88]
 
         modality_components = config.modality.split('_')
 
         # Text embeddings must be aligned to the windowed rows via last_positions
         if "text" in modality_components or "cosine" in modality_components:
-            df_text_raw = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
-            df_text_cos_raw = pd.read_csv("../../preprocessing/clip_text_cosine_similarity.csv")
+            df_text_raw = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "clip_text_embeddings_pca.csv"))
+            df_text_cos_raw = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "clip_text_cosine_similarity.csv"))
             df_text_index = df_text_raw.iloc[last_positions, 2:].reset_index(drop=True)
             df_text_distance = df_text_cos_raw.iloc[last_positions, 2:].reset_index(drop=True)
 
@@ -1075,21 +1060,8 @@ def train():
             print(df)
             print(df.shape)
 
-            # Feature randomization (if enabled)
-            if config.feature_randomizer == 1:
-                available_features = df.columns[4:].tolist()
-                max_features = len(available_features)
-                if max_features > 0:
-                    n_features = np.random.randint(1, max_features + 1)
-                    selected_features = np.random.choice(available_features, size=n_features, replace=False).tolist()
-                    df = df[df.columns[:4].tolist() + selected_features]
-                    wandb.log({"features_included": selected_features, "n_features_selected": n_features, "total_available_features": max_features})
-                    print(f"Feature randomization enabled: Selected {n_features} out of {max_features} features")
-                else:
-                    wandb.log({"features_included": [], "n_features_selected": 0, "total_available_features": 0})
-            else:
-                all_features = df.columns[4:].tolist()
-                wandb.log({"features_included": all_features, "n_features_selected": len(all_features), "total_available_features": len(all_features)})
+            all_features = df.columns[4:].tolist()
+            wandb.log({"features_included": all_features, "n_features_selected": len(all_features), "total_available_features": len(all_features)})
 
             train_early_fusion(df, config)
 
@@ -1103,7 +1075,7 @@ def train():
             elif data == "pca":
                 for modality_name, m in selected_modalities.items():
                     if modality_name == "text_full":
-                        df_text_pca = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
+                        df_text_pca = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "clip_text_embeddings_pca.csv"))
                         dfs[modality_name] = df_text_pca
                     else:
                         df_temp = pd.concat([info.copy(), m], axis=1)
@@ -1121,12 +1093,38 @@ def train():
                 train_late_fusion(dfs, config)
     else:
         # curated_v4 / catch22 / tsfresh / rf feature sets
+
+        # Check if text/cosine should be appended (e.g. rf + text)
+        modality_components = config.modality.split('_')
+        has_text_modality = (
+            ("text" in modality_components or "cosine" in modality_components)
+            and last_positions is not None
+        )
+
+        # For early fusion, concatenate text features BEFORE normalization
+        if has_text_modality and fusion_type == "early":
+            if "text" in modality_components:
+                df_text_raw = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "clip_text_embeddings_pca.csv"))
+                df_text_index = df_text_raw.iloc[last_positions, 2:].reset_index(drop=True)
+                df = pd.concat([df, df_text_index], axis=1)
+            if "cosine" in modality_components:
+                df_text_cos_raw = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "clip_text_cosine_similarity.csv"))
+                df_text_distance = df_text_cos_raw.iloc[last_positions, 2:].reset_index(drop=True)
+                df = pd.concat([df, df_text_distance], axis=1)
+
         if data == "norm":
             df = create_normalized_df(df)
         elif data == "pca":
             df = create_norm_pca_df(create_normalized_df(df))
 
-        if config.feature_randomizer == 1:
+        print(df)
+        print(df.shape)
+
+        # -------------------------------------------------------
+        # Feature randomization (if enabled)
+        # -------------------------------------------------------
+        # do this only for curated dataset
+        if config.feature_randomizer == 1 and config.feature_set == "curated_v4":
             available_features = df.columns[4:].tolist()
             max_features = len(available_features)
 
@@ -1143,15 +1141,11 @@ def train():
                     "n_features_selected": n_features,
                     "total_available_features": max_features
                 })
-                print(f"Feature randomization enabled: selected {n_features}/{max_features}")
+                print(f"Feature randomization enabled: Selected {n_features} out of {max_features} features")
                 print(f"Selected features: {selected_features}")
             else:
                 print("Warning: No features available for randomization")
-                wandb.log({
-                    "features_included": [],
-                    "n_features_selected": 0,
-                    "total_available_features": 0
-                })
+                wandb.log({"features_included": [], "n_features_selected": 0, "total_available_features": 0})
         else:
             all_features = df.columns[4:].tolist()
             wandb.log({
@@ -1160,10 +1154,38 @@ def train():
                 "total_available_features": len(all_features)
             })
 
-        print(df)
-        print(df.shape)
+        # Intermediate / late fusion with text modalities
+        if has_text_modality and fusion_type in ("intermediate", "late"):
+            info = df.iloc[:, :4]
+            dfs = {"base_features": df}
+            if "text" in modality_components:
+                df_text_raw = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "clip_text_embeddings_pca.csv"))
+                df_text_index = df_text_raw.iloc[last_positions, 2:].reset_index(drop=True)
+                df_text = pd.concat([info.reset_index(drop=True), df_text_index], axis=1)
+                if data == "norm":
+                    df_text = create_normalized_df(df_text)
+                elif data == "pca":
+                    df_text = create_norm_pca_df(create_normalized_df(df_text))
+                dfs["text_full"] = df_text
+            if "cosine" in modality_components:
+                df_text_cos_raw = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "clip_text_cosine_similarity.csv"))
+                df_text_distance = df_text_cos_raw.iloc[last_positions, 2:].reset_index(drop=True)
+                df_cos = pd.concat([info.reset_index(drop=True), df_text_distance], axis=1)
+                if data == "norm":
+                    df_cos = create_normalized_df(df_cos)
+                elif data == "pca":
+                    df_cos = create_norm_pca_df(create_normalized_df(df_cos))
+                dfs["text_distance"] = df_cos
 
-        train_early_fusion(df, config)
+            print(dfs)
+            if fusion_type == "intermediate":
+                train_intermediate_fusion(dfs, config)
+            elif fusion_type == "late":
+                train_late_fusion(dfs, config)
+        else:
+            print(df)
+            print(df.shape)
+            train_early_fusion(df, config)
 
 
 def main():
@@ -1221,7 +1243,7 @@ def main():
     def train_wrapper():
         train()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="brirl_gru_inter")
+    sweep_id = wandb.sweep(sweep=sweep_config, project="brirl_inter")
     wandb.agent(sweep_id, function=train_wrapper)
 
 if __name__ == '__main__':
