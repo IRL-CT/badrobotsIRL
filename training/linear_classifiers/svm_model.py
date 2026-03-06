@@ -13,8 +13,41 @@ from registry_utils import append_to_registry
 
 
 # Feature sets that use the full dataset without modality selection
-NO_MODALITY_SELECTION_SETS = {"catch22", "tsfresh", "curated_v4", "rf"}
+NO_MODALITY_SELECTION_SETS = {"catch22", "tsfresh", "curated_v4", "rf", "selectkbest"}
 
+
+
+def apply_aux_windowing(df_aux, participant_col_idx, feature_start_col, window_size, stride, aggregation):
+    """Apply windowing to an auxiliary DataFrame (e.g. text embeddings, cosine similarity).
+
+    Groups by participant, slides windows of size `window_size` with `stride`,
+    and aggregates feature columns using the same aggregation as the main DF.
+
+    Returns a DataFrame of aggregated feature columns only (equivalent to .iloc[:, feature_start_col:]).
+    """
+    df_aux = df_aux.reset_index(drop=True)
+    participant_col = df_aux.columns[participant_col_idx]
+    feature_cols = df_aux.columns[feature_start_col:].tolist()
+
+    rows = []
+    for participant in df_aux[participant_col].unique():
+        p_positions = np.where(df_aux[participant_col] == participant)[0]
+        n = len(p_positions)
+        start = 0
+        while start + window_size <= n:
+            end = start + window_size
+            window_pos = p_positions[start:end]
+            window = df_aux.iloc[window_pos]
+            if aggregation == "average":
+                row = window[feature_cols].mean().to_dict()
+            elif aggregation == "mode":
+                row = window[feature_cols].mode().iloc[0].to_dict()
+            else:  # 'last'
+                row = window[feature_cols].iloc[-1].to_dict()
+            rows.append(row)
+            start += stride
+
+    return pd.DataFrame(rows, columns=feature_cols).reset_index(drop=True)
 
 def apply_windowing(df, window_size, stride, aggregation):
     """Aggregate a per-frame DataFrame into windowed samples.
@@ -228,10 +261,15 @@ def train():
     # ------------------------------------------------------------------
     # Load base 100fps dataset
     # ------------------------------------------------------------------
-    if config.feature_set in ["curated_v4", "tsfresh", "catch22"]:
+    if config.feature_set in ["curated_v4", "tsfresh", "catch22"]: #includes 'catch22', 'tsfresh'
         df_base = pd.read_csv("../../preprocessing/curated_features/curated_features_dataset_v4.csv")
     elif config.feature_set == "rf":
         df_base = pd.read_csv("../../preprocessing/rf_features/allparticipants_rf_100fps.csv")
+    elif config.feature_set == "selectkbest":
+        if config.binary_multiclass == "binary":
+            df_base = pd.read_csv("../../preprocessing/interpolation/select_k_best_allparticipants_100fps_binary_label.csv")
+        else:
+            df_base = pd.read_csv("../../preprocessing/interpolation/select_k_best_allparticipants_100fps_multiclass_label.csv")
     else:
         # 'full' — all start from the full 100fps feature set
         df_base = pd.read_csv("../../preprocessing/full_features/allparticipants_100fps.csv")
@@ -259,9 +297,18 @@ def train():
     # ------------------------------------------------------------------
     if config.feature_set not in NO_MODALITY_SELECTION_SETS:
         info = df.iloc[:, :4]
-        df_pose_index = df.iloc[:, 4:28]
-        df_facial_index = pd.concat([df.iloc[:, 28:63], df.iloc[:, 88:]], axis=1)
-        df_audio_index = df.iloc[:, 63:88]
+        if config.feature_set == "selectkbest":
+            # Name-based modality splitting for selectkbest
+            feature_cols = df.columns[4:]
+            facial_cols = [c for c in feature_cols if c.startswith('AU') or c.startswith('gaze_')]
+            audio_cols = [c for c in feature_cols if c not in facial_cols]
+            df_pose_index = pd.DataFrame(index=df.index)  # no pose features
+            df_facial_index = df[facial_cols]
+            df_audio_index = df[audio_cols]
+        else:
+            df_pose_index = df.iloc[:, 4:28]
+            df_facial_index = pd.concat([df.iloc[:, 28:63], df.iloc[:, 88:]], axis=1)
+            df_audio_index = df.iloc[:, 63:88]
 
         modality_components = config.modality.split("_")
 
@@ -302,7 +349,8 @@ def train():
     # ------------------------------------------------------------------
     # Feature randomization (if enabled)
     # ------------------------------------------------------------------
-    if config.feature_randomizer == 1:
+    #do this onlyy for curated dataset
+    if config.feature_randomizer == 1 and config.feature_set == "curated_v4":
         available_features = df.columns[4:].tolist()
         max_features = len(available_features)
 
@@ -359,7 +407,9 @@ def train():
             sequence_length=1)
         X_train, X_val, X_test, y_train, y_val, y_test, _, _, _, _, _, _, _, session_train, session_val, session_test = splits
 
-        smote = SMOTE(random_state=seed_value)
+        min_class_count = min(np.bincount(y_train))
+        smote_k = min(5, min_class_count - 1)
+        smote = SMOTE(random_state=42, k_neighbors=smote_k)
         X_train_balanced, y_train_balanced = smote.fit_resample(X_train, y_train)
 
         svm = SVC(
@@ -416,10 +466,6 @@ def validate_modality_feature_combination(modality, feature_set):
     if "text" in modality_components and feature_set != "full":
         return False
 
-    # 'rf' feature set doesn't work with 'text'
-    if feature_set == "rf" and "text" in modality_components:
-        return False
-
     return True
 
 
@@ -471,7 +517,7 @@ def main():
         "name": "brirl_linear_inter_2",
         "parameters": {
             "binary_multiclass": {"values": ["binary", "multiclass"]},
-            "feature_set": {"values": ["full", "rf", "catch22", "tsfresh", "curated_v4"]},
+            "feature_set": {"values": ["full", "rf", "catch22", "tsfresh", "curated_v4","selectkbest"]},
             "dataset": {"values": ["reg", "norm", "pca"]},
             # Dataset-level windowing (applied to 100fps data before training)
             "window": {"values": [1, 5, 10, 15, 30]},
