@@ -233,38 +233,7 @@ def build_early_late_model(sequence_length, input_shape, num_lstm_layers, lstm_u
     return model
 
 
-def _extract_session_test(df, fold):
-    """Reconstruct the test-fold session array for get_all_metrics.
 
-    Replays the same fold-splitting logic used by create_data_splits
-    so that session_test aligns with the test predictions.
-    """
-    excluded_participants = ["p24nodbot"]
-    df_filtered = df[~df['participant'].isin(excluded_participants)].reset_index(drop=True)
-    all_sessions = df_filtered['participant'].values
-    fold_sessions = df_filtered['participant'].unique()
-    np.random.seed(42)
-    np.random.shuffle(fold_sessions)
-    num_of_sessions = len(fold_sessions)
-    train_size = int(np.floor(0.6 * num_of_sessions))
-    val_size = int(np.ceil(0.2 * num_of_sessions))
-    start_train_index = fold * val_size
-    end_train_index = (start_train_index + train_size if start_train_index + train_size <= len(fold_sessions)
-                       else start_train_index + train_size - len(fold_sessions))
-    if start_train_index >= end_train_index:
-        train_fold = np.concatenate((fold_sessions[start_train_index:], fold_sessions[:end_train_index]))
-    else:
-        train_fold = fold_sessions[start_train_index:end_train_index]
-    val_train_index = end_train_index
-    val_end_index = (val_train_index + val_size if val_train_index + val_size <= len(fold_sessions)
-                     else val_train_index + val_size - len(fold_sessions))
-    if val_train_index >= val_end_index:
-        val_fold = np.concatenate((fold_sessions[val_train_index:], fold_sessions[:val_end_index]))
-    else:
-        val_fold = fold_sessions[val_train_index:val_end_index]
-    test_fold = np.setdiff1d(fold_sessions, np.concatenate((train_fold, val_fold)))
-    test_idx = df_filtered[df_filtered['participant'].isin(test_fold)].index
-    return all_sessions[test_idx]
 
 
 def train_early_fusion(df, config):
@@ -314,14 +283,11 @@ def train_early_fusion(df, config):
         if splits is None:
             return
 
-        X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length = splits
+        X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length, session_train, session_val, session_test = splits
 
         y_train_sequences = to_categorical(y_train_sequences, num_classes=4)
         y_val_sequences = to_categorical(y_val_sequences, num_classes=4)
         y_test_sequences_cat = to_categorical(y_test_sequences, num_classes=4)
-
-        # Extract session info for get_all_metrics
-        session_test = _extract_session_test(df, fold)
 
         print("X_train_sequences shape:", X_train_sequences.shape)
         print("X_val_sequences shape:", X_val_sequences.shape)
@@ -430,7 +396,7 @@ def train_early_fusion(df, config):
         effective_test_stride = min(config.test_stride, config.test_window_size)
         wandb.log({"effective_test_stride": effective_test_stride, "effective_test_window_size": config.test_window_size})
         test_metrics = get_all_metrics(y_pred, y_test_class_indices, y_pred_proba=y_predict_probs_clean,
-                                       sessions=session_test, window_size=config.test_window_size,
+                                       sessions=session_test[-len(y_pred):], window_size=config.test_window_size,
                                        stride=effective_test_stride, tolerance=1)
         test_metrics.pop("test_edt_per_session", None)
 
@@ -502,8 +468,9 @@ def train_intermediate_fusion(modality_dfs, config):
             df = modality_dfs[modality_key]
             splits[modality_key] = create_data_splits(df, "multiclass", fold_no=fold, num_folds=5, seed_value=42, sequence_length=sequence_length)
 
-        # Extract session info for get_all_metrics from first modality df
-        session_test = _extract_session_test(modality_dfs[modality_keys[0]], fold)
+        # Extract session info for get_all_metrics from first modality
+        first_modality_splits = splits[modality_keys[0]]
+        session_test = first_modality_splits[15]  # session_test
         
         first_modality = modality_keys[0]
         y_train_sequences = splits[first_modality][7] 
@@ -633,7 +600,7 @@ def train_intermediate_fusion(modality_dfs, config):
         effective_test_stride = min(config.test_stride, config.test_window_size)
         wandb.log({"effective_test_stride": effective_test_stride, "effective_test_window_size": config.test_window_size})
         test_metrics = get_all_metrics(y_pred, y_test_class_indices, y_pred_proba=y_predict_probs_clean,
-                                       sessions=session_test, window_size=config.test_window_size,
+                                       sessions=session_test[-len(y_pred):], window_size=config.test_window_size,
                                        stride=effective_test_stride, tolerance=1)
         test_metrics.pop("test_edt_per_session", None)
         
@@ -707,8 +674,9 @@ def train_late_fusion(modality_dfs, config):
             df = modality_dfs[modality_key]
             splits[modality_key] = create_data_splits(df, "multiclass", fold_no=fold, num_folds=5, seed_value=42, sequence_length=sequence_length)
 
-        # Extract session info for get_all_metrics from first modality df
-        session_test = _extract_session_test(modality_dfs[modality_keys[0]], fold)
+        # Extract session info for get_all_metrics from first modality
+        first_modality_splits = splits[modality_keys[0]]
+        session_test = first_modality_splits[15]  # session_test
 
         input_layers = []
         outputs = []
@@ -846,7 +814,7 @@ def train_late_fusion(modality_dfs, config):
         effective_test_stride = min(config.test_stride, config.test_window_size)
         wandb.log({"effective_test_stride": effective_test_stride, "effective_test_window_size": config.test_window_size})
         test_metrics = get_all_metrics(y_pred, y_test_class_indices, y_pred_proba=y_predict_probs_clean,
-                                       sessions=session_test, window_size=config.test_window_size,
+                                       sessions=session_test[-len(y_pred):], window_size=config.test_window_size,
                                        stride=effective_test_stride, tolerance=1)
         test_metrics.pop("test_edt_per_session", None)
 

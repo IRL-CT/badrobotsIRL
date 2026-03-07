@@ -153,6 +153,13 @@ def get_all_metrics(y_pred, y_true, y_pred_proba=None, sessions=None,
             y_pred, y_true, sessions, window_size, effective_stride
         )
         if len(win_preds) > 0:
+            # Filter out NaN entries that can arise from stats.mode on
+            # very small remainder windows
+            valid_mask = ~(np.isnan(win_preds) | np.isnan(win_trues))
+            win_preds = win_preds[valid_mask]
+            win_trues = win_trues[valid_mask]
+
+        if len(win_preds) > 0:
             win_classes = np.unique(np.concatenate([win_trues, win_preds]))
             results["test_windowed_accuracy"] = accuracy_score(win_trues, win_preds)
             results["test_windowed_precision"] = precision_score(
