@@ -951,8 +951,8 @@ def train():
         if "text" in modality_components or "cosine" in modality_components:
             df_text_raw = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "clip_text_embeddings_pca.csv"))
             df_text_cos_raw = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "clip_text_cosine_similarity.csv"))
-            df_text_index = df_text_raw.iloc[last_positions, 2:].reset_index(drop=True)
-            df_text_distance = df_text_cos_raw.iloc[last_positions, 2:].reset_index(drop=True)
+            df_text_index = df_text_raw.iloc[last_positions, 4:].reset_index(drop=True)
+            df_text_distance = df_text_cos_raw.iloc[last_positions, 4:].reset_index(drop=True)
 
         selected_modalities = {}
         if "pose" in modality_components:
@@ -994,8 +994,8 @@ def train():
             elif data == "pca":
                 for modality_name, m in selected_modalities.items():
                     if modality_name == "text_full":
-                        df_text_pca = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "clip_text_embeddings_pca.csv"))
-                        dfs[modality_name] = df_text_pca
+                        df_temp = pd.concat([info.copy(), m], axis=1)
+                        dfs[modality_name] = df_temp
                     else:
                         df_temp = pd.concat([info.copy(), m], axis=1)
                         dfs[modality_name] = create_norm_pca_df(create_normalized_df(df_temp))
@@ -1024,11 +1024,11 @@ def train():
         if has_text_modality and fusion_type == "early":
             if "text" in modality_components:
                 df_text_raw = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "clip_text_embeddings_pca.csv"))
-                df_text_index = df_text_raw.iloc[last_positions, 2:].reset_index(drop=True)
+                df_text_index = df_text_raw.iloc[last_positions, 4:].reset_index(drop=True)
                 df = pd.concat([df, df_text_index], axis=1)
             if "cosine" in modality_components:
                 df_text_cos_raw = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "clip_text_cosine_similarity.csv"))
-                df_text_distance = df_text_cos_raw.iloc[last_positions, 2:].reset_index(drop=True)
+                df_text_distance = df_text_cos_raw.iloc[last_positions, 4:].reset_index(drop=True)
                 df = pd.concat([df, df_text_distance], axis=1)
 
         if data == "norm":
@@ -1079,7 +1079,7 @@ def train():
             dfs = {"base_features": df}
             if "text" in modality_components:
                 df_text_raw = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "clip_text_embeddings_pca.csv"))
-                df_text_index = df_text_raw.iloc[last_positions, 2:].reset_index(drop=True)
+                df_text_index = df_text_raw.iloc[last_positions, 4:].reset_index(drop=True)
                 df_text = pd.concat([info.reset_index(drop=True), df_text_index], axis=1)
                 if data == "norm":
                     df_text = create_normalized_df(df_text)
@@ -1088,7 +1088,7 @@ def train():
                 dfs["text_full"] = df_text
             if "cosine" in modality_components:
                 df_text_cos_raw = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "clip_text_cosine_similarity.csv"))
-                df_text_distance = df_text_cos_raw.iloc[last_positions, 2:].reset_index(drop=True)
+                df_text_distance = df_text_cos_raw.iloc[last_positions, 4:].reset_index(drop=True)
                 df_cos = pd.concat([info.reset_index(drop=True), df_text_distance], axis=1)
                 if data == "norm":
                     df_cos = create_normalized_df(df_cos)
