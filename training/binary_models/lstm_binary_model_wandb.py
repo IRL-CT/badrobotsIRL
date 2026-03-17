@@ -23,7 +23,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PREPROCESSING_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "..", "preprocessing"))
 
 # Feature sets that use the full dataset without modality selection
-NO_MODALITY_SELECTION_SETS = {"catch22", "tsfresh", "curated_features_v3_interpolated", "rf", "selectkbest"}
+NO_MODALITY_SELECTION_SETS = {"catch22", "tsfresh", "curated_features_v5_100fps", "rf", "selectkbest"}
 
 def apply_windowing(df, window_size, stride, aggregation):
     """Aggregate a per-frame DataFrame into windowed samples.
@@ -896,8 +896,8 @@ def train():
     # ------------------------------------------------------------------
     # Load base 100fps dataset
     # ------------------------------------------------------------------
-    if feature_set in ["curated_features_v3_interpolated", "tsfresh", "catch22"]:
-        df_base = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "curated_features_v3_interpolated.csv"))
+    if feature_set in ["curated_features_v5_100fps", "tsfresh", "catch22"]:
+        df_base = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "curated_features_v5_100fps.csv"))
     elif feature_set == "rf":
         df_base = pd.read_csv(os.path.join(PREPROCESSING_DIR, "interpolation", "rf_allparticipants_100fps.csv"))
     elif feature_set == "selectkbest":
@@ -1011,7 +1011,7 @@ def train():
             elif fusion_type == "late":
                 train_late_fusion(dfs, config)
     else:
-        # curated_features_v3_interpolated / catch22 / tsfresh / rf feature sets
+        # curated_features_v5_100fps / catch22 / tsfresh / rf feature sets
 
         # Check if text/cosine should be appended (e.g. rf + text)
         modality_components = config.modality.split('_')
@@ -1043,7 +1043,7 @@ def train():
         # Feature randomization (if enabled)
         # -------------------------------------------------------
         # do this only for curated dataset
-        if config.feature_randomizer == 1 and config.feature_set == "curated_features_v3_interpolated":
+        if config.feature_randomizer == 1 and config.feature_set == "curated_features_v5_100fps":
             available_features = df.columns[4:].tolist()
             max_features = len(available_features)
 
@@ -1113,7 +1113,7 @@ def main():
         'method': 'random',
         'name': 'brirl_lstm_inter',
         'parameters': {
-            'feature_set': {'values': ['full', 'curated_features_v3_interpolated', 'catch22', 'tsfresh', 'rf', 'selectkbest']},
+            'feature_set': {'values': ['full', 'curated_features_v5_100fps', 'catch22', 'tsfresh', 'rf', 'selectkbest']},
             'modality': {'values': [
                 'pose', 'facial', 'audio', 'text', 'cosine',
                 'pose_facial', 'pose_audio', 'pose_text', 'pose_cosine',
