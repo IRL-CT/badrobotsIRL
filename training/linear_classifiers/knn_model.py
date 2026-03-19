@@ -14,7 +14,7 @@ from registry_utils import append_to_registry
 
 
 # Feature sets that use the full dataset without modality selection
-NO_MODALITY_SELECTION_SETS = {"catch22", "tsfresh", "curated_v4", "rf", "selectkbest"}
+NO_MODALITY_SELECTION_SETS = {"catch22", "tsfresh", "curated_v4", "rf", "selectkbest", "curated_v5"}
 
 
 def apply_aux_windowing(df_aux, participant_col_idx, feature_start_col, window_size, stride, aggregation):
@@ -277,7 +277,6 @@ def train():
         df_base = pd.read_csv("../../preprocessing/full_features/allparticipants_100fps.csv")
         #see unique participants
         print("Unique participants in base dataset:", df_base.iloc[:, 1].unique())
-
     # ------------------------------------------------------------------
     # Apply windowing / on-the-fly feature extraction
     # ------------------------------------------------------------------

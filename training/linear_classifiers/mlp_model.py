@@ -14,7 +14,7 @@ from registry_utils import append_to_registry
 
 
 # Feature sets that use the full dataset without modality selection
-NO_MODALITY_SELECTION_SETS = {"catch22", "tsfresh", "curated_v4", "rf", "selectkbest"}
+NO_MODALITY_SELECTION_SETS = {"catch22", "tsfresh", "curated_v4", "rf", "selectkbest", "curated_v5"}
 
 
 def apply_aux_windowing(df_aux, participant_col_idx, feature_start_col, window_size, stride, aggregation):
@@ -262,8 +262,10 @@ def train():
     # ------------------------------------------------------------------
     # Load base 100fps dataset
     # ------------------------------------------------------------------
-    if config.feature_set in ["curated_v4", "tsfresh", "catch22"]: #includes 'catch22', 'tsfresh'
+    if config.feature_set in ["curated_v4"]: #includes 'catch22', 'tsfresh'
         df_base = pd.read_csv("../../preprocessing/curated_features/curated_features_dataset_v4.csv")
+    elif config.feature_set == "curated_v5":
+        df_base = pd.read_csv("../../preprocessing/curated_features/curated_features_dataset_v5.csv")
     elif config.feature_set == "rf":
         df_base = pd.read_csv("../../preprocessing/rf_features/allparticipants_rf_100fps.csv")
     elif config.feature_set == "selectkbest":
@@ -271,12 +273,12 @@ def train():
             df_base = pd.read_csv("../../preprocessing/interpolation/select_k_best_allparticipants_100fps_binary_label.csv")
         else:
             df_base = pd.read_csv("../../preprocessing/interpolation/select_k_best_allparticipants_100fps_multiclass_label.csv")
-    else:
+    elif config.feature_set in ["full"]:
         # 'full' — all start from the full 100fps feature set
         df_base = pd.read_csv("../../preprocessing/full_features/allparticipants_100fps.csv")
         #see unique participants
         print("Unique participants in base dataset:", df_base.iloc[:, 1].unique())
-
+        
     # ------------------------------------------------------------------
     # Apply windowing / on-the-fly feature extraction
     # ------------------------------------------------------------------
