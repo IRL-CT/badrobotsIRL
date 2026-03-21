@@ -1,8 +1,6 @@
 # BADRobotsIRL
 
-Recognizing robot failure by analyzing human reactions and behaviors toward in-person robot failures.
-
-Our study investigates human responses to successive conversational errors made by robots. We explore how these responses change over time generally and across different individuals. We conducted a user study involving 26 participants, where we examine the behavioral and emotional shifts that occur when users interact with a robot named HelperBot that was wizarded to make successive conversational errors. The robot failure (not understanding the participant's order) was verbalized as "Sorry, I do not understand" and occurred at least 3 times per interaction.
+Our study investigates human responses to successive conversational errors made by robots and how these responses change over time generally and across different individuals. We conducted a user study involving 26 participants, where we examine the behavioral and emotional shifts that occur when users interact with a robot named HelperBot that was wizarded to make successive conversational errors. The robot failure (not understanding the participant's order) was verbalized as "Sorry, I do not understand" and occurred at least 3 times per interaction.
 
 We develop machine learning models to classify robot failure (binary classification) and successive robot failure (multiclass classification) using features extracted from facial expressions (OpenFace), body pose (OpenPose), audio (openSMILE eGeMAPSv02), and text embeddings (CLIP). All features are linearly interpolated to a unified 100fps frame rate before training. We explore a range of model architectures, feature sets, modality combinations, fusion strategies, and data splitting approaches to detect successive robot error for a single user or across multiple participants.
 
@@ -16,11 +14,11 @@ This section documents interparticipant training models where models are trained
 
 Each classifier uses SMOTE for class balancing and supports binary and multiclass classification with W&B sweep integration. Code is located in [`training/linear_classifiers/`](training/linear_classifiers/).
 
-- **K-Nearest Neighbors (KNN)** — [knn_model.py](training/linear_classifiers/knn_model.py)
-- **Random Forest (RF)** — [rf_model.py](training/linear_classifiers/rf_model.py)
-- **Stochastic Gradient Descent (SGD)** — [sgd_model.py](training/linear_classifiers/sgd_model.py)
-- **Support Vector Machine (SVM)** — [svm_model.py](training/linear_classifiers/svm_model.py)
-- **Multilayer Perceptron (MLP)** — [mlp_model.py](training/linear_classifiers/mlp_model.py)
+- **K-Nearest Neighbors (KNN)**: [knn_model.py](training/linear_classifiers/knn_model.py)
+- **Random Forest (RF)**: [rf_model.py](training/linear_classifiers/rf_model.py)
+- **Stochastic Gradient Descent (SGD)**: [sgd_model.py](training/linear_classifiers/sgd_model.py)
+- **Support Vector Machine (SVM)**: [svm_model.py](training/linear_classifiers/svm_model.py)
+- **Multilayer Perceptron (MLP)**: [mlp_model.py](training/linear_classifiers/mlp_model.py)
 
 ### Recurrent Neural Networks (RNNs)
 
@@ -50,19 +48,19 @@ For the `curated_v5` feature set, an optional feature randomizer can be enabled 
 
 For the `full` feature set, features are organized by modality and can be combined in 22 different subsets:
 
-- **Pose** — upper-body keypoints (nose, neck, shoulders, elbows, wrists, eyes, ears) + deltas
-- **Facial** — OpenFace action units (AU) + gaze vectors
-- **Audio** — openSMILE eGeMAPSv02 low-level descriptors
-- **Text** — CLIP text embeddings (PCA-reduced)
-- **Cosine** — CLIP text cosine similarity distance
+- **Pose**: upper-body keypoints (nose, neck, shoulders, elbows, wrists, eyes, ears) + deltas
+- **Facial**: OpenFace action units (AU) + gaze vectors
+- **Audio**: openSMILE eGeMAPSv02 low-level descriptors
+- **Text**: CLIP text embeddings (PCA-reduced)
+- **Cosine**: CLIP text cosine similarity distance
 
 Feature sets `curated_v4`, `catch22`, `tsfresh`, `rf`, and `selectkbest` use all available features without per-modality splitting.
 
 ## Fusion Strategies (RNNs)
 
-- **Early Fusion** — modality features are concatenated before being input to the model
-- **Intermediate Fusion** — each modality is processed by independent RNN layers, then intermediate representations are concatenated and passed through shared layers
-- **Late Fusion** — each modality is trained by a separate RNN, then their outputs are concatenated for final classification
+- **Early Fusion**: modality features are concatenated before being input to the model
+- **Intermediate Fusion**: each modality is processed by independent RNN layers, then intermediate representations are concatenated and passed through shared layers
+- **Late Fusion**: each modality is trained by a separate RNN, then their outputs are concatenated for final classification
 
 ## Windowing & Aggregation
 
@@ -76,28 +74,28 @@ For `catch22` and `tsfresh`, windowing is integrated into the feature extraction
 
 ## Dataset Representations
 
-- **Raw** (`reg`) — features without normalization
-- **Normalized** (`norm`) — StandardScaler applied to features
-- **PCA** (`pca`) — StandardScaler + PCA retaining 90% variance
+- **Raw** (`reg`): features without normalization
+- **Normalized** (`norm`): StandardScaler applied to features
+- **PCA** (`pca`): StandardScaler + PCA retaining 90% variance
 
 ## Evaluation Metrics
 
 Model performance is evaluated using the following metrics, computed via [get_all_metrics.py](training/binary_models/get_all_metrics.py):
 
 ### Standard Metrics
-- **Accuracy** — proportion of correctly classified frames
-- **Precision** — macro-averaged precision across classes
-- **Recall** — macro-averaged recall across classes
-- **F1 Score** — macro-averaged F1 across classes
+- **Accuracy**: proportion of correctly classified frames
+- **Precision**: macro-averaged precision across classes
+- **Recall**: macro-averaged recall across classes
+- **F1 Score**: macro-averaged F1 across classes
 
 ### Windowed Metrics
 Per-frame predictions are aggregated into fixed-length windows using majority voting (statistical mode). The window-level prediction and label are each the mode of their respective per-frame values within that window. This evaluates the model's ability to correctly classify segments rather than individual frames.
 - **Windowed Accuracy, Precision, Recall, F1**
 
 ### Additional Metrics
-- **AUC** — area under the ROC curve (binary: positive class probability; multiclass: one-vs-rest macro average)
-- **FNR** — false negative rate (FN / (FN + TP)); measures how often errors go undetected
-- **Earliest Detection Time (EDT)** — for binary classification, the number of frames between the first true error onset (y_true == 1) and the model's first correct detection (y_pred == 1) at or after that point, averaged across sessions. Lower EDT indicates faster error detection.
+- **AUC**: area under the ROC curve (binary: positive class probability; multiclass: one-vs-rest macro average)
+- **FNR**: false negative rate (FN / (FN + TP)); measures how often errors go undetected
+- **Earliest Detection Time (EDT)**: for binary classification, the number of frames between the first true error onset (y_true == 1) and the model's first correct detection (y_pred == 1) at or after that point, averaged across sessions. Lower EDT indicates faster error detection.
 
 
 # Training Models to Detect Successive Robot Errors from Human Reactions (NERC 2025)
