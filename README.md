@@ -1,5 +1,11 @@
 # BADRobotsIRL
 
+Recognizing robot failure by analyzing human reactions and behaviors toward in-person robot failures.
+
+Our study investigates human responses to successive conversational errors made by robots. We explore how these responses change over time generally and across different individuals. We conducted a user study involving 26 participants, where we examine the behavioral and emotional shifts that occur when users interact with a robot named HelperBot that was wizarded to make successive conversational errors. The robot failure (not understanding the participant's order) was verbalized as "Sorry, I do not understand" and occurred at least 3 times per interaction.
+
+We develop machine learning models to classify robot failure (binary classification) and successive robot failure (multiclass classification) using features extracted from facial expressions (OpenFace), body pose (OpenPose), audio (openSMILE eGeMAPSv02), and text embeddings (CLIP). All features are linearly interpolated to a unified 100fps frame rate before training. We explore a range of model architectures, feature sets, modality combinations, fusion strategies, and data splitting approaches to detect successive robot error for a single user or across multiple participants.
+
 # Interparticipant Models
 
 This section documents interparticipant training models where models are trained on data from some participants and tested on different unseen participants using 5-fold grouped cross-validation. This tests how well a system can generalize failure detection to new individuals.
@@ -8,8 +14,7 @@ This section documents interparticipant training models where models are trained
 
 ### Linear Classifiers
 
-[`training/linear_classifiers/`](training/linear_classifiers/)
-Each classifier uses SMOTE for class balancing and supports binary and multiclass classification with W&B sweep integration.
+Each classifier uses SMOTE for class balancing and supports binary and multiclass classification with W&B sweep integration. Code is located in [`training/linear_classifiers/`](training/linear_classifiers/).
 
 - **K-Nearest Neighbors (KNN)** — [knn_model.py](training/linear_classifiers/knn_model.py)
 - **Random Forest (RF)** — [rf_model.py](training/linear_classifiers/rf_model.py)
@@ -19,8 +24,7 @@ Each classifier uses SMOTE for class balancing and supports binary and multiclas
 
 ### Recurrent Neural Networks (RNNs)
 
-[`training/binary_models/`](training/binary_models/) and [`training/multiclass_models/`](training/multiclass_models/).
-RNN models support early, intermediate, and late fusion, optional bidirectional layers, and configurable regularization (L1, L2, L1+L2).
+RNN models support early, intermediate, and late fusion, optional bidirectional layers, and configurable regularization (L1, L2, L1+L2). Code is located in [`training/binary_models/`](training/binary_models/) and [`training/multiclass_models/`](training/multiclass_models/).
 
 - **GRU**
   - Binary: [gru_binary_model_wandb.py](training/binary_models/gru_binary_model_wandb.py)
@@ -33,12 +37,14 @@ RNN models support early, intermediate, and late fusion, optional bidirectional 
 
 | Feature Set | Description | Source | # Features |
 |---|---|---|---|
-| `full` | All facial (AU + gaze), pose (upper-body keypoints + deltas), and audio (eGeMAPSv02) features | [allparticipants_100fps.csv](preprocessing/full_features/) | 84+ |
-| `curated_v4` | Hand-selected features: 10 audio, gaze (avg, magnitude, shift), head movement energy, VAD, verbal response time, cosine distance | [create_curated_features_dataset.py](preprocessing/curated_features/create_curated_features_dataset.py) | 20 |
-| `catch22` | 22 canonical time-series features computed per feature column per window using `pycatch22` | [catch22_dataset_generation.py](preprocessing/catch22_dataset_generation.py) | n_features × 22 |
-| `tsfresh` | Automated time-series feature extraction using `EfficientFCParameters` on sliding windows | [tsfresh_dataset_generation.py](preprocessing/tsfresh_dataset_generation.py) | ~700+ (varies) |
-| `rf` | Features selected via random forest importance with a 40% drop threshold | [allparticipants_rf_100fps.csv](preprocessing/rf_features/) | subset of `full` |
+| `full` | All facial (AU + gaze), pose (upper-body keypoints + deltas), and audio (eGeMAPSv02) features | [interpolate_features.py](preprocessing/interpolation/interpolate_features.py), [interpolate_pose.py](preprocessing/interpolation/interpolate_pose.py) | 84+ |
+| `curated_v5` | Curated features: 10 audio, gaze (avg, magnitude, shift), head movement energy, VAD, verbal response time, cosine distance, zones, audio deltas, cosine repetition metrics | [create_curated_features_dataset.py](preprocessing/curated_features/create_curated_features_dataset.py), [interpolate_curated_v3.py](preprocessing/interpolation/interpolate_curated_v3.py), [compute_zones.py](preprocessing/interpolation/compute_zones.py), [compute_audio_features.py](preprocessing/interpolation/compute_audio_features.py) | 20 |
+| `catch22` | 22 canonical time-series features computed per feature column per window using `pycatch22` | Generated on-the-fly during training via `apply_catch22_windowing()` in model scripts | n_features × 22 |
+| `tsfresh` | Automated time-series feature extraction using `EfficientFCParameters` on sliding windows | Generated on-the-fly during training via `apply_tsfresh_windowing()` in model scripts | ~700+ (varies) |
+| `rf` | Features selected via random forest importance with a 40% drop threshold | [rf_features.py](preprocessing/rf_features.py) | subset of `full` |
 | `selectkbest` | Features selected using scikit-learn's SelectKBest (separate sets for binary and multiclass labels) | [select_k_best.py](preprocessing/select_k_best.py) | subset of `full` |
+
+For the `curated_v5` feature set, an optional feature randomizer can be enabled to randomly select a subset of features during training, allowing exploration of which feature combinations are most predictive.
 
 ## Modalities
 
@@ -73,6 +79,29 @@ For `catch22` and `tsfresh`, windowing is integrated into the feature extraction
 - **Raw** (`reg`) — features without normalization
 - **Normalized** (`norm`) — StandardScaler applied to features
 - **PCA** (`pca`) — StandardScaler + PCA retaining 90% variance
+
+## Evaluation Metrics
+
+Model performance is evaluated using the following metrics, computed via [get_all_metrics.py](training/binary_models/get_all_metrics.py):
+
+### Standard Metrics
+- **Accuracy** — proportion of correctly classified frames
+- **Precision** — macro-averaged precision across classes
+- **Recall** — macro-averaged recall across classes
+- **F1 Score** — macro-averaged F1 across classes
+
+### Tolerant Metrics
+Frame-level predictions are evaluated with a tolerance window (±1 frame). A prediction is considered correct if the predicted label appears anywhere within the tolerance window around that frame in the ground truth. This accounts for slight temporal misalignment between predictions and labels.
+- **Tolerant Accuracy, Precision, Recall, F1**
+
+### Windowed Metrics
+Per-frame predictions are aggregated into fixed-length windows using majority voting (statistical mode). The window-level prediction and label are each the mode of their respective per-frame values within that window. This evaluates the model's ability to correctly classify segments rather than individual frames.
+- **Windowed Accuracy, Precision, Recall, F1**
+
+### Additional Metrics
+- **AUC** — area under the ROC curve (binary: positive class probability; multiclass: one-vs-rest macro average)
+- **FNR** — false negative rate (FN / (FN + TP)); measures how often errors go undetected
+- **Earliest Detection Time (EDT)** — for binary classification, the number of frames between the first true error onset (y_true == 1) and the model's first correct detection (y_pred == 1) at or after that point, averaged across sessions. Lower EDT indicates faster error detection.
 
 
 # Training Models to Detect Successive Robot Errors from Human Reactions (NERC 2025)
