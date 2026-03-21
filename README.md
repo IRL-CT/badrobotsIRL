@@ -1,3 +1,80 @@
+# BADRobotsIRL
+
+# Interparticipant Models
+
+This section documents interparticipant training models where models are trained on data from some participants and tested on different unseen participants using 5-fold grouped cross-validation. This tests how well a system can generalize failure detection to new individuals.
+
+## Model Architectures
+
+### Linear Classifiers
+
+[`training/linear_classifiers/`](training/linear_classifiers/)
+Each classifier uses SMOTE for class balancing and supports binary and multiclass classification with W&B sweep integration.
+
+- **K-Nearest Neighbors (KNN)** — [knn_model.py](training/linear_classifiers/knn_model.py)
+- **Random Forest (RF)** — [rf_model.py](training/linear_classifiers/rf_model.py)
+- **Stochastic Gradient Descent (SGD)** — [sgd_model.py](training/linear_classifiers/sgd_model.py)
+- **Support Vector Machine (SVM)** — [svm_model.py](training/linear_classifiers/svm_model.py)
+- **Multilayer Perceptron (MLP)** — [mlp_model.py](training/linear_classifiers/mlp_model.py)
+
+### Recurrent Neural Networks (RNNs)
+
+[`training/binary_models/`](training/binary_models/) and [`training/multiclass_models/`](training/multiclass_models/).
+RNN models support early, intermediate, and late fusion, optional bidirectional layers, and configurable regularization (L1, L2, L1+L2).
+
+- **GRU**
+  - Binary: [gru_binary_model_wandb.py](training/binary_models/gru_binary_model_wandb.py)
+  - Multiclass: [gru_multiclass_model_wandb.py](training/multiclass_models/gru_multiclass_model_wandb.py)
+- **LSTM**
+  - Binary: [lstm_binary_model_wandb.py](training/binary_models/lstm_binary_model_wandb.py)
+  - Multiclass: [lstm_multiclass_model_wandb.py](training/multiclass_models/lstm_multiclass_model_wandb.py)
+
+## Feature Sets
+
+| Feature Set | Description | Source | # Features |
+|---|---|---|---|
+| `full` | All facial (AU + gaze), pose (upper-body keypoints + deltas), and audio (eGeMAPSv02) features | [allparticipants_100fps.csv](preprocessing/full_features/) | 84+ |
+| `curated_v4` | Hand-selected features: 10 audio, gaze (avg, magnitude, shift), head movement energy, VAD, verbal response time, cosine distance | [create_curated_features_dataset.py](preprocessing/curated_features/create_curated_features_dataset.py) | 20 |
+| `catch22` | 22 canonical time-series features computed per feature column per window using `pycatch22` | [catch22_dataset_generation.py](preprocessing/catch22_dataset_generation.py) | n_features × 22 |
+| `tsfresh` | Automated time-series feature extraction using `EfficientFCParameters` on sliding windows | [tsfresh_dataset_generation.py](preprocessing/tsfresh_dataset_generation.py) | ~700+ (varies) |
+| `rf` | Features selected via random forest importance with a 40% drop threshold | [allparticipants_rf_100fps.csv](preprocessing/rf_features/) | subset of `full` |
+| `selectkbest` | Features selected using scikit-learn's SelectKBest (separate sets for binary and multiclass labels) | [select_k_best.py](preprocessing/select_k_best.py) | subset of `full` |
+
+## Modalities
+
+For the `full` feature set, features are organized by modality and can be combined in 22 different subsets:
+
+- **Pose** — upper-body keypoints (nose, neck, shoulders, elbows, wrists, eyes, ears) + deltas
+- **Facial** — OpenFace action units (AU) + gaze vectors
+- **Audio** — openSMILE eGeMAPSv02 low-level descriptors
+- **Text** — CLIP text embeddings (PCA-reduced)
+- **Cosine** — CLIP text cosine similarity distance
+
+Feature sets `curated_v4`, `catch22`, `tsfresh`, `rf`, and `selectkbest` use all available features without per-modality splitting.
+
+## Fusion Strategies (RNNs)
+
+- **Early Fusion** — modality features are concatenated before being input to the model
+- **Intermediate Fusion** — each modality is processed by independent RNN layers, then intermediate representations are concatenated and passed through shared layers
+- **Late Fusion** — each modality is trained by a separate RNN, then their outputs are concatenated for final classification
+
+## Windowing & Aggregation
+
+All models apply sliding-window aggregation over the 100fps frame-level data before training:
+
+- **Window sizes**: 1, 5, 10, 15, 30 frames
+- **Strides**: 1, 3, 5, 10 frames
+- **Aggregation methods**: `average` (mean of window), `mode` (statistical mode), `last` (last frame value)
+
+For `catch22` and `tsfresh`, windowing is integrated into the feature extraction step (features are computed directly on each window).
+
+## Dataset Representations
+
+- **Raw** (`reg`) — features without normalization
+- **Normalized** (`norm`) — StandardScaler applied to features
+- **PCA** (`pca`) — StandardScaler + PCA retaining 90% variance
+
+
 # Training Models to Detect Successive Robot Errors from Human Reactions (NERC 2025)
 
 Shannon Liu, Maria Teresa Parreira, Wendy Ju
