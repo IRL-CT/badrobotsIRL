@@ -90,10 +90,6 @@ Model performance is evaluated using the following metrics, computed via [get_al
 - **Recall** — macro-averaged recall across classes
 - **F1 Score** — macro-averaged F1 across classes
 
-### Tolerant Metrics
-Frame-level predictions are evaluated with a tolerance window (±1 frame). A prediction is considered correct if the predicted label appears anywhere within the tolerance window around that frame in the ground truth. This accounts for slight temporal misalignment between predictions and labels.
-- **Tolerant Accuracy, Precision, Recall, F1**
-
 ### Windowed Metrics
 Per-frame predictions are aggregated into fixed-length windows using majority voting (statistical mode). The window-level prediction and label are each the mode of their respective per-frame values within that window. This evaluates the model's ability to correctly classify segments rather than individual frames.
 - **Windowed Accuracy, Precision, Recall, F1**
