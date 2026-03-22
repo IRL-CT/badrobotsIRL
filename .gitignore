@@ -49,3 +49,5 @@ training/binary_models/wandb/*.log
 training/binary_models/wandb/latest-run
 *.txt
 /data/
+!/data/README.md
+!/data/*/.gitkeep
