@@ -1,14 +1,25 @@
 # BADRobotsIRL
 
-Our study investigates human responses to successive conversational errors made by robots and how these responses change over time generally and across different individuals. We conducted a user study involving 26 participants, where we examine the behavioral and emotional shifts that occur when users interact with a robot named HelperBot that was wizarded to make successive conversational errors. The robot failure (not understanding the participant's order) was verbalized as "Sorry, I do not understand" and occurred at least 3 times per interaction.
+Our study investigates human responses to successive conversational errors made by robots and how these responses change over time generally and across different individuals. We conducted a user study involving 26 participants, where we examine the behavioral and emotional shifts that occur when users interact with a robot named HelperBot that was wizarded to make successive conversational errors. The robot failure (not understanding the participant's order) was verbalized as "Sorry, I do not understand" and occurred at least 3 times per interaction. Afterward, the interaction ended with robot verbalizing "OK, I will call the researcher".
+
+## Table of Contents
+
+1. [Generalizable Multimodal Models for Robot Failure and Successive Error Detection](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#generalizable-multimodal-models-for-robot-failure-and-successive-error-detection)
+2. [Training Models to Detect Successive Robot Errors from Human Reactions (NERC 2025)](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#training-models-to-detect-successive-robot-errors-from-human-reactions-nerc-2025)
+3. ["I'm Done": Describing Human Reactions to Successive Robot Failure (HRI 2025)](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#im-done-describing-human-reactions-to-successive-robot-failure-hri-2025)
+4. [Features](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#feature-extraction)
+5. [Labels](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#labels)
+6. [Training](https://github.com/IRL-CT/badrobotsIRL?tab=readme-ov-file#model-training)
+7. [Participant Exclusion](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#participant-exclusion)
+8. [Principal Component Analysis](https://github.com/FAR-Lab/badrobotsIRL/tree/main?tab=readme-ov-file#principal-component-analysis-pca)
+
+# Generalizable Multimodal Models for Robot Failure and Successive Error Detection
 
 We develop machine learning models to classify robot failure (binary classification) and successive robot failure (multiclass classification) using features extracted from facial expressions (OpenFace), body pose (OpenPose), audio (openSMILE eGeMAPSv02), and text embeddings (CLIP). All features are linearly interpolated to a unified 100fps frame rate before training. We explore a range of model architectures, feature sets, modality combinations, fusion strategies, and data splitting approaches to detect successive robot error for a single user or across multiple participants.
 
-# Interparticipant Models
+## Interparticipant Model Architectures
 
 This section documents interparticipant training models where models are trained on data from some participants and tested on different unseen participants using 5-fold grouped cross-validation. This tests how well a system can generalize failure detection to new individuals.
-
-## Model Architectures
 
 ### Linear Classifiers
 
@@ -174,33 +185,8 @@ A statistical analysis of the video dataset of interactions between the particip
 
 The code used for the analysis is found at [full_statsanalysis.ipynb](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/stats/full_statsanalysis.ipynb).
 
-<!-- ### Reference / Bibtex -->
 
-
-# BAD Robots IRL
-
-Recognizing robot failure by analyzing human reactions and behaviors toward in-person robot failures.
-
-The experiment involved a participant and a robot interacting or conversing with each other in a private room. The robot was controlled by a researcher and was engineered to create at least 3 errors.
-
-The robot failure: not understanding the participant's order.
-
-The robot failure was verbalized as "Sorry, I do not understand" and occurred at least 3 times. Afterward, the interaction ended with robot verbalizing "OK, I will call the researcher".
-
-## Table of Contents
-
-1. [Analysis of Human Reactions to Robot Failure](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#analysis-of-human-reactions-to-robot-failure)
-2. [Features](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#feature-extraction)
-3. [Labels](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#labels)
-4. [Training](https://github.com/IRL-CT/badrobotsIRL?tab=readme-ov-file#model-training)
-5. [Participant Exclusion](https://github.com/FAR-Lab/badrobotsIRL?tab=readme-ov-file#participant-exclusion)
-6. [Principal Component Analysis](https://github.com/FAR-Lab/badrobotsIRL/tree/main?tab=readme-ov-file#principal-component-analysis-pca)
-
-## Analysis of Human Reactions to Robot Failure
-
-See [HRI25_LBR](https://github.com/FAR-Lab/badrobotsIRL/tree/main/HRI25_LBR) for more details on the study and findings.
-
-## Features
+# Features
 
 Feature extraction was performed on the participant to understand and analyze facial expressions, body movements, and speech that might convey underlying emotions during the human-robot interaction. After each feature extraction tool was applied to the sample's videos, resulting outputs were processed into readable forms which were then merged into one collective CSV file documenting all feature data per frame per participant.
 
@@ -335,7 +321,7 @@ Feature set: [stats_features](https://github.com/FAR-Lab/badrobotsIRL/blob/main/
 A random forest was used to assess feature importance. Features were retained up to the point where the importance drop exceeded 40%.
 Feature set: [rf_features](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/rf/rf_features_selected_40.csv)
 
-## Labels
+# Labels
 
 Two types of labeling methods were used: binary labeling and multiclass labeling. A label was applied to each frame of the video of the interaction between the participant and the robot. Labels were initially appended to the pose feature CSV files.
 
@@ -431,7 +417,7 @@ Participant 29's interaction consisted of 5 errors. Therefore, it contained 2 ad
 
 The Python script that assisted with the label analysis is found here: [label_analysis.py](https://github.com/FAR-Lab/badrobotsIRL/blob/main/preprocessing/label_analysis.py)
 
-## Model Training
+# Model Training
 
 We evaluated model performance using two training approaches:
 
@@ -470,7 +456,7 @@ We explored different model architectures to assess performance across different
 
 These models were trained using interparticipant and intraparticipant splits and with different fusion strategies, feature sets, and datasets as explained above.
 
-## Participant Exclusion
+# Participant Exclusion
 
 Participants were excluded based on the following reasons:
 - Failed protocol resulting in no reaction to failures
@@ -479,7 +465,7 @@ Participants were excluded based on the following reasons:
 
 Final number of participants: 24.
 
-## Principal Component Analysis (PCA)
+# Principal Component Analysis (PCA)
 
 PCA is a method used to reduce the number of variables in a large dataset by retaining patterns in the data. PCA was conducted on the dataset of 84 features containing facial, pose, and audio features. The short script below was used to retain 90% of the variance and apply the PCA to the dataset.
 
