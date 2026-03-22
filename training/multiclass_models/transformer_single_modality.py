@@ -6,6 +6,8 @@ import random
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.preprocessing import StandardScaler
 import wandb
+import os
+import sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'common'))
 from create_data_splits import create_data_splits, create_data_splits_pca
 
 def get_metrics(preds, targets):
@@ -254,9 +256,9 @@ def train():
     feature_set = config.feature_set
     data = config.data
 
-    df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
-    df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_stats_0_3.csv")
-    df_rf = pd.read_csv("../../preprocessing/rf_features/all_participants_rf_0_3_40.csv")
+    df = pd.read_csv("../../data/raw/all_participants_0_3.csv")
+    df_stats = pd.read_csv("../../data/feature_sets/all_participants_stats_0_3.csv")
+    df_rf = pd.read_csv("../../data/feature_sets/all_participants_rf_0_3_40.csv")
 
     info = df.iloc[:, :4]
     df_pose_index = df.iloc[:, 4:28]

@@ -8,6 +8,8 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+import os
+import sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'common'))
 from create_data_splits import create_data_splits
 from get_metrics import get_test_metrics  # Assuming this function can be reused
 import os
@@ -1063,13 +1065,13 @@ def train():
     fusion_type = config.fusion_type
     
     # Data loading (same as original script)
-    df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
-    df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_stats_0_3.csv")
-    df_rf = pd.read_csv("../../preprocessing/rf_features/all_participants_rf_0_3_40.csv")
+    df = pd.read_csv("../../data/raw/all_participants_0_3.csv")
+    df_stats = pd.read_csv("../../data/feature_sets/all_participants_stats_0_3.csv")
+    df_rf = pd.read_csv("../../data/feature_sets/all_participants_rf_0_3_40.csv")
     df_text = pd.read_csv("../../preprocessing/text_embeddings.csv")
-    df_text_pca = pd.read_csv("../../preprocessing/text_embeddings_pca.csv")
+    df_text_pca = pd.read_csv("../../data/embeddings/text_embeddings_pca.csv")
     df_text_clip = pd.read_csv("../../preprocessing/clip_text_embeddings.csv")
-    df_text_clip_pca = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
+    df_text_clip_pca = pd.read_csv("../../data/embeddings/clip_text_embeddings_pca.csv")
     
     info = df.iloc[:, :4]
     df_pose_index = df.iloc[:, 4:28]

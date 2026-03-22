@@ -31,6 +31,8 @@ import wandb
 from scipy import stats
 from sklearn.metrics import confusion_matrix
 
+import os
+import sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'common'))
 from get_all_metrics import get_all_metrics
 from registry_utils import get_predictions_for_run, load_registry
 

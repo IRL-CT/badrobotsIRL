@@ -12,6 +12,8 @@ import seaborn as sns
 from collections import Counter
 from imblearn.over_sampling import RandomOverSampler
 from imblearn.under_sampling import RandomUnderSampler
+import os
+import sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'common'))
 from create_data_splits import create_data_splits, create_data_splits_ids
 from create_data_splits import create_data_splits_intra_balanced as create_data_splits
 

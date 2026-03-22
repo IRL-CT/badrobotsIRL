@@ -5,6 +5,8 @@ import random
 #from sklearn.model_selection import KFold
 
 #import tensorflow as tf
+import os
+import sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'common'))
 from get_metrics import get_metrics
 #import tsai
 

@@ -8,6 +8,8 @@ from sklearn.metrics import accuracy_score, classification_report
 from sklearn.metrics import confusion_matrix
 import wandb
 from itertools import product
+import os
+import sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'common'))
 from get_metrics import get_test_metrics
 from create_data_splits import create_data_splits
 import random
@@ -19,11 +21,11 @@ def train():
     print(config)
     seed_value = 42
 
-    df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
-    df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_stats_0_3.csv")
-    df_rf = pd.read_csv("../../preprocessing/rf_features/all_participants_rf_0_3_40.csv")
+    df = pd.read_csv("../../data/raw/all_participants_0_3.csv")
+    df_stats = pd.read_csv("../../data/feature_sets/all_participants_stats_0_3.csv")
+    df_rf = pd.read_csv("../../data/feature_sets/all_participants_rf_0_3_40.csv")
     df_text = pd.read_csv("../../preprocessing/text_embeddings.csv")
-    df_text_pca = pd.read_csv("../../preprocessing/text_embeddings_pca.csv")
+    df_text_pca = pd.read_csv("../../data/embeddings/text_embeddings_pca.csv")
 
     info = df.iloc[:, :4]
     df_pose_index = df.iloc[:, 4:28]

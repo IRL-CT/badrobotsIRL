@@ -8,6 +8,8 @@ from sklearn.metrics import accuracy_score, classification_report
 from sklearn.metrics import confusion_matrix
 import wandb
 from itertools import product
+import os
+import sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'common'))
 from get_all_metrics import get_all_metrics
 from create_data_splits import create_data_splits
 from registry_utils import append_to_registry
@@ -263,19 +265,19 @@ def train():
     # Load base 100fps dataset
     # ------------------------------------------------------------------
     if config.feature_set in ["curated_v4"]: #includes 'catch22', 'tsfresh'
-        df_base = pd.read_csv("../../preprocessing/curated_features/curated_features_dataset_v4.csv")
+        df_base = pd.read_csv("../../data/feature_sets/curated_features_dataset_v4.csv")
     elif config.feature_set == "curated_v5":
-        df_base = pd.read_csv("../../preprocessing/curated_features/curated_features_dataset_v5.csv")
+        df_base = pd.read_csv("../../data/feature_sets/curated_features_dataset_v5.csv")
     elif config.feature_set == "rf":
-        df_base = pd.read_csv("../../preprocessing/rf_features/allparticipants_rf_100fps.csv")
+        df_base = pd.read_csv("../../data/feature_sets/rf_allparticipants_100fps.csv")
     elif config.feature_set == "selectkbest":
         if config.binary_multiclass == "binary":
-            df_base = pd.read_csv("../../preprocessing/interpolation/select_k_best_allparticipants_100fps_binary_label.csv")
+            df_base = pd.read_csv("../../data/feature_sets/select_k_best_allparticipants_100fps_binary_label.csv")
         else:
-            df_base = pd.read_csv("../../preprocessing/interpolation/select_k_best_allparticipants_100fps_multiclass_label.csv")
+            df_base = pd.read_csv("../../data/feature_sets/select_k_best_allparticipants_100fps_multiclass_label.csv")
     elif config.feature_set in ["full"]:
         # 'full' — all start from the full 100fps feature set
-        df_base = pd.read_csv("../../preprocessing/full_features/allparticipants_100fps.csv")
+        df_base = pd.read_csv("../../data/interpolated/allparticipants_100fps.csv")
         #see unique participants
         print("Unique participants in base dataset:", df_base.iloc[:, 1].unique())
         
@@ -317,8 +319,8 @@ def train():
 
         # Text embeddings must be aligned to the windowed rows via last_positions
         if "text" in modality_components or "cosine" in modality_components:
-            df_text_raw = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
-            df_text_cos_raw = pd.read_csv("../../preprocessing/clip_text_cosine_similarity.csv")
+            df_text_raw = pd.read_csv("../../data/embeddings/clip_text_embeddings_pca.csv")
+            df_text_cos_raw = pd.read_csv("../../data/embeddings/clip_text_cosine_similarity.csv")
             df_text_index = df_text_raw.iloc[last_positions, 2:].reset_index(drop=True)
             df_text_distance = df_text_cos_raw.iloc[last_positions, 2:].reset_index(drop=True)
 

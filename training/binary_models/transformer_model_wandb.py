@@ -5,6 +5,8 @@ import numpy as np
 import random
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import wandb
+import os
+import sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'common'))
 from create_data_splits import create_data_splits, create_data_splits_pca
 
 def get_metrics(preds, targets):

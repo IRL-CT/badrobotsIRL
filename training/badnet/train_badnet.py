@@ -22,6 +22,7 @@ from badnet_pytorch import (
     BadNetPretrained, BadNetSimple, create_model, BadNetCNN,
     create_interparticipant_folds, train_fold
 )
+import sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'common'))
 from get_metrics import get_test_metrics
 
 
@@ -30,7 +31,7 @@ def parse_args():
     
     # Data paths
     parser.add_argument("--csv_path", type=str, 
-                        default="../../preprocessing/full_features/all_participants_0_3.csv",
+                        default="../../data/raw/all_participants_0_3.csv",
                         help="Path to CSV file with labels")
     parser.add_argument("--image_base_path", type=str, 
                         default="../../../data/frames",

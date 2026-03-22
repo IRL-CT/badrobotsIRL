@@ -13,6 +13,8 @@ from keras import layers
 from keras.layers import LSTM, Dense, Dropout
 from keras.utils import to_categorical
 
+import os
+import sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'common'))
 from create_data_splits import create_data_splits
 
 import wandb

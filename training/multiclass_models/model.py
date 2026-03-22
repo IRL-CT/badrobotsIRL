@@ -12,6 +12,8 @@ from keras.callbacks import ModelCheckpoint
 from keras.regularizers import l1_l2, l1, l2
 from keras.utils import to_categorical
 import tensorflow as tf
+import os
+import sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'common'))
 from create_data_splits import create_data_splits, create_data_splits_pca
 from get_metrics import get_test_metrics
 
@@ -315,7 +317,7 @@ def train():
     np.random.seed(42)
     tf.random.set_seed(42)
     
-    df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
+    df = pd.read_csv("../../data/raw/all_participants_0_3.csv")
 
     test_metrics_list = {
         "test_accuracy": [],

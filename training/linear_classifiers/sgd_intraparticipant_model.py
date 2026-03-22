@@ -7,6 +7,8 @@ from imblearn.over_sampling import SMOTE
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 import wandb
+import os
+import sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'common'))
 from get_metrics import get_test_metrics
 from create_data_splits import make_split_indices
 
@@ -24,11 +26,11 @@ def train():
         return
 
     # Load datasets
-    df = pd.read_csv("../../preprocessing/full_features/all_participants_0_3.csv")
-    df_stats = pd.read_csv("../../preprocessing/stats_features/all_participants_stats_0_3.csv")
-    df_rf = pd.read_csv("../../preprocessing/rf_features/all_participants_rf_0_3_40.csv")
-    df_text = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
-    df_text_pca = pd.read_csv("../../preprocessing/clip_text_embeddings_pca.csv")
+    df = pd.read_csv("../../data/raw/all_participants_0_3.csv")
+    df_stats = pd.read_csv("../../data/feature_sets/all_participants_stats_0_3.csv")
+    df_rf = pd.read_csv("../../data/feature_sets/all_participants_rf_0_3_40.csv")
+    df_text = pd.read_csv("../../data/embeddings/clip_text_embeddings_pca.csv")
+    df_text_pca = pd.read_csv("../../data/embeddings/clip_text_embeddings_pca.csv")
 
     info = df.iloc[:, :4]
     df_pose_index = df.iloc[:, 4:28]
