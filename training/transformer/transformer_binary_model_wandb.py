@@ -322,7 +322,7 @@ class TransformerEncoderBlock(tf.keras.layers.Layer):
 
 
 def build_transformer_encoder(sequence_length, input_dim, d_model, num_heads,
-                               num_encoder_layers, ff_dim, dropout_rate):
+                               num_encoder_layers, ff_dim, dropout_rate, name="transformer_encoder"):
     """Build a Transformer encoder with learnable positional encoding and CLS token.
 
     Returns
@@ -360,7 +360,7 @@ def build_transformer_encoder(sequence_length, input_dim, d_model, num_heads,
     # Extract CLS token output (position 0)
     cls_output = ExtractCLSToken()(x)
 
-    return Model(inputs=inputs, outputs=cls_output, name="transformer_encoder")
+    return Model(inputs=inputs, outputs=cls_output, name=name)
 
 
 # Training: early, intermediate, late
@@ -817,6 +817,7 @@ def train_late_fusion(modality_dfs, config):
                 num_encoder_layers=num_encoder_layers,
                 ff_dim=ff_dim,
                 dropout_rate=dropout,
+                name=f"transformer_encoder_{modality_key}",
             )
 
             input_layers.append(input_layer)
