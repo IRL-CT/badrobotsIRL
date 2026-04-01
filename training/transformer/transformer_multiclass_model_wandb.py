@@ -14,7 +14,7 @@ from keras.layers import (
     LayerNormalization, MultiHeadAttention, Add,
     GlobalAveragePooling1D, concatenate,
 )
-from keras.callbacks import ModelCheckpoint
+from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.regularizers import l1_l2, l1, l2
 from keras.utils import to_categorical
 import tensorflow as tf
@@ -430,11 +430,14 @@ def train_early_fusion(df, config):
 
         model.compile(optimizer=optim, loss=loss, metrics=['accuracy', 'Precision', 'Recall', 'AUC'])
 
+        early_stop = EarlyStopping(monitor='val_loss', patience=15, restore_best_weights=True, verbose=1)
+
         model_history = model.fit(
             X_train_sequences, y_train_sequences,
             epochs=epochs,
             batch_size=batch_size,
             validation_data=(X_val_sequences, y_val_sequences),
+            callbacks=[early_stop],
             verbose=2
         )
 
@@ -630,11 +633,14 @@ def train_intermediate_fusion(modality_dfs, config):
         val_inputs = [splits[m][8] for m in modality_keys]
         test_inputs = [splits[m][10] for m in modality_keys]
 
+        early_stop = EarlyStopping(monitor='val_loss', patience=15, restore_best_weights=True, verbose=1)
+
         model_history = model.fit(
             train_inputs, y_train_sequences,
             epochs=epochs,
             batch_size=batch_size,
             validation_data=(val_inputs, y_val_sequences),
+            callbacks=[early_stop],
             verbose=2
         )
 
@@ -821,11 +827,14 @@ def train_late_fusion(modality_dfs, config):
         val_inputs = [splits[m][8] for m in modality_keys]
         test_inputs = [splits[m][10] for m in modality_keys]
 
+        early_stop = EarlyStopping(monitor='val_loss', patience=15, restore_best_weights=True, verbose=1)
+
         model_history = model.fit(
             train_inputs, y_train_sequences_cat,
             epochs=epochs,
             batch_size=batch_size,
             validation_data=(val_inputs, y_val_sequences_cat),
+            callbacks=[early_stop],
             verbose=2
         )
 
