@@ -381,6 +381,23 @@ def train():
         })
         print(f"Feature randomization disabled: Using all {len(all_features)} features")
 
+    # ------------------------------------------------------------------
+    # Aggregate features (if enabled)
+    # ------------------------------------------------------------------
+    if config.agg_features:
+        info_cols = df.iloc[:, :4]
+        feature_data = df.iloc[:, 4:]
+        n_original = feature_data.shape[1]
+        agg_df = pd.DataFrame({
+            "agg_mean": feature_data.mean(axis=1).values,
+            "agg_std": feature_data.std(axis=1).values,
+            "agg_min": feature_data.min(axis=1).values,
+            "agg_max": feature_data.max(axis=1).values,
+        })
+        df = pd.concat([info_cols.reset_index(drop=True), agg_df.reset_index(drop=True)], axis=1)
+        print(f"agg_features enabled: replaced {n_original} features with 4 aggregate stats (mean, std, min, max)")
+        wandb.log({"agg_features_n_original": n_original})
+
     test_metrics_list = {
         "test_accuracy": [],
         "test_precision": [],
@@ -530,6 +547,7 @@ def main():
             "test_window_size": {"values": [1, 5, 10, 15, 30]},
             "test_stride": {"values": [1, 3, 5, 10]},
             "n_neighbors": {"values": [3, 5, 7, 10, 15, 30]},
+            "agg_features": {"values": [True, False]}, #temp only true for testing
             "feature_randomizer": {"values": [1]},
             "modality": {"values": [
                 "pose", "facial", "audio", "text", "cosine",
