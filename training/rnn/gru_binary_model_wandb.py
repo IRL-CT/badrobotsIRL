@@ -1077,6 +1077,21 @@ def train():
                 "total_available_features": len(all_features)
             })
 
+        # Aggregate features (if enabled)
+        if config.agg_features:
+            info_cols = df.iloc[:, :4]
+            feature_data = df.iloc[:, 4:]
+            n_original = feature_data.shape[1]
+            agg_df = pd.DataFrame({
+                "agg_mean": feature_data.mean(axis=1).values,
+                "agg_std": feature_data.std(axis=1).values,
+                "agg_min": feature_data.min(axis=1).values,
+                "agg_max": feature_data.max(axis=1).values,
+            })
+            df = pd.concat([info_cols.reset_index(drop=True), agg_df.reset_index(drop=True)], axis=1)
+            print(f"agg_features enabled: replaced {n_original} features with 4 aggregate stats (mean, std, min, max)")
+            wandb.log({"agg_features_n_original": n_original})
+
         # Intermediate / late fusion with text modalities
         if has_text_modality and fusion_type in ("intermediate", "late"):
             info = df.iloc[:, :4]
@@ -1152,6 +1167,8 @@ def main():
             'epochs': {'values': [100, 150, 200, 250]},
             'recurrent_regularizer': {'values': ['l1', 'l2', 'l1_l2']},
             'loss': {'values': ["binary_crossentropy"]},
+
+            'agg_features': {'values': [True, False]},
             
             'sequence_length': {'values': [5, 10, 15, 30, 60, 100, 150, 300]},
 
