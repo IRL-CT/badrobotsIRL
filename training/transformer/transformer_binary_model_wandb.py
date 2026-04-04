@@ -1164,9 +1164,7 @@ def train():
                 "total_available_features": len(all_features)
             })
 
-        # ------------------------------------------------------------------
         # Aggregate features (if enabled)
-        # ------------------------------------------------------------------
         if config.agg_features:
             info_cols = df.iloc[:, :4]
             feature_data = df.iloc[:, 4:]
