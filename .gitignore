@@ -51,3 +51,4 @@ training/binary_models/wandb/latest-run
 !/data/
 !/data/README.md
 !/data/*/.gitkeep
+*.mp4

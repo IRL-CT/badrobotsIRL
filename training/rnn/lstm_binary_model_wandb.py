@@ -949,12 +949,15 @@ def train():
 
         modality_components = config.modality.split('_')
 
-        # Text embeddings must be aligned to the windowed rows via last_positions
+        # Embeddings must be aligned to the windowed rows via last_positions
         if "text" in modality_components or "cosine" in modality_components:
             df_text_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "clip_text_embeddings_pca.csv"))
             df_text_cos_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "clip_text_cosine_similarity.csv"))
             df_text_index = df_text_raw.iloc[last_positions, 4:].reset_index(drop=True)
             df_text_distance = df_text_cos_raw.iloc[last_positions, 4:].reset_index(drop=True)
+        if "gemini" in modality_components:
+            df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings.csv"))
+            df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
 
         selected_modalities = {}
         if "pose" in modality_components:
@@ -967,6 +970,8 @@ def train():
             selected_modalities["text_full"] = df_text_index
         if "cosine" in modality_components:
             selected_modalities["text_distance"] = df_text_distance
+        if "gemini" in modality_components:
+            selected_modalities["gemini_video"] = df_gemini_index
 
         if fusion_type == "early":
             df = info
@@ -1015,14 +1020,14 @@ def train():
     else:
         # curated_features_v5_100fps / catch22 / tsfresh / rf feature sets
 
-        # Check if text/cosine should be appended (e.g. rf + text)
+        # Check if text/cosine/gemini should be appended (e.g. rf + text)
         modality_components = config.modality.split('_')
         has_text_modality = (
-            ("text" in modality_components or "cosine" in modality_components)
+            ("text" in modality_components or "cosine" in modality_components or "gemini" in modality_components)
             and last_positions is not None
         )
 
-        # For early fusion, concatenate text features BEFORE normalization
+        # For early fusion, concatenate text/gemini features BEFORE normalization
         if has_text_modality and fusion_type == "early":
             if "text" in modality_components:
                 df_text_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "clip_text_embeddings_pca.csv"))
@@ -1032,6 +1037,10 @@ def train():
                 df_text_cos_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "clip_text_cosine_similarity.csv"))
                 df_text_distance = df_text_cos_raw.iloc[last_positions, 4:].reset_index(drop=True)
                 df = pd.concat([df, df_text_distance], axis=1)
+            if "gemini" in modality_components:
+                df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings.csv"))
+                df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
+                df = pd.concat([df, df_gemini_index], axis=1)
 
         if data == "norm":
             df = create_normalized_df(df)
@@ -1112,6 +1121,15 @@ def train():
                 elif data == "pca":
                     df_cos = create_norm_pca_df(create_normalized_df(df_cos))
                 dfs["text_distance"] = df_cos
+            if "gemini" in modality_components:
+                df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings.csv"))
+                df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
+                df_gemini = pd.concat([info.reset_index(drop=True), df_gemini_index], axis=1)
+                if data == "norm":
+                    df_gemini = create_normalized_df(df_gemini)
+                elif data == "pca":
+                    df_gemini = create_norm_pca_df(create_normalized_df(df_gemini))
+                dfs["gemini_video"] = df_gemini
 
             print(dfs)
             if fusion_type == "intermediate":
@@ -1132,13 +1150,13 @@ def main():
         'parameters': {
             'feature_set': {'values': ['full', 'curated_features_v5_100fps', 'catch22', 'tsfresh', 'rf', 'selectkbest']},
             'modality': {'values': [
-                'pose', 'facial', 'audio', 'text', 'cosine',
-                'pose_facial', 'pose_audio', 'pose_text', 'pose_cosine',
-                'facial_audio', 'facial_text', 'facial_cosine',
-                'audio_text', 'audio_cosine',
+                'pose', 'facial', 'audio', 'text', 'cosine', 'gemini',
+                'pose_facial', 'pose_audio', 'pose_text', 'pose_cosine', 'pose_gemini',
+                'facial_audio', 'facial_text', 'facial_cosine', 'facial_gemini',
+                'audio_text', 'audio_cosine', 'audio_gemini',
                 'pose_facial_audio', 'pose_facial_text', 'pose_audio_text',
                 'facial_audio_text', 'facial_audio_cosine', 'pose_facial_audio_cosine',
-                'pose_facial_audio_text', 'pose_audio_cosine',
+                'pose_facial_audio_text', 'pose_audio_cosine', 'pose_facial_audio_gemini',
             ]},
 
             'dataset': {'values': ["reg", "norm", "pca"]},
