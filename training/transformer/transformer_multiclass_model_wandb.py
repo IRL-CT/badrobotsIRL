@@ -23,6 +23,11 @@ import sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__fi
 from create_data_splits import create_data_splits, create_data_splits_pca
 from get_all_metrics import get_all_metrics
 
+# Prevent TF from pre-allocating all GPU memory
+gpus = tf.config.experimental.list_physical_devices('GPU')
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PREPROCESSING_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "..", "preprocessing"))
 DATA_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "..", "data"))
@@ -470,8 +475,6 @@ def train_early_fusion(df, config):
         y_predict_probs = model.predict(X_test_sequences)
         y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
 
-        df_probs = pd.DataFrame(y_predict_probs_clean)
-
         y_pred = np.argmax(y_predict_probs_clean, axis=1)
         y_test_class_indices = y_test_sequences
 
@@ -505,6 +508,12 @@ def train_early_fusion(df, config):
         wandb.log({f"fold_{fold}_metrics": test_metrics})
         print(f"Fold {fold} Test Metrics:", test_metrics)
 
+        del model, encoder, model_history, optim, early_stop
+        del X_train_sequences, y_train_sequences
+        del X_val_sequences, y_val_sequences
+        del X_test_sequences, y_test_sequences, y_test_sequences_cat
+        del X_train, X_val, X_test
+        del y_predict_probs, y_predict_probs_clean
         tf.keras.backend.clear_session()
         gc.collect()
 
@@ -673,8 +682,6 @@ def train_intermediate_fusion(modality_dfs, config):
         y_predict_probs = model.predict(test_inputs)
         y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
 
-        df_probs = pd.DataFrame(y_predict_probs_clean)
-
         y_pred = np.argmax(y_predict_probs_clean, axis=1)
         y_test_class_indices = y_test_sequences
 
@@ -708,6 +715,11 @@ def train_intermediate_fusion(modality_dfs, config):
         wandb.log({f"fold_{fold}_metrics": test_metrics})
         print(f"Fold {fold} Test Metrics:", test_metrics)
 
+        del model, model_history, optim, early_stop
+        del splits, train_inputs, val_inputs, test_inputs
+        del feature_inputs, feature_outputs
+        del y_train_sequences, y_val_sequences, y_test_sequences, y_test_sequences_cat
+        del y_predict_probs, y_predict_probs_clean
         tf.keras.backend.clear_session()
         gc.collect()
 
@@ -868,8 +880,6 @@ def train_late_fusion(modality_dfs, config):
         y_predict_probs = model.predict(test_inputs)
         y_predict_probs_clean = np.nan_to_num(y_predict_probs, nan=0.0)
 
-        df_probs = pd.DataFrame(y_predict_probs_clean)
-
         y_pred = np.argmax(y_predict_probs_clean, axis=1)
         y_test_class_indices = y_test_sequences
 
@@ -903,6 +913,12 @@ def train_late_fusion(modality_dfs, config):
         wandb.log({f"fold_{fold}_metrics": test_metrics})
         print(f"Fold {fold} Test Metrics:", test_metrics)
 
+        del model, model_history, optim, early_stop
+        del splits, train_inputs, val_inputs, test_inputs
+        del input_layers, outputs
+        del y_train_sequences, y_val_sequences, y_test_sequences
+        del y_train_sequences_cat, y_val_sequences_cat, y_test_sequences_cat
+        del y_predict_probs, y_predict_probs_clean
         tf.keras.backend.clear_session()
         gc.collect()
 
@@ -986,6 +1002,23 @@ def train():
         last_positions = None
     else:
         df, last_positions = apply_windowing(df_base, window, win_stride, config.aggregation)
+
+    # Free the raw dataframe after windowing
+    del df_base
+    gc.collect()
+
+    # Memory guard: skip hyperparameter combinations that would exceed RAM
+    n_samples = len(df)
+    n_features = len(df.columns) - 4
+    n_modalities = len(config.modality.split('_'))
+    estimated_seq_bytes = n_samples * config.sequence_length * n_features * 4 * 3  # train/val/test
+    if config.fusion_type in ('intermediate', 'late') and config.feature_set not in NO_MODALITY_SELECTION_SETS:
+        estimated_seq_bytes *= n_modalities
+    estimated_gb = estimated_seq_bytes / (1024**3)
+    if estimated_gb > 30:
+        print(f"Skipping: estimated {estimated_gb:.1f}GB sequence data exceeds memory budget")
+        wandb.log({"status": "skipped_memory_limit", "estimated_gb": round(estimated_gb, 1)})
+        return
 
     modality_components = config.modality.split('_')
     if last_positions is None and ("text" in modality_components or "cosine" in modality_components):
@@ -1225,6 +1258,8 @@ def main():
 
     def train_wrapper():
         train()
+        tf.keras.backend.clear_session()
+        gc.collect()
 
     sweep_id = wandb.sweep(sweep=sweep_config, project="brirl_inter")
     wandb.agent(sweep_id, function=train_wrapper)
