@@ -959,7 +959,7 @@ def train():
             df_text_index = df_text_raw.iloc[last_positions, 4:].reset_index(drop=True)
             df_text_distance = df_text_cos_raw.iloc[last_positions, 4:].reset_index(drop=True)
         if "gemini" in modality_components:
-            df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings.csv"))
+            df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings_pca.csv"))
             df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
 
         selected_modalities = {}
@@ -1041,7 +1041,7 @@ def train():
                 df_text_distance = df_text_cos_raw.iloc[last_positions, 4:].reset_index(drop=True)
                 df = pd.concat([df, df_text_distance], axis=1)
             if "gemini" in modality_components:
-                df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings.csv"))
+                df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings_pca.csv"))
                 df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
                 df = pd.concat([df, df_gemini_index], axis=1)
 
@@ -1125,7 +1125,7 @@ def train():
                     df_cos = create_norm_pca_df(create_normalized_df(df_cos))
                 dfs["text_distance"] = df_cos
             if "gemini" in modality_components:
-                df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings.csv"))
+                df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings_pca.csv"))
                 df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
                 df_gemini = pd.concat([info.reset_index(drop=True), df_gemini_index], axis=1)
                 if data == "norm":
