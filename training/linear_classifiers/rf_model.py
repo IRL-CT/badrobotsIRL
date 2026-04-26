@@ -264,7 +264,7 @@ def train():
     # ------------------------------------------------------------------
     # Load base 100fps dataset
     # ------------------------------------------------------------------
-    if config.feature_set in ["curated_v4"]: #includes 'catch22', 'tsfresh'
+    if config.feature_set in ["curated_v4", "catch22", "tsfresh"]:
         df_base = pd.read_csv("../../data/feature_sets/curated_features_dataset_v4.csv")
     elif config.feature_set == "curated_v5":
         df_base = pd.read_csv("../../data/feature_sets/curated_features_dataset_v5.csv")
