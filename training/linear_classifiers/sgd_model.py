@@ -264,7 +264,7 @@ def train():
     # ------------------------------------------------------------------
     # Load base 100fps dataset
     # ------------------------------------------------------------------
-    if config.feature_set in ["curated_v4"]: #includes 'catch22', 'tsfresh'
+    if config.feature_set in ["curated_v4", "catch22", "tsfresh"]:
         df_base = pd.read_csv("../../data/feature_sets/curated_features_dataset_v4.csv")
     elif config.feature_set == "curated_v5":
         df_base = pd.read_csv("../../data/feature_sets/curated_features_dataset_v5.csv")
@@ -316,13 +316,19 @@ def train():
             df_audio_index = df.iloc[:, 63:88]
 
         modality_components = config.modality.split("_")
+        use_pca_embeddings = (config.dataset == "pca")
 
-        # Text embeddings must be aligned to the windowed rows via last_positions
+        # Text/gemini embeddings must be aligned to the windowed rows via last_positions
         if "text" in modality_components or "cosine" in modality_components:
-            df_text_raw = pd.read_csv("../../data/embeddings/clip_text_embeddings_pca.csv")
-            df_text_cos_raw = pd.read_csv("../../data/embeddings/clip_text_cosine_similarity.csv")
-            df_text_index = df_text_raw.iloc[last_positions, 2:].reset_index(drop=True)
-            df_text_distance = df_text_cos_raw.iloc[last_positions, 2:].reset_index(drop=True)
+            text_path = "../../data/clip_text_embeddings_pca.csv" if use_pca_embeddings else "../../data/clip_text_embeddings.csv"
+            df_text_raw = pd.read_csv(text_path)
+            df_text_cos_raw = pd.read_csv("../../data/clip_text_cosine_similarity.csv")
+            df_text_index = df_text_raw.iloc[last_positions, 4:].reset_index(drop=True)
+            df_text_distance = df_text_cos_raw.iloc[last_positions, 4:].reset_index(drop=True)
+        if "gemini" in modality_components:
+            gemini_path = "../../data/embeddings/gemini_video_embeddings_pca.csv" if use_pca_embeddings else "../../data/embeddings/gemini_video_embeddings.csv"
+            df_gemini_raw = pd.read_csv(gemini_path)
+            df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
 
         selected_modalities = {}
         if "pose" in modality_components:
@@ -335,6 +341,8 @@ def train():
             selected_modalities["text_full"] = df_text_index
         if "cosine" in modality_components:
             selected_modalities["text_distance"] = df_text_distance
+        if "gemini" in modality_components:
+            selected_modalities["gemini_video"] = df_gemini_index
 
         df = info
         for m in selected_modalities.values():
@@ -492,8 +500,10 @@ def train():
 def validate_modality_feature_combination(modality, feature_set):
     modality_components = modality.split("_")
 
-    # Text only works with 'full' feature set
+    # Text and gemini only work with 'full' feature set
     if "text" in modality_components and feature_set != "full":
+        return False
+    if "gemini" in modality_components and feature_set != "full":
         return False
 
     return True
@@ -562,13 +572,25 @@ def main():
             "agg_features": {"values": [True, False]}, #temp only true for testing
             "feature_randomizer": {"values": [1]},
             "modality": {"values": [
-                "pose", "facial", "audio", "text", "cosine",
-                "pose_facial", "pose_audio", "pose_text", "pose_cosine",
-                "facial_audio", "facial_text", "facial_cosine",
-                "audio_text", "audio_cosine",
+                # single modalities
+                "pose", "facial", "audio", "text", "cosine", "gemini",
+                # 2-modality
+                "pose_facial", "pose_audio", "pose_text", "pose_cosine", "pose_gemini",
+                "facial_audio", "facial_text", "facial_cosine", "facial_gemini",
+                "audio_text", "audio_cosine", "audio_gemini",
+                "text_gemini", "cosine_gemini",
+                # 3-modality
                 "pose_facial_audio", "pose_facial_text", "pose_audio_text",
                 "facial_audio_text", "facial_audio_cosine", "pose_facial_audio_cosine",
-                "pose_facial_audio_text", "pose_audio_cosine",
+                "pose_audio_cosine",
+                "pose_facial_gemini", "pose_audio_gemini", "facial_audio_gemini",
+                "pose_text_gemini", "facial_text_gemini", "audio_text_gemini",
+                # 4-modality
+                "pose_facial_audio_text", "pose_facial_audio_cosine",
+                "pose_facial_audio_gemini",
+                "pose_facial_text_gemini", "facial_audio_text_gemini", "pose_audio_text_gemini",
+                # 5-modality
+                "pose_facial_audio_text_gemini",
             ]},
             "model_type": {"values": ["sgd"]},
         },

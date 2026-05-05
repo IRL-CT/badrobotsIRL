@@ -31,6 +31,19 @@ wandb/
 **/wandb/
 **/**/wandb/
 **/*.sub
+**/__pycache__/
+training/binary_models/__pycache__
+training/binary_models/wandb
+training/binary_models/training_outputs
+training/multiclass_models/__pycache__
+training/multiclass_models/wandb
+training/multiclass_models/training_outputs
+training/transformer/wandb
+training/transformer/__pycache__
+training/transformer/training_outputs
+training/linear_classifiers/__pycache__
+training/rnn/__pycache__
+data/transcripts/
 *.csv
 training/badnet/__pycache__
 training/badnet/wandb
@@ -52,3 +65,4 @@ training/binary_models/wandb/latest-run
 !/data/README.md
 !/data/*/.gitkeep
 *.mp4
+data/embeddings/*
