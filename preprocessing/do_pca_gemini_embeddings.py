@@ -6,9 +6,9 @@ from sklearn.decomposition import PCA
 import joblib
 
 def main():
-    input_file = '../data/embeddings/gemini_video_embeddings.csv'
-    output_file = '../data/embeddings/gemini_video_embeddings_pca.csv'
-    model_file = '../data/embeddings/pca_model_gemini.pkl'
+    input_file = '../data/embeddings/gemini_video_embeddings_visual_audio.csv'
+    output_file = '../data/embeddings/gemini_video_embeddings_pca_visual_audio.csv'
+    model_file = '../data/embeddings/pca_model_gemini_visual_audio.pkl'
 
     print(f"Loading {input_file}...")
     try:

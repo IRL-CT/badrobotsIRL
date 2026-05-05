@@ -956,8 +956,13 @@ def train():
             df_text_index = df_text_raw.iloc[last_positions, 4:].reset_index(drop=True)
             df_text_distance = df_text_cos_raw.iloc[last_positions, 4:].reset_index(drop=True)
         if "gemini" in modality_components:
-            df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings_pca.csv"))
+            gemini_dims = config.gemini_dims
+            use_cols = list(range(4 + gemini_dims))
+            df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings_visual_audio_full.csv"), usecols=use_cols)
             df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
+            del df_gemini_raw
+            import gc
+            gc.collect()
 
         selected_modalities = {}
         if "pose" in modality_components:
@@ -1038,8 +1043,13 @@ def train():
                 df_text_distance = df_text_cos_raw.iloc[last_positions, 4:].reset_index(drop=True)
                 df = pd.concat([df, df_text_distance], axis=1)
             if "gemini" in modality_components:
-                df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings_pca.csv"))
+                gemini_dims = config.gemini_dims
+                use_cols = list(range(4 + gemini_dims))
+                df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings_visual_audio_full.csv"), usecols=use_cols)
                 df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
+                del df_gemini_raw
+                import gc
+                gc.collect()
                 df = pd.concat([df, df_gemini_index], axis=1)
 
         if data == "norm":
@@ -1122,8 +1132,13 @@ def train():
                     df_cos = create_norm_pca_df(create_normalized_df(df_cos))
                 dfs["text_distance"] = df_cos
             if "gemini" in modality_components:
-                df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings_pca.csv"))
+                gemini_dims = config.gemini_dims
+                use_cols = list(range(4 + gemini_dims))
+                df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings_visual_audio_full.csv"), usecols=use_cols)
                 df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
+                del df_gemini_raw
+                import gc
+                gc.collect()
                 df_gemini = pd.concat([info.reset_index(drop=True), df_gemini_index], axis=1)
                 if data == "norm":
                     df_gemini = create_normalized_df(df_gemini)
@@ -1185,6 +1200,7 @@ def main():
             'loss': {'values': ["binary_crossentropy"]},
 
             'agg_features': {'values': [True, False]},
+            'gemini_dims': {'values': [128, 256, 768, 3072]},
             
             'sequence_length': {'values': [5, 10, 15, 30, 60, 100, 150, 300]},
 
