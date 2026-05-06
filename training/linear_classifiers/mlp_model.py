@@ -18,6 +18,14 @@ from registry_utils import append_to_registry
 # Feature sets that use the full dataset without modality selection
 NO_MODALITY_SELECTION_SETS = {"catch22", "tsfresh", "curated_v4", "rf", "selectkbest", "curated_v5"}
 
+GEMINI_EMBEDDING_PATHS = {
+    "default":            "../../data/embeddings/gemini_video_embeddings.csv",
+    "visual_audio_128d":  "../../data/embeddings/gemini_video_embeddings_visual_audio_128d.csv",
+    "visual_audio_256d":  "../../data/embeddings/gemini_video_embeddings_visual_audio_256d.csv",
+    "visual_audio_768d":  "../../data/embeddings/gemini_video_embeddings_visual_audio_768d.csv",
+    "visual_audio_full":  "../../data/embeddings/gemini_video_embeddings_visual_audio_full.csv",
+}
+
 
 def apply_aux_windowing(df_aux, participant_col_idx, feature_start_col, window_size, stride, aggregation):
     """Apply windowing to an auxiliary DataFrame (e.g. text embeddings, cosine similarity).
@@ -326,7 +334,11 @@ def train():
             df_text_index = df_text_raw.iloc[last_positions, 4:].reset_index(drop=True)
             df_text_distance = df_text_cos_raw.iloc[last_positions, 4:].reset_index(drop=True)
         if "gemini" in modality_components:
-            gemini_path = "../../data/embeddings/gemini_video_embeddings_pca.csv" if use_pca_embeddings else "../../data/embeddings/gemini_video_embeddings.csv"
+            gemini_key = getattr(config, "gemini_embedding", "default")
+            if use_pca_embeddings and gemini_key == "default":
+                gemini_path = "../../data/embeddings/gemini_video_embeddings_pca.csv"
+            else:
+                gemini_path = GEMINI_EMBEDDING_PATHS.get(gemini_key, GEMINI_EMBEDDING_PATHS["default"])
             df_gemini_raw = pd.read_csv(gemini_path)
             df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
 
@@ -473,7 +485,9 @@ def train():
         wandb.log({f"t{fold}_{k}": v for k, v in test_metrics.items()})
         print(test_metrics)
 
-        print(confusion_matrix(y_test, y_pred))
+        cm = confusion_matrix(y_test, y_pred)
+        print(cm)
+        wandb.log({f"t{fold}_confusion_matrix": cm.tolist()})
 
         # Collect predictions for ensemble artifact
         fold_df = pd.DataFrame({
@@ -567,26 +581,34 @@ def main():
             "mlp_activation": {"values": ["relu", "tanh"]},
             "agg_features": {"values": [True, False]}, #temp only true for testing
             "feature_randomizer": {"values": [1]},
+            "gemini_embedding": {"values": [
+                "default",
+                "visual_audio_128d",
+                "visual_audio_256d",
+                "visual_audio_768d",
+                "visual_audio_full",
+            ]},
             "modality": {"values": [
                 # single modalities
-                "pose", "facial", "audio", "text", "cosine", "gemini",
+                # "pose", "facial", "audio", "text", "cosine",
+                "gemini",
                 # 2-modality
-                "pose_facial", "pose_audio", "pose_text", "pose_cosine", "pose_gemini",
-                "facial_audio", "facial_text", "facial_cosine", "facial_gemini",
-                "audio_text", "audio_cosine", "audio_gemini",
-                "text_gemini", "cosine_gemini",
+                # "pose_facial", "pose_audio", "pose_text", "pose_cosine", "pose_gemini",
+                # "facial_audio", "facial_text", "facial_cosine", "facial_gemini",
+                # "audio_text", "audio_cosine", "audio_gemini",
+                # "text_gemini", "cosine_gemini",
                 # 3-modality
-                "pose_facial_audio", "pose_facial_text", "pose_audio_text",
-                "facial_audio_text", "facial_audio_cosine", "pose_facial_audio_cosine",
-                "pose_audio_cosine",
-                "pose_facial_gemini", "pose_audio_gemini", "facial_audio_gemini",
-                "pose_text_gemini", "facial_text_gemini", "audio_text_gemini",
+                # "pose_facial_audio", "pose_facial_text", "pose_audio_text",
+                # "facial_audio_text", "facial_audio_cosine", "pose_facial_audio_cosine",
+                # "pose_audio_cosine",
+                # "pose_facial_gemini", "pose_audio_gemini", "facial_audio_gemini",
+                # "pose_text_gemini", "facial_text_gemini", "audio_text_gemini",
                 # 4-modality
-                "pose_facial_audio_text", "pose_facial_audio_cosine",
-                "pose_facial_audio_gemini",
-                "pose_facial_text_gemini", "facial_audio_text_gemini", "pose_audio_text_gemini",
+                # "pose_facial_audio_text", "pose_facial_audio_cosine",
+                # "pose_facial_audio_gemini",
+                # "pose_facial_text_gemini", "facial_audio_text_gemini", "pose_audio_text_gemini",
                 # 5-modality
-                "pose_facial_audio_text_gemini",
+                # "pose_facial_audio_text_gemini",
             ]},
             "model_type": {"values": ["mlp"]},
         },
