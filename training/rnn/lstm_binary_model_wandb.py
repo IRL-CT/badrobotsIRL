@@ -878,6 +878,7 @@ def train():
 
     wandb.init()
     config = wandb.config
+    wandb.config.update({"modality": "gemini"}, allow_val_change=True)
     print(config)
 
     seed_value = 42
@@ -961,7 +962,6 @@ def train():
             df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings_visual_audio_full.csv"), usecols=use_cols)
             df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
             del df_gemini_raw
-            import gc
             gc.collect()
 
         selected_modalities = {}
@@ -1048,7 +1048,6 @@ def train():
                 df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings_visual_audio_full.csv"), usecols=use_cols)
                 df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
                 del df_gemini_raw
-                import gc
                 gc.collect()
                 df = pd.concat([df, df_gemini_index], axis=1)
 
@@ -1137,7 +1136,6 @@ def train():
                 df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings_visual_audio_full.csv"), usecols=use_cols)
                 df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
                 del df_gemini_raw
-                import gc
                 gc.collect()
                 df_gemini = pd.concat([info.reset_index(drop=True), df_gemini_index], axis=1)
                 if data == "norm":

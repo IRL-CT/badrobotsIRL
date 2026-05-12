@@ -65,4 +65,4 @@ training/binary_models/wandb/latest-run
 !/data/README.md
 !/data/*/.gitkeep
 *.mp4
-data/embeddings/*
+data/embeddings/*.nfs*
