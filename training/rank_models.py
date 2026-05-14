@@ -26,14 +26,31 @@ linear_df = linear_df[linear_df["model"].isin(linear_models)].copy()
 print(f"RNN runs after model filter: {len(rnn_df)}")
 print(f"Linear runs after model filter: {len(linear_df)}")
 
-# performance metrics
-perf_cols = [
-    "avg_test_accuracy", "avg_test_f1", "avg_test_precision", "avg_test_recall",
-    "avg_test_auc", "avg_test_windowed_accuracy", "avg_test_windowed_f1",
-    "avg_test_windowed_precision", "avg_test_windowed_recall", "avg_test_fnr",
+# Calculate standard deviations from fold metrics
+base_metrics = [
+    "accuracy", "f1", "precision", "recall", "auc", 
+    "windowed_accuracy", "windowed_f1", "windowed_precision", "windowed_recall", "fnr"
 ]
 
-id_cols = ["run_name", "class", "model", "modality", "feature_set", "Sweep"]
+for m in base_metrics:
+    # RNN fold metrics: fold_0_metrics.test_f1, etc.
+    rnn_cols = [f"fold_{i}_metrics.test_{m}" for i in range(5)]
+    rnn_exist = [c for c in rnn_cols if c in rnn_df.columns]
+    if rnn_exist:
+        rnn_df[f"std_test_{m}"] = rnn_df[rnn_exist].std(axis=1)
+
+    # Linear fold metrics: t0_test_f1, etc.
+    lin_cols = [f"t{i}_test_{m}" for i in range(5)]
+    lin_exist = [c for c in lin_cols if c in linear_df.columns]
+    if lin_exist:
+        linear_df[f"std_test_{m}"] = linear_df[lin_exist].std(axis=1)
+
+# performance metrics
+perf_cols = []
+for m in base_metrics:
+    perf_cols.extend([f"avg_test_{m}", f"std_test_{m}"])
+
+id_cols = ["run_name", "class", "model", "modality", "feature_set", "Sweep", "Created"]
 
 # RNN hyperparameters
 rnn_hyper_cols = [
@@ -68,14 +85,55 @@ df = pd.concat([rnn_clean, linear_clean], ignore_index=True)
 df = df.dropna(subset=["avg_test_f1"]) # drop runs with no f1
 print(f"\nTotal runs with valid F1: {len(df)}")
 
-# Select top performing run per (class, model, modality) by f1 score
+# Tag each run as rnn or linear
+dl_models = ["gru", "lstm"]
+df["model_type"] = df["model"].apply(lambda m: "rnn" if m in dl_models else "linear")
 
 df = df.sort_values("avg_test_f1", ascending=False)
-best = df.groupby(["class", "model", "modality"], dropna=False).first().reset_index()
-best = best.sort_values(["class", "modality", "model"])
 
-print(f"Top performing runs: {len(best)}\n")
-print(best[["class", "model", "modality", "feature_set", "avg_test_f1", "Sweep"]].to_string(index=False))
+# Best run per individual model per (class, model, modality) — for the CSV
+best_all = df.groupby(["class", "model", "modality"], dropna=False).first().reset_index()
+best_all = best_all.sort_values(["class", "modality", "model_type", "model"])
 
-best.to_csv("top_models.csv", index=False)
+print(f"Top performing runs: {len(best_all)}\n")
+print(best_all[["class", "model_type", "model", "modality", "feature_set", "avg_test_f1", "Sweep"]].to_string(index=False))
+
+# Best rnn and linear per (class, modality) for comparison
+df_dl = df[df["model_type"] == "rnn"]
+best_dl = df_dl.groupby(["class", "modality"], dropna=False).first().reset_index()
+df_lin = df[df["model_type"] == "linear"]
+best_lin = df_lin.groupby(["class", "modality"], dropna=False).first().reset_index()
+
+summary_rows = []
+for cls in ["binary", "multiclass"]:
+    dl_sub = best_dl[best_dl["class"] == cls].set_index("modality")
+    lin_sub = best_lin[best_lin["class"] == cls].set_index("modality")
+    shared = sorted(set(dl_sub.index) & set(lin_sub.index))
+    for mod in shared:
+        dl_f1 = dl_sub.loc[mod, "avg_test_f1"]
+        dl_model = dl_sub.loc[mod, "model"]
+        lin_f1 = lin_sub.loc[mod, "avg_test_f1"]
+        lin_model = lin_sub.loc[mod, "model"]
+        if isinstance(dl_f1, pd.Series):
+            dl_f1, dl_model = dl_f1.iloc[0], dl_model.iloc[0]
+        if isinstance(lin_f1, pd.Series):
+            lin_f1, lin_model = lin_f1.iloc[0], lin_model.iloc[0]
+        diff = lin_f1 - dl_f1
+        summary_rows.append({
+            "class": cls, "modality": mod,
+            "best_rnn": dl_model, "rnn_f1": round(dl_f1, 4),
+            "best_linear": lin_model, "linear_f1": round(lin_f1, 4),
+            "winner": "linear" if diff > 0 else "rnn",
+            "f1_diff": round(abs(diff), 4),
+        })
+
+summary_df = pd.DataFrame(summary_rows)
+
+# Write both to a single CSV with a separator
+with open("top_models.csv", "w") as f:
+    best_all.to_csv(f, index=False)
+    f.write("\n")
+    f.write("RNN vs Linear Summary\n")
+    summary_df.to_csv(f, index=False)
+
 print("\nSaved to top_models.csv")
