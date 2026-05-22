@@ -286,6 +286,18 @@ def train_early_fusion(df, config):
 
         X_train, X_val, X_test, y_train, y_val, y_test, X_train_sequences, y_train_sequences, X_val_sequences, y_val_sequences, X_test_sequences, y_test_sequences, sequence_length, session_train, session_val, session_test = splits
 
+        from imblearn.over_sampling import SMOTE
+        min_class_count = min(np.bincount(y_train_sequences))
+        smote_k = min(5, min_class_count - 1)
+        if smote_k > 0:
+            smote = SMOTE(random_state=42, k_neighbors=smote_k)
+            samples, seq_len, features = X_train_sequences.shape
+            X_train_flat = X_train_sequences.reshape(samples, seq_len * features)
+            X_train_balanced_flat, y_train_balanced = smote.fit_resample(X_train_flat, y_train_sequences)
+            X_train_sequences = X_train_balanced_flat.reshape(-1, seq_len, features)
+            y_train_sequences = y_train_balanced
+
+
         y_train_sequences = to_categorical(y_train_sequences, num_classes=4)
         y_val_sequences = to_categorical(y_val_sequences, num_classes=4)
         y_test_sequences_cat = to_categorical(y_test_sequences, num_classes=4)
@@ -392,7 +404,7 @@ def train_early_fusion(df, config):
             columns=[f"Pred {c}" for c in range(num_classes)]
         ))
 
-        wandb.log({f"fold_{fold}_confusion_matrix": cm})
+        wandb.log({f"fold_{fold}_confusion_matrix": cm.tolist()})
 
         effective_test_stride = min(config.test_stride, config.test_window_size)
         wandb.log({"effective_test_stride": effective_test_stride, "effective_test_window_size": config.test_window_size})
@@ -476,7 +488,34 @@ def train_intermediate_fusion(modality_dfs, config):
         first_modality = modality_keys[0]
         y_train_sequences = splits[first_modality][7] 
         y_val_sequences = splits[first_modality][9] 
-        y_test_sequences = splits[first_modality][11] 
+        y_test_sequences = splits[first_modality][11]
+
+        train_inputs = [splits[m][6] for m in modality_keys]
+        from imblearn.over_sampling import SMOTE
+        samples = y_train_sequences.shape[0]
+        flat_inputs = []
+        shapes = []
+        for X_seq in train_inputs:
+            s, seq_len, f = X_seq.shape
+            flat_inputs.append(X_seq.reshape(s, seq_len * f))
+            shapes.append((seq_len, f))
+        
+        X_train_concat = np.hstack(flat_inputs)
+        min_class_count = min(np.bincount(y_train_sequences))
+        smote_k = min(5, min_class_count - 1)
+        if smote_k > 0:
+            smote = SMOTE(random_state=42, k_neighbors=smote_k)
+            X_train_balanced_concat, y_train_balanced = smote.fit_resample(X_train_concat, y_train_sequences)
+            
+            curr_idx = 0
+            for i, (seq_len, f) in enumerate(shapes):
+                dim = seq_len * f
+                X_bal_flat = X_train_balanced_concat[:, curr_idx:curr_idx+dim]
+                splits[modality_keys[i]] = list(splits[modality_keys[i]])
+                splits[modality_keys[i]][6] = X_bal_flat.reshape(-1, seq_len, f)
+                curr_idx += dim
+            y_train_sequences = y_train_balanced
+ 
 
         y_train_sequences = to_categorical(y_train_sequences, num_classes=4)
         y_val_sequences = to_categorical(y_val_sequences, num_classes=4)
@@ -596,7 +635,7 @@ def train_intermediate_fusion(modality_dfs, config):
             columns=[f"Pred {c}" for c in range(num_classes)]
         ))
 
-        wandb.log({f"fold_{fold}_confusion_matrix": cm})
+        wandb.log({f"fold_{fold}_confusion_matrix": cm.tolist()})
 
         effective_test_stride = min(config.test_stride, config.test_window_size)
         wandb.log({"effective_test_stride": effective_test_stride, "effective_test_window_size": config.test_window_size})
@@ -711,6 +750,33 @@ def train_late_fusion(modality_dfs, config):
         y_val_sequences = splits[first_modality][9]
         y_test_sequences = splits[first_modality][11]
 
+        train_inputs = [splits[m][6] for m in modality_keys]
+        from imblearn.over_sampling import SMOTE
+        samples = y_train_sequences.shape[0]
+        flat_inputs = []
+        shapes = []
+        for X_seq in train_inputs:
+            s, seq_len, f = X_seq.shape
+            flat_inputs.append(X_seq.reshape(s, seq_len * f))
+            shapes.append((seq_len, f))
+        
+        X_train_concat = np.hstack(flat_inputs)
+        min_class_count = min(np.bincount(y_train_sequences))
+        smote_k = min(5, min_class_count - 1)
+        if smote_k > 0:
+            smote = SMOTE(random_state=42, k_neighbors=smote_k)
+            X_train_balanced_concat, y_train_balanced = smote.fit_resample(X_train_concat, y_train_sequences)
+            
+            curr_idx = 0
+            for i, (seq_len, f) in enumerate(shapes):
+                dim = seq_len * f
+                X_bal_flat = X_train_balanced_concat[:, curr_idx:curr_idx+dim]
+                splits[modality_keys[i]] = list(splits[modality_keys[i]])
+                splits[modality_keys[i]][6] = X_bal_flat.reshape(-1, seq_len, f)
+                curr_idx += dim
+            y_train_sequences = y_train_balanced
+
+
         if len(y_train_sequences.shape) == 1 or y_train_sequences.shape[1] == 1:
             num_classes = 4
             y_train_sequences_cat = to_categorical(y_train_sequences, num_classes=4)
@@ -810,7 +876,7 @@ def train_late_fusion(modality_dfs, config):
             columns=[f"Pred {c}" for c in range(num_classes)]
         ))
 
-        wandb.log({f"fold_{fold}_confusion_matrix": cm})
+        wandb.log({f"fold_{fold}_confusion_matrix": cm.tolist()})
 
         effective_test_stride = min(config.test_stride, config.test_window_size)
         wandb.log({"effective_test_stride": effective_test_stride, "effective_test_window_size": config.test_window_size})
@@ -880,7 +946,7 @@ def train():
 
     wandb.init()
     config = wandb.config
-    wandb.config.update({"modality": "gemini"}, allow_val_change=True)
+    # wandb.config.update({"modality": "pose_gemini"}, allow_val_change=True)
     print(config)
 
     seed_value = 42
@@ -928,10 +994,10 @@ def train():
     else:
         df, last_positions = apply_windowing(df_base, window, win_stride, config.aggregation)
 
-    # Skip text/cosine modality when last_positions is unavailable (catch22/tsfresh)
+    # Skip text/cosine/gemini modality when last_positions is unavailable (catch22/tsfresh)
     modality_components = config.modality.split('_')
-    if last_positions is None and ("text" in modality_components or "cosine" in modality_components):
-        print(f"Skipping: text/cosine modality not supported with {feature_set} (no last_positions)")
+    if last_positions is None and ("text" in modality_components or "cosine" in modality_components or "gemini" in modality_components):
+        print(f"Skipping: text/cosine/gemini modality not supported with {feature_set} (no last_positions)")
         wandb.log({"status": "skipped_invalid_combination"})
         return
 
@@ -1173,6 +1239,9 @@ def main():
                 'facial_audio_text', 'facial_audio_cosine', 'pose_facial_audio_cosine',
                 'pose_facial_audio_text', 'pose_audio_cosine', 'pose_facial_audio_gemini',
             ]},
+
+            # 'modality':{'values': ['pose_gemini']},
+
 
             'dataset': {'values': ["reg", "norm", "pca"]},
             'fusion_type': {'values': ['early', 'intermediate', 'late']},

@@ -1,6 +1,6 @@
 import pandas as pd
 
-rnn_df = pd.read_csv("rnn_transformer_models.csv")
+rnn_df = pd.read_csv("rnn_transformer_models_5_21.csv")
 linear_df = pd.read_csv("linear_models.csv")
 
 rnn_df = rnn_df.rename(columns={"Name": "run_name"})
@@ -89,6 +89,30 @@ print(f"\nTotal runs with valid F1: {len(df)}")
 dl_models = ["gru", "lstm"]
 df["model_type"] = df["model"].apply(lambda m: "rnn" if m in dl_models else "linear")
 
+# Fix modality column to reflect actual data used
+NO_MODALITY_SELECTION_SETS = {"catch22", "tsfresh", "curated_features_v5_100fps", "rf", "selectkbest", "curated_v4", "curated_v5"}
+
+def get_effective_modality(row):
+    feat_set = row.get("feature_set", "")
+    mod = str(row.get("modality", ""))
+    is_rnn = row.get("model_type") == "rnn"
+    
+    if feat_set in NO_MODALITY_SELECTION_SETS:
+        if is_rnn:
+            components = mod.split('_')
+            text_mods = [c for c in components if c in ["text", "cosine", "gemini"]]
+            if text_mods:
+                return feat_set + "_" + "_".join(text_mods)
+            else:
+                return feat_set
+        else:
+            # Linear models do not append text/cosine/gemini in NO_MODALITY_SELECTION_SETS
+            return feat_set
+    return mod
+
+df["modality"] = df.apply(get_effective_modality, axis=1)
+
+
 df = df.sort_values("avg_test_f1", ascending=False)
 
 # Best run per individual model per (class, model, modality) — for the CSV
@@ -130,10 +154,10 @@ for cls in ["binary", "multiclass"]:
 summary_df = pd.DataFrame(summary_rows)
 
 # Write both to a single CSV with a separator
-with open("top_models.csv", "w") as f:
+with open("top_models_clarity.csv", "w") as f:
     best_all.to_csv(f, index=False)
     f.write("\n")
     f.write("RNN vs Linear Summary\n")
     summary_df.to_csv(f, index=False)
 
-print("\nSaved to top_models.csv")
+print("\nSaved to top_models_clarity.csv")
