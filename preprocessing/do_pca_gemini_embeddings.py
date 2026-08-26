@@ -1,64 +1,71 @@
-#SCRIPT to do PCA on Gemini Video Embeddings csv 
+# SCRIPT to do PCA on Gemini Video Embeddings csv cleanly & efficiently
+import os
+import glob
 import pandas as pd
 import numpy as np
-import os
 from sklearn.decomposition import PCA
 import joblib
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+CHECKPOINT_DIR = os.path.join(DATA_DIR, "embeddings", "gemini_checkpoints_visual_audio_clean")
+EMBEDDINGS_DIR = os.path.join(DATA_DIR, "embeddings")
+BASE_DATASET = os.path.join(DATA_DIR, "interpolated", "allparticipants_100fps.csv")
+
+EXCLUDED_PARTICIPANTS = {"p1nodbot", "p3nodbot", "p13nodbot", "p15nodbot", "p24nodbot", "p30nodbot"}
+
 def main():
-    input_file = '../data/embeddings/gemini_video_embeddings_visual_audio.csv'
-    output_file = '../data/embeddings/gemini_video_embeddings_pca_visual_audio.csv'
-    model_file = '../data/embeddings/pca_model_gemini_visual_audio.pkl'
+    output_file = os.path.join(EMBEDDINGS_DIR, "gemini_video_embeddings_pca_visual_audio.csv")
+    model_file = os.path.join(EMBEDDINGS_DIR, "pca_model_gemini_visual_audio.pkl")
 
-    print(f"Loading {input_file}...")
-    try:
-        df = pd.read_csv(input_file)
-    except FileNotFoundError:
-        print(f"Error: Could not find {input_file}. Make sure you generated the embeddings first.")
-        return
+    df_base = pd.read_csv(BASE_DATASET, usecols=["participant"])
+    ordered_participants = []
+    for p in df_base["participant"].unique():
+        if p not in EXCLUDED_PARTICIPANTS and p not in ordered_participants:
+            ordered_participants.append(p)
+    ordered_participants = sorted(ordered_participants)
 
-    print("Base shape:", df.shape)
-
-    # Columns 0-3 are participant, frame, binary_label, multiclass_label
-    df_cols_first = df.iloc[:, 0:4]
-    df_feats = df.iloc[:, 4:]
-
-    print("Fitting PCA. To reduce memory and computation time, we use unique rows for fitting...")
-    # Since the 1-second interval embeddings are repeated 100 times, 
-    # we can just take the unique vectors to fit the PCA. This avoids fitting on 350,000 duplicated rows.
-    df_unique_feats = df_feats.drop_duplicates()
+    print(f"1. Extracting unique 1-second embedding vectors across {len(ordered_participants)} participants...")
+    unique_vectors = []
+    for p in ordered_participants:
+        p_file = os.path.join(CHECKPOINT_DIR, f"{p}_gemini.csv")
+        df_p = pd.read_csv(p_file)
+        feats = df_p.iloc[:, 4:].drop_duplicates().values
+        unique_vectors.append(feats)
     
-    print(f"Unique embedding rows for fitting: {df_unique_feats.shape[0]}")
-    
-    # Do PCA to keep 90% of the variance
+    all_unique_feats = np.vstack(unique_vectors)
+    print(f"Total unique embedding vectors: {all_unique_feats.shape[0]} x {all_unique_feats.shape[1]}")
+
+    print("2. Fitting PCA to retain 90% variance...")
     pca = PCA(n_components=0.90)
-    pca.fit(df_unique_feats)
+    pca.fit(all_unique_feats)
+
+    print(f"  -> Total variance retained: {pca.explained_variance_ratio_.sum():.4f}")
+    print(f"  -> Number of components to reach 90% variance: {pca.n_components_}")
+
+    print("3. Transforming dataset participant-by-participant and saving...")
+    pca_cols = [f"gemini_PC{i}" for i in range(1, pca.n_components_ + 1)]
+    meta_cols = ["frame", "participant", "binary_label", "multiclass_label"]
     
-    print("Total variance retained:", pca.explained_variance_ratio_.sum())
-    print("Number of components to reach 90% variance:", pca.n_components_)
+    for idx, p in enumerate(ordered_participants):
+        p_file = os.path.join(CHECKPOINT_DIR, f"{p}_gemini.csv")
+        df_p = pd.read_csv(p_file)
+        
+        df_meta = df_p[meta_cols].copy()
+        feats = df_p.iloc[:, 4:].values
+        df_pca = pd.DataFrame(pca.transform(feats), columns=pca_cols)
+        
+        df_out = pd.concat([df_meta, df_pca], axis=1)
+        
+        if idx == 0:
+            df_out.to_csv(output_file, index=False, mode="w")
+        else:
+            df_out.to_csv(output_file, index=False, header=False, mode="a")
+        print(f"  -> Transformed {p} ({len(df_out)} rows)")
 
-    # Transform the FULL 100fps data (all ~350k rows)
-    print("Transforming full dataset...")
-    df_pca = pca.transform(df_feats)
-
-    # Recombine with metadata 
-    full_df = pd.concat([df_cols_first, pd.DataFrame(df_pca)], axis=1)
-    
-    # Rename the PCA columns
-    new_cols = list(df_cols_first.columns) + [f'gemini_PC{i}' for i in range(1, pca.n_components_ + 1)]
-    full_df.columns = new_cols
-    
-    print('Checking for nan values (should be 0):')
-    print(full_df.isnull().sum().sum())
-    print("Output shape:", full_df.shape)
-
-    print(f"Saving PCA dataset to {output_file}...")
-    full_df.to_csv(output_file, index=False)
-
-    print(f"Saving PCA model to {model_file}...")
+    print(f"\n4. Saving PCA model to {model_file}...")
     joblib.dump(pca, model_file)
-    
-    print("Done")
+    print("Done! PCA generation successfully completed.")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

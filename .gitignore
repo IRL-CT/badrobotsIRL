@@ -66,3 +66,6 @@ training/binary_models/wandb/latest-run
 !/data/*/.gitkeep
 *.mp4
 data/embeddings/*.nfs*
+*.tar.gz
+*.pkl
+preprocessing/diarization_data.json
