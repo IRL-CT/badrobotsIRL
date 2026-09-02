@@ -2,8 +2,10 @@ import os
 import sys
 import time
 import glob
-import subprocess
+import shutil
+import argparse
 import tempfile
+import subprocess
 import pandas as pd
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -12,14 +14,34 @@ from google.genai import types
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data")
-INPUT_VIDEO_DIR = os.path.join(DATA_DIR, "raw", "mp4_human_only_audio")
-DOWNSCALED_DIR = os.path.join(DATA_DIR, "raw", "mp4_480p_human_only_audio")
-CHECKPOINT_DIR = os.path.join(DATA_DIR, "embeddings", "gemini_checkpoints_visual_audio_clean")
-EMBEDDINGS_DIR = os.path.join(DATA_DIR, "embeddings")
-BASE_DATASET = os.path.join(DATA_DIR, "interpolated", "allparticipants_100fps.csv")
 
-# Excluded participants in the study
+INPUT_VIDEO_DIR = os.path.join(DATA_DIR, "raw", "mp4_human_only_audio")
+DOWNSCALED_DIR  = os.path.join(DATA_DIR, "raw", "mp4_480p_human_only_audio")
+CHECKPOINT_DIR  = os.path.join(DATA_DIR, "embeddings", "gemini_checkpoints_visual_audio_clean")
+EMBEDDINGS_DIR  = os.path.join(DATA_DIR, "embeddings")
+BASE_DATASET    = os.path.join(DATA_DIR, "interpolated", "allparticipants_100fps.csv")
+
 EXCLUDED_PARTICIPANTS = {"p1nodbot", "p3nodbot", "p13nodbot", "p15nodbot", "p24nodbot", "p30nodbot"}
+MIN_CLIP_COVERAGE = 0.85
+
+sys.stdout.reconfigure(line_buffering=True)
+
+def get_ffmpeg_binary():
+    import shutil
+    exe = shutil.which("ffmpeg")
+    if exe:
+        return exe
+    local_exe = os.path.expanduser("~/.local/bin/ffmpeg")
+    if os.path.exists(local_exe):
+        return local_exe
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return "ffmpeg"
+
+FFMPEG_BIN = get_ffmpeg_binary()
+print(f"Using ffmpeg binary: {FFMPEG_BIN}")
 
 def get_gemini_client():
     api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
@@ -27,27 +49,74 @@ def get_gemini_client():
         raise EnvironmentError("No API key found. Set GEMINI_API_KEY or GOOGLE_API_KEY environment variable.")
     return genai.Client(api_key=api_key)
 
-def downscale_video(participant_id):
+def get_video_duration_sec(path):
+    """Accurately extract duration in seconds from video container."""
+    try:
+        cmd = [
+            FFMPEG_BIN, "-v", "error", "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1", path
+        ]
+        out = subprocess.check_output(cmd).decode().strip()
+        return float(out)
+    except Exception:
+        # Fallback to parsing ffmpeg stderr
+        try:
+            cmd = [FFMPEG_BIN, "-i", path]
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            for line in res.stderr.decode('utf-8', errors='ignore').split('\n'):
+                if "Duration:" in line:
+                    parts = line.split("Duration:")[1].split(",")[0].strip().split(":")
+                    return float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
+        except Exception:
+            pass
+    return None
+
+def downscale_video_robust(participant_id):
+    """Downscale full-res 4K video to 480p sequentially with duration validation."""
     os.makedirs(DOWNSCALED_DIR, exist_ok=True)
     out_path = os.path.join(DOWNSCALED_DIR, f"{participant_id}.mp4")
-    if os.path.exists(out_path) and os.path.getsize(out_path) > 1000:
-        return participant_id, out_path
+    in_path  = os.path.join(INPUT_VIDEO_DIR, f"{participant_id}.mp4")
 
-    in_path = os.path.join(INPUT_VIDEO_DIR, f"{participant_id}.mp4")
     if not os.path.exists(in_path):
         raise FileNotFoundError(f"Input video not found: {in_path}")
 
+    src_dur = get_video_duration_sec(in_path)
+
+    # Check if existing 480p video is valid
+    if os.path.exists(out_path) and os.path.getsize(out_path) > 1000:
+        out_dur = get_video_duration_sec(out_path)
+        if src_dur and out_dur and abs(out_dur - src_dur) < 2.0:
+            print(f"[{participant_id}] Valid 480p video cached ({out_dur:.1f}s).")
+            return participant_id, out_path
+        else:
+            print(f"[{participant_id}] Existing 480p video mismatch/truncated (src={src_dur}s, out={out_dur}s). Re-encoding...")
+            try:
+                os.remove(out_path)
+            except Exception:
+                pass
+
+    print(f"[{participant_id}] Downscaling source video ({src_dur:.1f}s) to 480p with 1s keyframes...")
     cmd = [
-        "ffmpeg", "-y", "-i", in_path,
-        "-vf", "scale=854:480:flags=fast_bilinear", "-r", "30",
-        "-c:v", "libx264", "-preset", "ultrafast", "-tune", "fastdecode",
+        FFMPEG_BIN, "-y", "-i", in_path,
+        "-vf", "scale=854:480,fps=30",
+        "-g", "30", "-keyint_min", "30", "-sc_threshold", "0",
+        "-c:v", "libx264", "-preset", "ultrafast",
         "-c:a", "aac", "-b:a", "128k",
         out_path
     ]
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+    res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    if res.returncode != 0:
+        raise RuntimeError(f"Downscale failed for {participant_id}:\n{res.stderr.decode('utf-8', errors='ignore')[-500:]}")
+
+    out_dur = get_video_duration_sec(out_path)
+    if src_dur and out_dur and (src_dur - out_dur) > 2.0:
+        raise RuntimeError(f"Downscale truncated {participant_id}: out={out_dur:.1f}s vs src={src_dur:.1f}s")
+
+    print(f"[{participant_id}] Downscale complete ({out_dur:.1f}s, {os.path.getsize(out_path)/(1024*1024):.1f} MB).")
     return participant_id, out_path
 
 def embed_video_clip(client, clip_bytes, max_retries=6):
+    """Embed 1-second mp4 clip using Gemini Embedding 2."""
     part = types.Part.from_bytes(data=clip_bytes, mime_type="video/mp4")
     for attempt in range(max_retries):
         try:
@@ -60,81 +129,106 @@ def embed_video_clip(client, clip_bytes, max_retries=6):
             elif hasattr(res, "embedding") and res.embedding:
                 return res.embedding.values
             else:
-                raise ValueError("No embedding returned")
+                raise ValueError("No embedding returned from API")
         except Exception as e:
             if attempt == max_retries - 1:
-                print(f"Embedding failed after {max_retries} attempts: {e}")
-                raise e
-            time.sleep(2.0 * (attempt + 1))
+                raise RuntimeError(f"Embedding API failed after {max_retries} attempts: {e}") from e
+            wait = 2.0 * (attempt + 1)
+            print(f"    [Retry {attempt+1}/{max_retries}] {e}. Waiting {wait:.0f}s...")
+            time.sleep(wait)
+
+def is_checkpoint_valid(checkpoint_file, expected_seconds):
+    """Validate that checkpoint contains enough unique fingerprints."""
+    if not os.path.exists(checkpoint_file) or os.path.getsize(checkpoint_file) < 1000:
+        return False
+    try:
+        df = pd.read_csv(checkpoint_file, usecols=["gemini_0", "gemini_1", "gemini_2"])
+        n_unique = df.drop_duplicates().shape[0]
+        min_required = max(3, int(expected_seconds * MIN_CLIP_COVERAGE))
+        if n_unique >= min_required:
+            print(f"  -> Valid checkpoint: {n_unique} unique fingerprints (need >= {min_required}).")
+            return True
+        print(f"  WARNING: Checkpoint has only {n_unique} unique fingerprints (need >= {min_required}). Regenerating.")
+        return False
+    except Exception as e:
+        return False
 
 def process_participant(participant_id, client, df_base_part):
     checkpoint_file = os.path.join(CHECKPOINT_DIR, f"{participant_id}_gemini.csv")
-    if os.path.exists(checkpoint_file) and os.path.getsize(checkpoint_file) > 1000:
-        print(f"[{participant_id}] Checkpoint already exists. Loaded.")
+    n_frames = len(df_base_part)
+    expected_seconds = int(np.ceil(n_frames / 100))
+
+    if is_checkpoint_valid(checkpoint_file, expected_seconds):
+        print(f"[{participant_id}] Valid checkpoint loaded.")
         return pd.read_csv(checkpoint_file)
 
-    video_480p = os.path.join(DOWNSCALED_DIR, f"{participant_id}.mp4")
-    if not os.path.exists(video_480p):
-        downscale_video(participant_id)
+    # 1. Ensure 480p downscaled video is complete & valid
+    _, video_480p = downscale_video_robust(participant_id)
 
-    # Get total video duration
-    cmd = ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", video_480p]
-    dur_str = subprocess.check_output(cmd).decode().strip()
-    total_sec = int(np.ceil(float(dur_str)))
-
-    print(f"[{participant_id}] Segmenting {total_sec} 1-second clips and embedding...")
-
+    # 2. Segment into 1-second clips
     embeddings_by_sec = {}
-
     with tempfile.TemporaryDirectory() as tmp_dir:
-        # Segment into 1s clips directly from 480p video in 0.3s
         chunk_pattern = os.path.join(tmp_dir, "clip_%04d.mp4")
         subprocess.run([
-            "ffmpeg", "-y", "-i", video_480p,
+            FFMPEG_BIN, "-y", "-i", video_480p,
             "-c", "copy", "-f", "segment", "-segment_time", "1",
             "-reset_timestamps", "1",
             chunk_pattern
         ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
 
         clip_files = sorted(glob.glob(os.path.join(tmp_dir, "clip_*.mp4")))
-        
-        # Parallel embedding calls
-        def embed_worker(idx, path):
-            with open(path, "rb") as f:
+        print(f"[{participant_id}] Sliced {len(clip_files)} 1-second clips. Embedding in parallel...")
+
+        def embed_worker(sec_idx, clip_path):
+            with open(clip_path, "rb") as f:
                 b = f.read()
             vec = embed_video_clip(client, b)
-            return idx, vec
+            return sec_idx, vec
 
         with ThreadPoolExecutor(max_workers=8) as pool:
-            futures = [pool.submit(embed_worker, sec, path) for sec, path in enumerate(clip_files)]
-            for f in as_completed(futures):
-                sec, vec = f.result()
-                embeddings_by_sec[sec] = vec
+            futures = [pool.submit(embed_worker, s, p) for s, p in enumerate(clip_files)]
+            done = 0
+            for fut in as_completed(futures):
+                sec_idx, vec = fut.result()
+                embeddings_by_sec[sec_idx] = vec
+                done += 1
+                if done % 10 == 0 or done == len(clip_files):
+                    print(f"  [{participant_id}] {done}/{len(clip_files)} clips embedded...")
 
-    # Construct 100fps mapped dataframe
-    n_frames = len(df_base_part)
+    # 3. Validate coverage
+    n_embedded = len(embeddings_by_sec)
+    min_clips = int(expected_seconds * MIN_CLIP_COVERAGE)
+    if n_embedded < min_clips:
+        raise RuntimeError(
+            f"[{participant_id}] Only {n_embedded}/{expected_seconds} clips succeeded (need >= {min_clips}). "
+            f"NOT saving checkpoint."
+        )
+
+    # 4. Map 1-second embeddings to 100fps frame rows
     feature_matrix = np.zeros((n_frames, 3072), dtype=np.float32)
-
     for i in range(n_frames):
-        sec_idx = min(i // 100, total_sec - 1)
+        sec_idx = i // 100
         if sec_idx in embeddings_by_sec:
             feature_matrix[i, :] = embeddings_by_sec[sec_idx]
-        elif (len(embeddings_by_sec) - 1) in embeddings_by_sec:
-            feature_matrix[i, :] = embeddings_by_sec[len(embeddings_by_sec) - 1]
+        elif embeddings_by_sec:
+            nearest = min(embeddings_by_sec.keys(), key=lambda k: abs(k - sec_idx))
+            feature_matrix[i, :] = embeddings_by_sec[nearest]
 
     feature_cols = [f"gemini_{j}" for j in range(3072)]
     df_feats = pd.DataFrame(feature_matrix, columns=feature_cols)
-
     meta_cols = ["frame", "participant", "binary_label", "multiclass_label"]
     df_meta = df_base_part[meta_cols].reset_index(drop=True)
     df_full = pd.concat([df_meta, df_feats], axis=1)
 
-    # Save participant checkpoint
     df_full.to_csv(checkpoint_file, index=False)
-    print(f"[{participant_id}] Finished! Checkpoint saved ({df_full.shape[0]} rows x {df_full.shape[1]} cols).")
+    print(f"[{participant_id}] Done. {n_embedded} clips embedded. Checkpoint saved ({df_full.shape[0]} rows x {df_full.shape[1]} cols).")
     return df_full
 
 def main():
+    parser = argparse.ArgumentParser(description="Generate clean multimodal Gemini embeddings.")
+    parser.add_argument("--participants", nargs="+", default=None, help="Process specific participant IDs.")
+    args = parser.parse_args()
+
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     os.makedirs(EMBEDDINGS_DIR, exist_ok=True)
 
@@ -142,57 +236,23 @@ def main():
 
     print(f"Loading base dataset from {BASE_DATASET}...")
     df_base = pd.read_csv(BASE_DATASET)
-    participants = sorted(df_base["participant"].unique())
-    active_participants = [p for p in participants if p not in EXCLUDED_PARTICIPANTS]
+    all_participants = sorted(df_base["participant"].unique())
+    active_participants = [p for p in all_participants if p not in EXCLUDED_PARTICIPANTS]
 
-    print(f"Found {len(active_participants)} active study participants to embed.")
+    if args.participants:
+        requested = set(args.participants)
+        active_participants = [p for p in active_participants if p in requested]
 
-    # Step 1: Pre-downscale videos in parallel
-    print("\n--- Step 1: Pre-downscaling videos to 480p in parallel ---")
-    to_downscale = [p for p in active_participants if not os.path.exists(os.path.join(DOWNSCALED_DIR, f"{p}.mp4"))]
-    if to_downscale:
-        print(f"Downscaling {len(to_downscale)} videos (using 4 parallel workers)...")
-        with ThreadPoolExecutor(max_workers=4) as pool:
-            futures = {pool.submit(downscale_video, p): p for p in to_downscale}
-            for f in as_completed(futures):
-                p_id, path = f.result()
-                print(f"  -> Downscaled {p_id}.mp4")
-    else:
-        print("All 480p downscaled videos already exist.")
+    print(f"Processing {len(active_participants)} participant(s): {active_participants}\n")
 
-    # Step 2: Extract & embed each participant
-    print("\n--- Step 2: Generating Gemini Multimodal Embeddings ---")
-    participant_dfs = []
     for idx, p in enumerate(active_participants, 1):
         print(f"\n[{idx}/{len(active_participants)}] Processing {p}...")
         df_part = df_base[df_base["participant"] == p].copy()
-        df_out = process_participant(p, client, df_part)
-        if df_out is not None:
-            participant_dfs.append(df_out)
+        process_participant(p, client, df_part)
 
-    # Step 3: Combine and export
-    print("\n--- Step 3: Combining and Slicing Dimensions ---")
-    full_df = pd.concat(participant_dfs, axis=0).reset_index(drop=True)
-    print(f"Full combined dataset shape: {full_df.shape}")
-
-    full_output_path = os.path.join(EMBEDDINGS_DIR, "gemini_video_embeddings_visual_audio_full.csv")
-    print(f"Saving full 3072-D dataset to {full_output_path}...")
-    full_df.to_csv(full_output_path, index=False)
-
-    for d in [768, 256, 128]:
-        slice_path = os.path.join(EMBEDDINGS_DIR, f"gemini_video_embeddings_visual_audio_{d}d.csv")
-        print(f"Saving {d}-D slice to {slice_path}...")
-        meta_and_slice = full_df.iloc[:, : 4 + d]
-        meta_and_slice.to_csv(slice_path, index=False)
-
-    # Step 4: Run PCA
-    print("\n--- Step 4: Computing PCA (90% variance) ---")
-    pca_script = os.path.join(BASE_DIR, "preprocessing", "do_pca_gemini_embeddings.py")
-    subprocess.run([sys.executable, pca_script], check=True)
-
-    print("\n" + "="*70)
-    print("STEP 2 COMPLETE: GEMINI MULTIMODAL EMBEDDINGS SUCCESSFULLY GENERATED!")
-    print("="*70)
+    print("\n" + "=" * 70)
+    print("EMBEDDING COMPLETE! Run combine_gemini_embeddings.py to build final dataset.")
+    print("=" * 70)
 
 if __name__ == "__main__":
     main()
