@@ -16,8 +16,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
 INPUT_VIDEO_DIR = os.path.join(DATA_DIR, "raw", "mp4_human_only_audio")
-DOWNSCALED_DIR  = os.path.join(DATA_DIR, "raw", "mp4_480p_human_only_audio")
-CHECKPOINT_DIR  = os.path.join(DATA_DIR, "embeddings", "gemini_checkpoints_visual_audio_clean")
+DOWNSCALED_DIR  = os.path.join(DATA_DIR, "raw", "mp4_480p_visual_only")
+CHECKPOINT_DIR  = os.path.join(DATA_DIR, "embeddings", "gemini_checkpoints_visual_only_clean")
 EMBEDDINGS_DIR  = os.path.join(DATA_DIR, "embeddings")
 BASE_DATASET    = os.path.join(DATA_DIR, "interpolated", "allparticipants_100fps.csv")
 
@@ -60,7 +60,6 @@ def get_video_duration_sec(path):
         out = subprocess.check_output(cmd).decode().strip()
         return float(out)
     except Exception:
-        # Fallback to parsing ffmpeg stderr
         try:
             cmd = [FFMPEG_BIN, "-i", path]
             res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -72,8 +71,8 @@ def get_video_duration_sec(path):
             pass
     return None
 
-def downscale_video_robust(participant_id):
-    """Downscale full-res 4K video to 480p sequentially with duration validation."""
+def downscale_video_visual_only(participant_id):
+    """Downscale full-res 4K video to 480p, stripping audio entirely."""
     os.makedirs(DOWNSCALED_DIR, exist_ok=True)
     out_path = os.path.join(DOWNSCALED_DIR, f"{participant_id}.mp4")
     in_path  = os.path.join(INPUT_VIDEO_DIR, f"{participant_id}.mp4")
@@ -83,11 +82,10 @@ def downscale_video_robust(participant_id):
 
     src_dur = get_video_duration_sec(in_path)
 
-    # Check if existing 480p video is valid
     if os.path.exists(out_path) and os.path.getsize(out_path) > 1000:
         out_dur = get_video_duration_sec(out_path)
         if src_dur and out_dur and abs(out_dur - src_dur) < 2.0:
-            print(f"[{participant_id}] Valid 480p video cached ({out_dur:.1f}s).")
+            print(f"[{participant_id}] Valid visual-only 480p video cached ({out_dur:.1f}s).")
             return participant_id, out_path
         else:
             print(f"[{participant_id}] Existing 480p video mismatch/truncated (src={src_dur}s, out={out_dur}s). Re-encoding...")
@@ -96,13 +94,13 @@ def downscale_video_robust(participant_id):
             except Exception:
                 pass
 
-    print(f"[{participant_id}] Downscaling source video ({src_dur:.1f}s) to 480p with 1s keyframes...")
+    print(f"[{participant_id}] Downscaling source video ({src_dur:.1f}s) to 480p (visual only, no audio)...")
     cmd = [
         FFMPEG_BIN, "-y", "-i", in_path,
         "-vf", "scale=854:480,fps=30",
         "-g", "30", "-keyint_min", "30", "-sc_threshold", "0",
         "-c:v", "libx264", "-preset", "ultrafast",
-        "-c:a", "aac", "-b:a", "128k",
+        "-an",          # Strip audio track -- visual embeddings only
         out_path
     ]
     res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
@@ -113,11 +111,11 @@ def downscale_video_robust(participant_id):
     if src_dur and out_dur and (src_dur - out_dur) > 2.0:
         raise RuntimeError(f"Downscale truncated {participant_id}: out={out_dur:.1f}s vs src={src_dur:.1f}s")
 
-    print(f"[{participant_id}] Downscale complete ({out_dur:.1f}s, {os.path.getsize(out_path)/(1024*1024):.1f} MB).")
+    print(f"[{participant_id}] Downscale complete ({out_dur:.1f}s, {os.path.getsize(out_path)/(1024*1024):.1f} MB, no audio).")
     return participant_id, out_path
 
 def embed_video_clip(client, clip_bytes, max_retries=6):
-    """Embed 1-second mp4 clip using Gemini Embedding 2."""
+    """Embed 1-second mp4 clip (visual only) using Gemini Embedding 2."""
     part = types.Part.from_bytes(data=clip_bytes, mime_type="video/mp4")
     for attempt in range(max_retries):
         try:
@@ -151,11 +149,11 @@ def is_checkpoint_valid(checkpoint_file, expected_seconds):
             return True
         print(f"  WARNING: Checkpoint has only {n_unique} unique fingerprints (need >= {min_required}). Regenerating.")
         return False
-    except Exception as e:
+    except Exception:
         return False
 
 def process_participant(participant_id, client, df_base_part):
-    checkpoint_file = os.path.join(CHECKPOINT_DIR, f"{participant_id}_gemini.csv")
+    checkpoint_file = os.path.join(CHECKPOINT_DIR, f"{participant_id}_gemini_visual.csv")
     n_frames = len(df_base_part)
     expected_seconds = int(np.ceil(n_frames / 100))
 
@@ -163,10 +161,10 @@ def process_participant(participant_id, client, df_base_part):
         print(f"[{participant_id}] Valid checkpoint loaded.")
         return pd.read_csv(checkpoint_file)
 
-    # 1. Ensure 480p downscaled video is complete & valid
-    _, video_480p = downscale_video_robust(participant_id)
+    # 1. Ensure visual-only 480p downscaled video is complete & valid
+    _, video_480p = downscale_video_visual_only(participant_id)
 
-    # 2. Segment into 1-second clips
+    # 2. Segment into 1-second clips (audio already absent in source)
     embeddings_by_sec = {}
     with tempfile.TemporaryDirectory() as tmp_dir:
         chunk_pattern = os.path.join(tmp_dir, "clip_%04d.mp4")
@@ -178,7 +176,7 @@ def process_participant(participant_id, client, df_base_part):
         ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
 
         clip_files = sorted(glob.glob(os.path.join(tmp_dir, "clip_*.mp4")))
-        print(f"[{participant_id}] Sliced {len(clip_files)} 1-second clips. Embedding in parallel...")
+        print(f"[{participant_id}] Sliced {len(clip_files)} 1-second clips (visual only). Embedding in parallel...")
 
         def embed_worker(sec_idx, clip_path):
             with open(clip_path, "rb") as f:
@@ -222,11 +220,11 @@ def process_participant(participant_id, client, df_base_part):
     df_full = pd.concat([df_meta, df_feats], axis=1)
 
     df_full.to_csv(checkpoint_file, index=False)
-    print(f"[{participant_id}] Done. {n_embedded} clips embedded. Checkpoint saved ({df_full.shape[0]} rows x {df_full.shape[1]} cols).")
+    print(f"[{participant_id}] Done. {n_embedded} clips embedded (visual only). Checkpoint saved ({df_full.shape[0]} rows x {df_full.shape[1]} cols).")
     return df_full
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate clean multimodal Gemini embeddings.")
+    parser = argparse.ArgumentParser(description="Generate visual-only Gemini embeddings (no audio).")
     parser.add_argument("--participants", nargs="+", default=None, help="Process specific participant IDs.")
     args = parser.parse_args()
 
@@ -252,7 +250,7 @@ def main():
         process_participant(p, client, df_part)
 
     print("\n" + "=" * 70)
-    print("EMBEDDING COMPLETE! Run combine_gemini_embeddings.py to build final dataset.")
+    print("EMBEDDING COMPLETE! Run combine_gemini_visual_only_embeddings.py to build final dataset.")
     print("=" * 70)
 
 if __name__ == "__main__":
