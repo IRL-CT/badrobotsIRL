@@ -69,3 +69,4 @@ data/embeddings/*.nfs*
 *.tar.gz
 *.pkl
 preprocessing/diarization_data.json
+*.log
