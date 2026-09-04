@@ -1,4 +1,26 @@
+"""
+Generate genuine multimodal Gemini (Video + Audio) embeddings using Gemini Embedding 2.
+
+Multimodal Note:
+----------------
+Google Gemini Embedding 2 explicitly ignores audio tracks embedded inside video containers
+("Audio tracks are not processed in video files"). Therefore, to achieve genuine audiovisual
+embeddings, video and audio must be submitted as separate interleaved Part objects in a single
+API request:
+    contents = [
+        types.Part.from_bytes(data=video_bytes, mime_type="video/mp4"),
+        types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav")
+    ]
+
+Inputs:
+- Source videos: data/raw/mp4_human_only_audio/{participant}.mp4
+  (Videos with robot/researcher speech muted and only participant speech retained)
+
+Outputs:
+- Checkpoints: data/embeddings/gemini_checkpoints_audiovisual/{participant}_gemini_audiovisual.csv
+"""
 import os
+import re
 import sys
 import time
 import glob
@@ -12,12 +34,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from google import genai
 from google.genai import types
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
 INPUT_VIDEO_DIR = os.path.join(DATA_DIR, "raw", "mp4_human_only_audio")
 DOWNSCALED_DIR  = os.path.join(DATA_DIR, "raw", "mp4_480p_visual_only")
-CHECKPOINT_DIR  = os.path.join(DATA_DIR, "embeddings", "gemini_checkpoints_visual_only_clean")
+CHECKPOINT_DIR  = os.path.join(DATA_DIR, "embeddings", "gemini_checkpoints_audiovisual")
 EMBEDDINGS_DIR  = os.path.join(DATA_DIR, "embeddings")
 BASE_DATASET    = os.path.join(DATA_DIR, "interpolated", "allparticipants_100fps.csv")
 
@@ -27,7 +49,6 @@ MIN_CLIP_COVERAGE = 0.85
 sys.stdout.reconfigure(line_buffering=True)
 
 def get_ffmpeg_binary():
-    import shutil
     exe = shutil.which("ffmpeg")
     if exe:
         return exe
@@ -42,7 +63,6 @@ def get_ffmpeg_binary():
 
 FFMPEG_BIN = get_ffmpeg_binary()
 FFPROBE_BIN = os.path.join(os.path.dirname(FFMPEG_BIN), "ffprobe") if os.path.dirname(FFMPEG_BIN) else "ffprobe"
-print(f"Using ffmpeg binary: {FFMPEG_BIN}")
 
 def get_gemini_client():
     api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
@@ -71,8 +91,8 @@ def get_video_duration_sec(path):
             pass
     return None
 
-def downscale_video_visual_only(participant_id):
-    """Downscale full-res 4K video to 480p, stripping audio entirely."""
+def downscale_video_visual_stream(participant_id):
+    """Downscale full-res 4K video to 480p visual stream with 1s keyframes."""
     os.makedirs(DOWNSCALED_DIR, exist_ok=True)
     out_path = os.path.join(DOWNSCALED_DIR, f"{participant_id}.mp4")
     in_path  = os.path.join(INPUT_VIDEO_DIR, f"{participant_id}.mp4")
@@ -85,22 +105,16 @@ def downscale_video_visual_only(participant_id):
     if os.path.exists(out_path) and os.path.getsize(out_path) > 1000:
         out_dur = get_video_duration_sec(out_path)
         if src_dur and out_dur and abs(out_dur - src_dur) < 2.0:
-            print(f"[{participant_id}] Valid visual-only 480p video cached ({out_dur:.1f}s).")
-            return participant_id, out_path
-        else:
-            print(f"[{participant_id}] Existing 480p video mismatch/truncated (src={src_dur}s, out={out_dur}s). Re-encoding...")
-            try:
-                os.remove(out_path)
-            except Exception:
-                pass
+            print(f"[{participant_id}] Valid 480p visual stream cached ({out_dur:.1f}s).")
+            return participant_id, out_path, in_path
 
-    print(f"[{participant_id}] Downscaling source video ({src_dur:.1f}s) to 480p (visual only, no audio)...")
+    print(f"[{participant_id}] Downscaling source video ({src_dur:.1f}s) to 480p visual stream...")
     cmd = [
         FFMPEG_BIN, "-y", "-i", in_path,
         "-vf", "scale=854:480,fps=30",
         "-g", "30", "-keyint_min", "30", "-sc_threshold", "0",
         "-c:v", "libx264", "-preset", "ultrafast",
-        "-an",          # Strip audio track -- visual embeddings only
+        "-an",
         out_path
     ]
     res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
@@ -108,20 +122,29 @@ def downscale_video_visual_only(participant_id):
         raise RuntimeError(f"Downscale failed for {participant_id}:\n{res.stderr.decode('utf-8', errors='ignore')[-500:]}")
 
     out_dur = get_video_duration_sec(out_path)
-    if src_dur and out_dur and (src_dur - out_dur) > 2.0:
-        raise RuntimeError(f"Downscale truncated {participant_id}: out={out_dur:.1f}s vs src={src_dur:.1f}s")
+    print(f"[{participant_id}] Downscale complete ({out_dur:.1f}s, {os.path.getsize(out_path)/(1024*1024):.1f} MB).")
+    return participant_id, out_path, in_path
 
-    print(f"[{participant_id}] Downscale complete ({out_dur:.1f}s, {os.path.getsize(out_path)/(1024*1024):.1f} MB, no audio).")
-    return participant_id, out_path
+def parse_retry_delay(error_str):
+    """Parse suggested retry delay from error message."""
+    match = re.search(r"retry in (\d+(\.\d+)?)s", str(error_str))
+    if match:
+        return float(match.group(1)) + 1.0
+    match_sec = re.search(r"retryDelay': '(\d+)s'", str(error_str))
+    if match_sec:
+        return float(match_sec.group(1)) + 1.0
+    return None
 
-def embed_video_clip(client, clip_bytes, max_retries=6):
-    """Embed 1-second mp4 clip (visual only) using Gemini Embedding 2."""
-    part = types.Part.from_bytes(data=clip_bytes, mime_type="video/mp4")
+def embed_audiovisual_clip(client, video_bytes, audio_bytes, max_retries=6):
+    """Embed 1-second segment using interleaved Video + Audio in Gemini Embedding 2."""
+    part_video = types.Part.from_bytes(data=video_bytes, mime_type="video/mp4")
+    part_audio = types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav")
+
     for attempt in range(max_retries):
         try:
             res = client.models.embed_content(
                 model="models/gemini-embedding-2",
-                contents=[part]
+                contents=[part_video, part_audio]
             )
             if hasattr(res, "embeddings") and res.embeddings:
                 return res.embeddings[0].values
@@ -130,14 +153,19 @@ def embed_video_clip(client, clip_bytes, max_retries=6):
             else:
                 raise ValueError("No embedding returned from API")
         except Exception as e:
+            err_msg = str(e)
+            if "RESOURCE_EXHAUSTED" in err_msg and "quota" in err_msg.lower() and "day" in err_msg.lower():
+                raise RuntimeError(f"Daily quota reached: {e}") from e
+
+            suggested_wait = parse_retry_delay(err_msg)
+            wait = suggested_wait if suggested_wait else (2.0 * (attempt + 1) + np.random.uniform(0.5, 2.0))
             if attempt == max_retries - 1:
-                raise RuntimeError(f"Embedding API failed after {max_retries} attempts: {e}") from e
-            wait = 2.0 * (attempt + 1)
-            print(f"    [Retry {attempt+1}/{max_retries}] {e}. Waiting {wait:.0f}s...")
+                raise RuntimeError(f"Audiovisual embedding API failed after {max_retries} attempts: {e}") from e
+            print(f"    [Retry {attempt+1}/{max_retries}] 429/Error. Waiting {wait:.1f}s...")
             time.sleep(wait)
 
 def is_checkpoint_valid(checkpoint_file, expected_seconds):
-    """Validate that checkpoint contains enough unique fingerprints."""
+    """Validate checkpoint integrity and coverage."""
     if not os.path.exists(checkpoint_file) or os.path.getsize(checkpoint_file) < 1000:
         return False
     try:
@@ -153,46 +181,63 @@ def is_checkpoint_valid(checkpoint_file, expected_seconds):
         return False
 
 def process_participant(participant_id, client, df_base_part):
-    checkpoint_file = os.path.join(CHECKPOINT_DIR, f"{participant_id}_gemini_visual.csv")
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+    checkpoint_file = os.path.join(CHECKPOINT_DIR, f"{participant_id}_gemini_audiovisual.csv")
     n_frames = len(df_base_part)
     expected_seconds = int(np.ceil(n_frames / 100))
 
     if is_checkpoint_valid(checkpoint_file, expected_seconds):
-        print(f"[{participant_id}] Valid checkpoint loaded.")
+        print(f"[{participant_id}] Valid audiovisual checkpoint loaded.")
         return pd.read_csv(checkpoint_file)
 
-    # 1. Ensure visual-only 480p downscaled video is complete & valid
-    _, video_480p = downscale_video_visual_only(participant_id)
+    # 1. Ensure visual 480p video stream is ready
+    _, video_480p, in_video = downscale_video_visual_stream(participant_id)
 
-    # 2. Segment into 1-second clips (audio already absent in source)
+    # 2. Slice both 1-second video clips and 1-second 16kHz mono audio WAV clips
     embeddings_by_sec = {}
     with tempfile.TemporaryDirectory() as tmp_dir:
-        chunk_pattern = os.path.join(tmp_dir, "clip_%04d.mp4")
+        # 2a. Segment video into 1-second MP4s
+        video_pattern = os.path.join(tmp_dir, "vclip_%04d.mp4")
         subprocess.run([
             FFMPEG_BIN, "-y", "-i", video_480p,
             "-c", "copy", "-f", "segment", "-segment_time", "1",
             "-reset_timestamps", "1",
-            chunk_pattern
+            video_pattern
         ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
 
-        clip_files = sorted(glob.glob(os.path.join(tmp_dir, "clip_*.mp4")))
-        print(f"[{participant_id}] Sliced {len(clip_files)} 1-second clips (visual only). Embedding in parallel...")
+        # 2b. Extract 16kHz mono audio and segment into 1-second WAVs
+        audio_pattern = os.path.join(tmp_dir, "aclip_%04d.wav")
+        subprocess.run([
+            FFMPEG_BIN, "-y", "-i", in_video,
+            "-vn", "-ac", "1", "-ar", "16000",
+            "-f", "segment", "-segment_time", "1",
+            "-reset_timestamps", "1",
+            audio_pattern
+        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
 
-        def embed_worker(sec_idx, clip_path):
-            with open(clip_path, "rb") as f:
-                b = f.read()
-            vec = embed_video_clip(client, b)
+        v_files = sorted(glob.glob(os.path.join(tmp_dir, "vclip_*.mp4")))
+        a_files = sorted(glob.glob(os.path.join(tmp_dir, "aclip_*.wav")))
+        n_clips = min(len(v_files), len(a_files))
+
+        print(f"[{participant_id}] Sliced {n_clips} 1-second audiovisual segments. Embedding in parallel...")
+
+        def embed_worker(sec_idx, v_path, a_path):
+            with open(v_path, "rb") as vf:
+                v_bytes = vf.read()
+            with open(a_path, "rb") as af:
+                a_bytes = af.read()
+            vec = embed_audiovisual_clip(client, v_bytes, a_bytes)
             return sec_idx, vec
 
-        with ThreadPoolExecutor(max_workers=8) as pool:
-            futures = [pool.submit(embed_worker, s, p) for s, p in enumerate(clip_files)]
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            futures = [pool.submit(embed_worker, s, v_files[s], a_files[s]) for s in range(n_clips)]
             done = 0
             for fut in as_completed(futures):
                 sec_idx, vec = fut.result()
                 embeddings_by_sec[sec_idx] = vec
                 done += 1
-                if done % 10 == 0 or done == len(clip_files):
-                    print(f"  [{participant_id}] {done}/{len(clip_files)} clips embedded...")
+                if done % 10 == 0 or done == n_clips:
+                    print(f"  [{participant_id}] {done}/{n_clips} clips embedded (visual + audio)...")
 
     # 3. Validate coverage
     n_embedded = len(embeddings_by_sec)
@@ -203,7 +248,7 @@ def process_participant(participant_id, client, df_base_part):
             f"NOT saving checkpoint."
         )
 
-    # 4. Map 1-second embeddings to 100fps frame rows
+    # 4. Map 1-second embeddings to 100fps frame rows (guaranteeing exact length & metadata)
     feature_matrix = np.zeros((n_frames, 3072), dtype=np.float32)
     for i in range(n_frames):
         sec_idx = i // 100
@@ -220,11 +265,11 @@ def process_participant(participant_id, client, df_base_part):
     df_full = pd.concat([df_meta, df_feats], axis=1)
 
     df_full.to_csv(checkpoint_file, index=False)
-    print(f"[{participant_id}] Done. {n_embedded} clips embedded (visual only). Checkpoint saved ({df_full.shape[0]} rows x {df_full.shape[1]} cols).")
+    print(f"[{participant_id}] Done. {n_embedded} clips embedded (multimodal video+audio). Saved ({df_full.shape[0]} rows x {df_full.shape[1]} cols).")
     return df_full
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate visual-only Gemini embeddings (no audio).")
+    parser = argparse.ArgumentParser(description="Generate genuine multimodal (Video + Audio) Gemini embeddings.")
     parser.add_argument("--participants", nargs="+", default=None, help="Process specific participant IDs.")
     args = parser.parse_args()
 
@@ -235,14 +280,18 @@ def main():
 
     print(f"Loading base dataset from {BASE_DATASET}...")
     df_base = pd.read_csv(BASE_DATASET)
-    all_participants = sorted(df_base["participant"].unique())
-    active_participants = [p for p in all_participants if p not in EXCLUDED_PARTICIPANTS]
+    # Order strictly by order of appearance in base dataset
+    ordered_participants = []
+    for p in df_base["participant"]:
+        if p not in EXCLUDED_PARTICIPANTS and p not in ordered_participants:
+            ordered_participants.append(p)
 
+    active_participants = ordered_participants
     if args.participants:
         requested = set(args.participants)
         active_participants = [p for p in active_participants if p in requested]
 
-    print(f"Processing {len(active_participants)} participant(s): {active_participants}\n")
+    print(f"Processing {len(active_participants)} participant(s) in strict base dataset sequence: {active_participants}\n")
 
     for idx, p in enumerate(active_participants, 1):
         print(f"\n[{idx}/{len(active_participants)}] Processing {p}...")
@@ -250,7 +299,7 @@ def main():
         process_participant(p, client, df_part)
 
     print("\n" + "=" * 70)
-    print("EMBEDDING COMPLETE! Run combine_gemini_visual_only_embeddings.py to build final dataset.")
+    print("AUDIOVISUAL EMBEDDING COMPLETE! Run combine_gemini_embeddings.py --mode audiovisual to build final dataset.")
     print("=" * 70)
 
 if __name__ == "__main__":
