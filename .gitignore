@@ -70,3 +70,5 @@ data/embeddings/*.nfs*
 *.pkl
 preprocessing/diarization_data.json
 *.log
+.env
+*.env
