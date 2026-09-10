@@ -19,7 +19,11 @@ from registry_utils import append_to_registry
 NO_MODALITY_SELECTION_SETS = {"catch22", "tsfresh", "curated_v4", "rf", "selectkbest", "curated_v5"}
 
 GEMINI_EMBEDDING_PATHS = {
-    "default":            "../../data/embeddings/gemini_video_embeddings.csv",
+    # --- 2026-08-26 rerun on CORRECTED embeddings -------------------------------
+    # "default" pointed at gemini_video_embeddings.csv (video-only). That file is
+    # NOT part of the corrected release, so the option is disabled. Kept for
+    # reference so the original sweep can be restored later.
+    # "default":          "../../data/embeddings/gemini_video_embeddings.csv",
     "visual_audio_128d":  "../../data/embeddings/gemini_video_embeddings_visual_audio_128d.csv",
     "visual_audio_256d":  "../../data/embeddings/gemini_video_embeddings_visual_audio_256d.csv",
     "visual_audio_768d":  "../../data/embeddings/gemini_video_embeddings_visual_audio_768d.csv",
@@ -334,11 +338,17 @@ def train():
             df_text_index = df_text_raw.iloc[last_positions, 4:].reset_index(drop=True)
             df_text_distance = df_text_cos_raw.iloc[last_positions, 4:].reset_index(drop=True)
         if "gemini" in modality_components:
-            gemini_key = getattr(config, "gemini_embedding", "default")
-            if use_pca_embeddings and gemini_key == "default":
-                gemini_path = "../../data/embeddings/gemini_video_embeddings_pca.csv"
-            else:
-                gemini_path = GEMINI_EMBEDDING_PATHS.get(gemini_key, GEMINI_EMBEDDING_PATHS["default"])
+            gemini_key = getattr(config, "gemini_embedding", "visual_audio_full")
+            # OLD: when dataset == "pca" and gemini_embedding == "default", a pre-computed
+            #      frame-level PCA of the embeddings was substituted. Disabled because
+            #      (a) the "default" video-only file is not in the corrected release, and
+            #      (b) the reported protocol applies PCA *after* windowing, which the
+            #          `dataset == "pca"` branch (create_norm_pca_df) still does below.
+            # if use_pca_embeddings and gemini_key == "default":
+            #     gemini_path = "../../data/embeddings/gemini_video_embeddings_pca.csv"
+            # else:
+            #     gemini_path = GEMINI_EMBEDDING_PATHS.get(gemini_key, GEMINI_EMBEDDING_PATHS["default"])
+            gemini_path = GEMINI_EMBEDDING_PATHS.get(gemini_key, GEMINI_EMBEDDING_PATHS["visual_audio_full"])
             df_gemini_raw = pd.read_csv(gemini_path)
             df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
 
@@ -572,12 +582,23 @@ def create_norm_pca_df(df):
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Launch the wandb sweep for this model.")
+    parser.add_argument("--project", default="brirl_linear_gemini_clean",
+                        help="wandb project to log the sweep into (default: %(default)s).")
+    parser.add_argument("--entity", default=None, help="wandb entity. Defaults to your wandb default.")
+    parser.add_argument("--count", type=int, default=None,
+                        help="Max number of sweep runs to execute (default: unlimited).")
+    args = parser.parse_args()
     sweep_config = {
         "method": "random",
-        "name": "brirl_linear_inter_2",
+        "name": "brirl_linear_gemini_clean",
         "parameters": {
             "binary_multiclass": {"values": ["binary", "multiclass"]},
-            "feature_set": {"values": ["full", "rf", "catch22", "tsfresh", "curated_v4","selectkbest", "curated_v5"]},
+            # Gemini requires the "full" feature set (validate_modality_feature_combination),
+            # so the sweep is pinned to "full" to avoid wasting runs on skipped combinations.
+            "feature_set": {"values": ["full"]},
+            # OLD: "feature_set": {"values": ["full", "rf", "catch22", "tsfresh", "curated_v4", "selectkbest", "curated_v5"]},
             "dataset": {"values": ["reg", "norm", "pca"]},
             # Dataset-level windowing (applied to 100fps data before training)
             "window": {"values": [1, 5, 10, 15, 30]},
@@ -590,34 +611,38 @@ def main():
             "max_depth": {"values": [5, 10, 15, 20, 25, 30]},
             "agg_features": {"values": [True, False]}, #temp only true for testing
             "feature_randomizer": {"values": [1]},
+            # 3072-D "visual_audio_full" is the default; MRL truncations swept alongside.
             "gemini_embedding": {"values": [
-                "default",
-                "visual_audio_128d",
-                "visual_audio_256d",
-                "visual_audio_768d",
                 "visual_audio_full",
+                "visual_audio_768d",
+                "visual_audio_256d",
+                "visual_audio_128d",
+                # "default",   # OLD - video-only embeddings, not in corrected release
             ]},
+            # ONLY modality combinations containing 'gemini' are active for this rerun.
+            # Non-gemini combinations are commented out (kept to restore the full sweep).
             "modality": {"values": [
-                # single modalities
-                # "pose", "facial", "audio", "text", "cosine",
+                # gemini alone
                 "gemini",
                 # 2-modality
-                # "pose_facial", "pose_audio", "pose_text", "pose_cosine", "pose_gemini",
-                # "facial_audio", "facial_text", "facial_cosine", "facial_gemini",
-                # "audio_text", "audio_cosine", "audio_gemini",
-                # "text_gemini", "cosine_gemini",
+                "pose_gemini", "facial_gemini", "audio_gemini",
+                "text_gemini", "cosine_gemini",
                 # 3-modality
+                "pose_facial_gemini", "pose_audio_gemini", "facial_audio_gemini",
+                "pose_text_gemini", "facial_text_gemini", "audio_text_gemini",
+                # 4-modality
+                "pose_facial_audio_gemini", "pose_facial_text_gemini",
+                "facial_audio_text_gemini", "pose_audio_text_gemini",
+                # 5-modality
+                "pose_facial_audio_text_gemini",
+                # ---------- OLD / non-gemini combinations (disabled) ----------
+                # "pose", "facial", "audio", "text", "cosine",
+                # "pose_facial", "pose_audio", "pose_text", "pose_cosine",
+                # "facial_audio", "facial_text", "facial_cosine",
+                # "audio_text", "audio_cosine",
                 # "pose_facial_audio", "pose_facial_text", "pose_audio_text",
                 # "facial_audio_text", "facial_audio_cosine", "pose_facial_audio_cosine",
-                # "pose_audio_cosine",
-                # "pose_facial_gemini", "pose_audio_gemini", "facial_audio_gemini",
-                # "pose_text_gemini", "facial_text_gemini", "audio_text_gemini",
-                # 4-modality
-                # "pose_facial_audio_text", "pose_facial_audio_cosine",
-                # "pose_facial_audio_gemini",
-                # "pose_facial_text_gemini", "facial_audio_text_gemini", "pose_audio_text_gemini",
-                # 5-modality
-                # "pose_facial_audio_text_gemini",
+                # "pose_audio_cosine", "pose_facial_audio_text", "pose_facial_audio_cosine",
             ]},
             "model_type": {"values": ["rf"]},
         },
@@ -625,8 +650,9 @@ def main():
 
     print(sweep_config)
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="brirl_linear_inter_2")
-    wandb.agent(sweep_id, function=train)
+    sweep_id = wandb.sweep(sweep=sweep_config, project=args.project, entity=args.entity)
+    wandb.agent(sweep_id, function=train, count=args.count,
+                entity=args.entity, project=args.project)
 
 
 if __name__ == "__main__":

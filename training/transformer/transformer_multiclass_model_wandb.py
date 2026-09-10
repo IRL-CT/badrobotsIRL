@@ -1040,8 +1040,8 @@ def train():
         modality_components = config.modality.split('_')
 
         if "text" in modality_components or "cosine" in modality_components:
-            df_text_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "clip_text_embeddings_pca.csv"))
-            df_text_cos_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "clip_text_cosine_similarity.csv"))
+            df_text_raw = pd.read_csv(os.path.join(DATA_DIR, "clip_text_embeddings_pca.csv"))
+            df_text_cos_raw = pd.read_csv(os.path.join(DATA_DIR, "clip_text_cosine_similarity.csv"))
             df_text_index = df_text_raw.iloc[last_positions, 4:].reset_index(drop=True)
             df_text_distance = df_text_cos_raw.iloc[last_positions, 4:].reset_index(drop=True)
         if "gemini" in modality_components:
@@ -1050,7 +1050,6 @@ def train():
             df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings_visual_audio_full.csv"), usecols=use_cols)
             df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
             del df_gemini_raw
-            import gc
             gc.collect()
 
         selected_modalities = {}
@@ -1120,11 +1119,11 @@ def train():
 
         if has_text_modality and fusion_type == "early":
             if "text" in modality_components:
-                df_text_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "clip_text_embeddings_pca.csv"))
+                df_text_raw = pd.read_csv(os.path.join(DATA_DIR, "clip_text_embeddings_pca.csv"))
                 df_text_index = df_text_raw.iloc[last_positions, 4:].reset_index(drop=True)
                 df = pd.concat([df, df_text_index], axis=1)
             if "cosine" in modality_components:
-                df_text_cos_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "clip_text_cosine_similarity.csv"))
+                df_text_cos_raw = pd.read_csv(os.path.join(DATA_DIR, "clip_text_cosine_similarity.csv"))
                 df_text_distance = df_text_cos_raw.iloc[last_positions, 4:].reset_index(drop=True)
                 df = pd.concat([df, df_text_distance], axis=1)
             if "gemini" in modality_components:
@@ -1133,7 +1132,6 @@ def train():
                 df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings_visual_audio_full.csv"), usecols=use_cols)
                 df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
                 del df_gemini_raw
-                import gc
                 gc.collect()
                 df = pd.concat([df, df_gemini_index], axis=1)
 
@@ -1194,7 +1192,7 @@ def train():
             info = df.iloc[:, :4]
             dfs = {"base_features": df}
             if "text" in modality_components:
-                df_text_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "clip_text_embeddings_pca.csv"))
+                df_text_raw = pd.read_csv(os.path.join(DATA_DIR, "clip_text_embeddings_pca.csv"))
                 df_text_index = df_text_raw.iloc[last_positions, 4:].reset_index(drop=True)
                 df_text = pd.concat([info.reset_index(drop=True), df_text_index], axis=1)
                 if data == "norm":
@@ -1203,7 +1201,7 @@ def train():
                     df_text = create_norm_pca_df(create_normalized_df(df_text))
                 dfs["text_full"] = df_text
             if "cosine" in modality_components:
-                df_text_cos_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "clip_text_cosine_similarity.csv"))
+                df_text_cos_raw = pd.read_csv(os.path.join(DATA_DIR, "clip_text_cosine_similarity.csv"))
                 df_text_distance = df_text_cos_raw.iloc[last_positions, 4:].reset_index(drop=True)
                 df_cos = pd.concat([info.reset_index(drop=True), df_text_distance], axis=1)
                 if data == "norm":
@@ -1217,7 +1215,6 @@ def train():
                 df_gemini_raw = pd.read_csv(os.path.join(DATA_DIR, "embeddings", "gemini_video_embeddings_visual_audio_full.csv"), usecols=use_cols)
                 df_gemini_index = df_gemini_raw.iloc[last_positions, 4:].reset_index(drop=True)
                 del df_gemini_raw
-                import gc
                 gc.collect()
                 df_gemini = pd.concat([info.reset_index(drop=True), df_gemini_index], axis=1)
                 if data == "norm":
@@ -1238,20 +1235,48 @@ def train():
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Launch the wandb sweep for this model.")
+    parser.add_argument("--project", default="brirl_deep_gemini_clean",
+                        help="wandb project to log the sweep into (default: %(default)s).")
+    parser.add_argument("--entity", default=None, help="wandb entity. Defaults to your wandb default.")
+    parser.add_argument("--count", type=int, default=None,
+                        help="Max number of sweep runs to execute (default: unlimited).")
+    args = parser.parse_args()
 
     sweep_config = {
         'method': 'random',
         'name': 'brirl_transformer_multiclass',
         'parameters': {
-            'feature_set': {'values': ['full', 'curated_features_v5_100fps', 'catch22', 'tsfresh', 'rf', 'selectkbest']},
+            # 2026-08-26 rerun on CORRECTED Gemini embeddings.
+            # Gemini/text modalities require the 'full' feature set, so the sweep is
+            # pinned to 'full' to avoid wasting runs on skipped combinations.
+            'feature_set': {'values': ['full']},
+            # OLD: 'feature_set': {'values': ['full', 'curated_features_v5_100fps', 'catch22', 'tsfresh', 'rf', 'selectkbest']},
+            # ONLY modality combinations containing 'gemini' are active for this rerun.
+            # Non-gemini combinations are commented out (kept to restore the full sweep).
             'modality': {'values': [
-                'pose', 'facial', 'audio', 'text', 'cosine', 'gemini',
-                'pose_facial', 'pose_audio', 'pose_text', 'pose_cosine', 'pose_gemini',
-                'facial_audio', 'facial_text', 'facial_cosine', 'facial_gemini',
-                'audio_text', 'audio_cosine', 'audio_gemini',
-                'pose_facial_audio', 'pose_facial_text', 'pose_audio_text',
-                'facial_audio_text', 'facial_audio_cosine', 'pose_facial_audio_cosine',
-                'pose_facial_audio_text', 'pose_audio_cosine', 'pose_facial_audio_gemini',
+                # gemini alone
+                'gemini',
+                # 2-modality
+                'pose_gemini', 'facial_gemini', 'audio_gemini',
+                'text_gemini', 'cosine_gemini',
+                # 3-modality
+                'pose_facial_gemini', 'pose_audio_gemini', 'facial_audio_gemini',
+                'pose_text_gemini', 'facial_text_gemini', 'audio_text_gemini',
+                # 4-modality
+                'pose_facial_audio_gemini', 'pose_facial_text_gemini',
+                'facial_audio_text_gemini', 'pose_audio_text_gemini',
+                # 5-modality
+                'pose_facial_audio_text_gemini',
+                # ---------- OLD / non-gemini combinations (disabled) ----------
+                # 'pose', 'facial', 'audio', 'text', 'cosine',
+                # 'pose_facial', 'pose_audio', 'pose_text', 'pose_cosine',
+                # 'facial_audio', 'facial_text', 'facial_cosine',
+                # 'audio_text', 'audio_cosine',
+                # 'pose_facial_audio', 'pose_facial_text', 'pose_audio_text',
+                # 'facial_audio_text', 'facial_audio_cosine', 'pose_facial_audio_cosine',
+                # 'pose_audio_cosine', 'pose_facial_audio_text',
             ]},
 
             'dataset': {'values': ["reg", "norm", "pca"]},
@@ -1295,8 +1320,9 @@ def main():
         tf.keras.backend.clear_session()
         gc.collect()
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project="brirl_inter")
-    wandb.agent(sweep_id, function=train_wrapper)
+    sweep_id = wandb.sweep(sweep=sweep_config, project=args.project, entity=args.entity)
+    wandb.agent(sweep_id, function=train_wrapper, count=args.count,
+                entity=args.entity, project=args.project)
 
 if __name__ == '__main__':
     main()
