@@ -161,6 +161,12 @@ def train():
     wandb.log({"n_seconds": len(Xs), "n_features_raw": Xs.shape[1]})
 
     sessions = H.build_sessions(Xs, y, parts, cfg.window_sec, cfg.stride_sec)
+    # Noise-input control -- see hier_model.py. The docstring quotes a 0.55-0.61
+    # floor measured ad hoc; this makes it a swept, logged condition.
+    if getattr(cfg, "noise_input", False):
+        _rng = np.random.default_rng(1000 + int(getattr(cfg, "seed", 0)))
+        for _s in sessions:
+            _s["X"] = _rng.standard_normal(_s["X"].shape).astype("float32")
     baseline_win = max(1, cfg.baseline_sec // max(1, cfg.stride_sec))
 
     feats = {s["part"]: (escalation_features(s, baseline_win, cfg), s["y"])
@@ -235,6 +241,9 @@ def main():
         "name": "brirl_hier_escalation_v6_linear",
         "parameters": {
             "binary_multiclass": {"values": ["binary", "multiclass"]},
+            # Control: identical structure, features replaced by noise.
+            "noise_input": {"values": [False, True]},
+            "seed": {"values": [0, 1, 2]},
             "model_type": {"values": ["logreg", "sgd", "rf", "mlp"]},
             # --- which escalation blocks are switched on --------------------
             # use_current alone == the flat control.

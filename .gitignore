@@ -68,3 +68,12 @@ training/binary_models/wandb/latest-run
 data/embeddings/*
 data/embeddings_old/*
 *.pdf
+
+# Analysis outputs: SLURM job logs and regenerable prediction dumps.
+# noise_control_*.csv are force-added (small, and they ARE the result).
+training/analysis/*.out
+training/analysis/*.err
+training/analysis/*.log
+training/analysis/__pycache__
+training/analysis/headline_predictions.csv
+training/hierarchical_escalation/noise_control_hier.log

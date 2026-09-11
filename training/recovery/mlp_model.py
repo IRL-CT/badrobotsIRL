@@ -625,6 +625,13 @@ def main():
     parser.add_argument("--entity", default=None, help="wandb entity. Defaults to your wandb default.")
     parser.add_argument("--count", type=int, default=None,
                         help="Max number of sweep runs to execute (default: unlimited).")
+    # The detection-multiclass (stage) condition was starved: with both tasks in
+    # one sweep, random search split the budget and the stage task never got
+    # enough runs. --task multiclass pins the sweep to one task so the whole
+    # budget goes to it.
+    parser.add_argument("--task", choices=["both", "binary", "multiclass"],
+                        default="both",
+                        help="Pin binary_multiclass instead of sweeping both.")
     args = parser.parse_args()
     sweep_config = {
         "method": "random",
@@ -685,6 +692,11 @@ def main():
     }
 
     print(sweep_config)
+
+    if args.task != "both":
+        sweep_config["parameters"]["binary_multiclass"] = {"values": [args.task]}
+        sweep_config["name"] = f'{sweep_config["name"]}_{args.task}'
+        print(f"task pinned to {args.task}")
 
     sweep_id = wandb.sweep(sweep=sweep_config, project=args.project, entity=args.entity)
     wandb.agent(sweep_id, function=train, count=args.count,

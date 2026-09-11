@@ -156,12 +156,19 @@ def aggregate_blocks(y_pred, y_true, sessions, y_proba=None, rows_per_unit=1):
     out_proba = None
     if y_proba is not None:
         out_proba = np.vstack(unit_proba)
-        totals = out_proba.sum(axis=1, keepdims=True)
-        out_proba = np.divide(
-            out_proba, totals,
-            out=np.full_like(out_proba, 1.0 / out_proba.shape[1]),
-            where=totals > 0,
-        )
+        # Renormalise ONLY a multi-column distribution. A binary Keras head emits
+        # a single sigmoid column, and dividing that column by its own sum turns
+        # every probability into exactly 1.0 -- constant scores, AUC exactly 0.5.
+        # That is what made avg_sec_test_auc 0.5 for every binary deep run while
+        # multiclass runs were fine (frame-level AUC 0.995 -> second-level 0.500
+        # on a reproduction). Averaging a sigmoid is already the right answer.
+        if out_proba.shape[1] > 1:
+            totals = out_proba.sum(axis=1, keepdims=True)
+            out_proba = np.divide(
+                out_proba, totals,
+                out=np.full_like(out_proba, 1.0 / out_proba.shape[1]),
+                where=totals > 0,
+            )
 
     return (
         np.asarray(unit_pred),

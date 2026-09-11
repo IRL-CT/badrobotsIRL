@@ -168,6 +168,15 @@ def train():
         Xz = scaler.transform(Xs).astype("float32")
 
         sess = H.build_sessions(Xz, y, parts, cfg.window_sec, cfg.stride_sec)
+        # Noise-input control: replace the features with Gaussian noise while
+        # keeping y, widx, part and the session structure untouched. With level-2
+        # recurrence the hidden state can simply count windows, and in this fixed
+        # protocol the label is nearly a function of that count. If noise
+        # reproduces the score, the score is the schedule, not the person.
+        if getattr(cfg, "noise_input", False):
+            _rng = np.random.default_rng(1000 + fold + 100000 * int(getattr(cfg, "seed", 0)))
+            for _s in sess:
+                _s["X"] = _rng.standard_normal(_s["X"].shape).astype("float32")
         by_part = {s["part"]: s for s in sess}
         split = {k: [by_part[p] for p in ps if p in by_part]
                  for k, ps in (("tr", tr_p), ("va", va_p), ("te", te_p))}
@@ -272,6 +281,9 @@ def main():
         "name": "brirl_hier_escalation_v6",
         "parameters": {
             "binary_multiclass": {"values": ["binary", "multiclass"]},
+            # Control: identical structure, features replaced by noise.
+            "noise_input": {"values": [False, True]},
+            "seed": {"values": [0, 1, 2]},
             # --- the hierarchy itself ---------------------------------------
             "level1": {"values": ["gru", "lstm", "rnn", "bigru", "bilstm", "mean"]},
             # "none" is the flat control: no session-level state at all.

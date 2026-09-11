@@ -976,6 +976,23 @@ def train():
     tf.random.set_seed(seed_value)
 
     feature_set = config.feature_set
+    # ---- Bug A guard: sequence context must not exceed 3 s -------------------
+    # create_sequences assigns the label of the LAST element, so the first
+    # (sequence_length - 1) * effective_stride frames of every session get no
+    # prediction at all. Those frames are the start of the session -- the
+    # pre-failure block. At sequence_length=150, stride=10 that is 14.9 s, more
+    # than the 10.4 s median pre-failure block, so class 0 vanished entirely from
+    # the test set. All three top stage runs (F1 0.40-0.43) were measured that
+    # way and are not valid. Cap the context at 300 frames = 3 s.
+    _eff_stride = min(int(config.stride), int(config.window))
+    if int(config.sequence_length) * _eff_stride > 300:
+        print(f"Skipping: sequence_length={config.sequence_length} x effective_stride="
+              f"{_eff_stride} = {int(config.sequence_length) * _eff_stride} frames > 300 "
+              f"({int(config.sequence_length) * _eff_stride / 100:.1f}s of the session would "
+              f"have no prediction)")
+        wandb.log({"status": "skipped_context_exceeds_3s"})
+        return
+
 
     # Skip modality validation for feature sets that ignore modality selection
     if feature_set not in NO_MODALITY_SELECTION_SETS:
@@ -1332,9 +1349,15 @@ def main():
             # OLD: 'agg_features': {'values': [True, False]},
             # Source of the embedding: 'visual' = video only, 'visual_audio' = video+audio.
             'gemini_source': {'values': ['visual', 'visual_audio']},
-            'gemini_dims': {'values': [128, 256, 768, 3072]},
+            # 3072-D + long sequences is what OOM-killed the deep jobs.
+            # OLD: [128, 256, 768, 3072].
+            'gemini_dims': {'values': [128, 256, 768]},
             
-            'sequence_length': {'values': [5, 10, 15, 30, 60, 100, 150, 300]},
+            # Capped at 3 s of context (see the Bug A guard in train()):
+            # max effective_stride is 10, so 30 x 10 = 300 frames exactly.
+            # OLD: [5, 10, 15, 30, 60, 100, 150, 300] -- the long ones deleted
+            # the entire pre-failure block from the test set.
+            'sequence_length': {'values': [5, 10, 15, 30]},
 
             'model': {'values': ['lstm']},
             'class': {'value': 'multiclass'}
