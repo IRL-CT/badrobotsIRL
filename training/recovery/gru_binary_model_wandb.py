@@ -1204,6 +1204,15 @@ def train():
         if _agg and "gemini" in str(config.modality).split("_"):
             _agg = False
             wandb.log({"agg_features_forced_off": True})
+        # A single-feature modality (`cosine` is one column) makes agg_std the standard
+        # deviation of a single value, which pandas returns as NaN under its default
+        # ddof=1 -- every row NaN, and the run dies on "Input X contains NaN". It killed
+        # 4 of 10 `cosine` draws, which is why the C cell is empty/thin in the ablation
+        # tables. The other three stats are degenerate here anyway (mean = min = max =
+        # the value), so aggregating one column is meaningless regardless: use it raw.
+        if _agg and df.shape[1] - 4 < 2:
+            _agg = False
+            wandb.log({"agg_features_forced_off_single_feature": True})
         if _agg:
             info_cols = df.iloc[:, :4]
             feature_data = df.iloc[:, 4:]

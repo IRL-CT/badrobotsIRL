@@ -453,6 +453,15 @@ def train():
     if _agg and "gemini" in str(config.modality).split("_"):
         _agg = False
         wandb.log({"agg_features_forced_off": True})
+    # A single-feature modality (`cosine` is one column) makes agg_std the standard
+    # deviation of a single value, which pandas returns as NaN under its default
+    # ddof=1 -- every row NaN, and the run dies on "Input X contains NaN". It killed
+    # 4 of 10 `cosine` draws, which is why the C cell is empty/thin in the ablation
+    # tables. The other three stats are degenerate here anyway (mean = min = max =
+    # the value), so aggregating one column is meaningless regardless: use it raw.
+    if _agg and df.shape[1] - 4 < 2:
+        _agg = False
+        wandb.log({"agg_features_forced_off_single_feature": True})
     if _agg:
         info_cols = df.iloc[:, :4]
         feature_data = df.iloc[:, 4:]
@@ -635,6 +644,13 @@ def main():
     parser.add_argument("--task", choices=["both", "binary", "multiclass"],
                         default="both",
                         help="Pin binary_multiclass instead of sweeping both.")
+    # The modality ablation table has empty cells because random search over 40
+    # modalities x feature_set x dataset x window x stride x aggregation almost
+    # never draws a single-modality combination: `text` and `cosine` alone had
+    # ZERO runs in every table. --modalities pins the list so the budget lands on
+    # the cells the table actually needs.
+    parser.add_argument("--modalities", default=None,
+                        help="Comma-separated modality list to pin (default: sweep all).")
     args = parser.parse_args()
     sweep_config = {
         "method": "random",
@@ -696,6 +712,11 @@ def main():
     }
 
     print(sweep_config)
+
+    if args.modalities:
+        _mods = [m.strip() for m in args.modalities.split(",") if m.strip()]
+        sweep_config["parameters"]["modality"] = {"values": _mods}
+        print(f"modality pinned to {len(_mods)}: {_mods}")
 
     if args.task != "both":
         sweep_config["parameters"]["binary_multiclass"] = {"values": [args.task]}
