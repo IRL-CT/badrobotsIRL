@@ -80,7 +80,31 @@ HEADLINE = {
             binary_multiclass="multiclass", modality="text_gemini",
             feature_set="selectkbest", dataset="norm", window=15, stride=5,
             aggregation="mode", gemini_source="visual_audio", gemini_embedding="full"),
+    # 8-9: the two best v5 recovery-multiclass cells from the UNCAPPED export
+    # (analysis_results/ablation_v5_recovery_multiclass.csv). Configs 1-7 were
+    # chosen from the 1000-row capped exports, so these supersede 6-7 as the
+    # 3-class headline pair. Hyperparameters here are the sweep's own, not the
+    # grid midpoint, because these exist to reproduce two specific published
+    # numbers; the driver checks the reproduction against W&B.
+    # valiant-sweep-280 (vlbtp8sh): second-level F1 0.682, AUC 0.836
+    8: dict(track="v5", name="recov_3cls_best_embed", model="rf",
+            binary_multiclass="multiclass", modality="pose_facial_audio_gemini",
+            feature_set="full", dataset="norm", window=5, stride=1,
+            aggregation="mode", agg_features=True, test_window_size=1, test_stride=3,
+            gemini_source="visual_audio", gemini_embedding="768d",
+            n_estimators=200, max_depth=5),
+    # dark-sweep-265 (76a2vnjw): second-level F1 0.655, AUC 0.841
+    9: dict(track="v5", name="recov_3cls_best_engineered", model="rf",
+            binary_multiclass="multiclass", modality="pose_facial_audio_text",
+            feature_set="full", dataset="norm", window=30, stride=5,
+            aggregation="average", agg_features=False, test_window_size=10,
+            test_stride=10, gemini_source="visual", gemini_embedding="768d",
+            n_estimators=300, max_depth=25),
 }
+
+# W&B second-level F1 for the configs that reproduce a specific logged run, so
+# the driver can report whether the reproduction actually landed.
+EXPECTED_F1 = {8: 0.6819, 9: 0.6553}
 
 # Hyperparameters the sweeps also set. Fixed at the grid's mid value: these runs
 # exist to produce PREDICTIONS for the time-matched / per-participant analyses,
@@ -241,6 +265,17 @@ def main():
             continue
         try:
             rows = run_one(i, HEADLINE[i])
+            if i in EXPECTED_F1:
+                # These two reproduce a specific W&B run, so say whether the
+                # reproduction actually landed rather than assuming it did.
+                import sklearn.metrics as _sk
+                got = float(np.mean([
+                    _sk.f1_score(json.loads(r["y_true"]), json.loads(r["y_pred"]),
+                                 average="macro") for r in rows]))
+                exp = EXPECTED_F1[i]
+                print(f"  [{i}] frame-level macro-F1 {got:.4f} "
+                      f"(W&B second-level {exp:.4f}); these are different units, "
+                      f"compare the second-level figure downstream", flush=True)
             pd.DataFrame(rows).to_csv(a.out, mode="a",
                                       header=not os.path.exists(a.out), index=False)
             all_rows += rows
