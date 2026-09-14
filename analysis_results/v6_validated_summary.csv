@@ -1,0 +1,6 @@
+arm,validation_status,real_n,real_median_F1,real_best_F1,noise_n,noise_median_F1,noise_max_F1,real_max_minus_noise_max,noise_runs_at_or_above_threshold,threshold,dedicated_grid_real_max,dedicated_grid_noise_max,reason
+session GRU (level2=gru),FAILED noise control,385,0.651,0.966,125,0.374,0.967,-0.001,7,0.85,0.852,0.852,7 noise run(s) reach F1 >= 0.85; noise max 0.967 vs real max 0.966 -- the score is reachable with no real signal
+session LSTM (level2=lstm),FAILED noise control,408,0.674,0.974,133,0.508,0.974,0.0,19,0.85,0.811,0.925,19 noise run(s) reach F1 >= 0.85; noise max 0.974 vs real max 0.974 -- the score is reachable with no real signal
+session RNN (level2=rnn),FAILED noise control,425,0.605,0.979,138,0.461,0.986,-0.007,3,0.85,,,3 noise run(s) reach F1 >= 0.85; noise max 0.986 vs real max 0.979 -- the score is reachable with no real signal
+escalation features (per-window + escalation inputs),VALIDATED,7626,0.556,0.961,2472,0.346,0.703,0.258,0,0.85,0.858,0.611,noise max 0.703 stays below 0.85; real max 0.961 exceeds it by 0.258
+flat 1 Hz (level2=none),VALIDATED,397,0.445,0.808,136,0.443,0.56,0.248,0,0.85,0.682,0.522,noise max 0.56 stays below 0.85; real max 0.808 exceeds it by 0.248

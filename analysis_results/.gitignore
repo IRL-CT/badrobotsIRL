@@ -1,0 +1,16 @@
+# Regenerated artifacts, far too large for git:
+#   raw/                 86M  -- one CSV per W&B project, 26,733 runs
+#   all_runs_clean.csv   69M  -- the four v4/v5 projects pooled and time-filtered
+# Both rebuild from scratch with the two commands in README.md.
+raw/
+all_runs_clean.csv
+export.log
+
+# The small result tables DO belong in the repo. The top-level .gitignore has a
+# blanket `*.csv`, so they have to be re-included explicitly here.
+!ablation_v4_detection_binary.csv
+!ablation_v4_detection_multiclass.csv
+!ablation_v5_recovery_binary.csv
+!ablation_v5_recovery_multiclass.csv
+!v6_validated_summary.csv
+!v6_best_runs_by_arm.csv
