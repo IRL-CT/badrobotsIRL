@@ -1,0 +1,10 @@
+# The top-level .gitignore ignores *.csv. The small result tables that the
+# rebuttal text quotes belong in the repo; re-include them explicitly.
+# The W&B export and the per-prediction registries are regenerated artefacts.
+!relative_controls.csv
+!confusion_*.csv
+!decay_best_exact_k*.csv
+!smote_*.csv
+v6_escalation_export.csv
+headline_predictions_rebuttal_*.csv
+*.log

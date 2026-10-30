@@ -100,11 +100,59 @@ HEADLINE = {
             aggregation="average", agg_features=False, test_window_size=10,
             test_stride=10, gemini_source="visual", gemini_embedding="768d",
             n_estimators=300, max_depth=25),
+    # ---- HRI'27 rebuttal additions (Oct 2026) --------------------------------
+    # 10: EXACT reproduction of the sweep-best binary recovery run
+    # splendid-sweep-136 (hzv27uye, second-level F1 0.735 / AUC 0.847). Config 5
+    # reproduced only its modality, with grid-midpoint hyperparameters and
+    # agg_features off, which is why the delay analysis ran at 0.708 (T5).
+    10: dict(track="v5", name="recov_bin_best_embed_exact", model="rf",
+             binary_multiclass="binary", modality="pose_facial_audio_gemini",
+             feature_set="full", dataset="norm", window=10, stride=10,
+             aggregation="average", agg_features=True, test_window_size=10,
+             test_stride=3, gemini_source="visual_audio", gemini_embedding="128d",
+             n_estimators=200, max_depth=10),
+    # 11: EXACT reproduction of the best absolute-state STAGE run
+    # true-sweep-651 (kd8roa8z, second-level F1 0.469 / AUC 0.695), for the
+    # second-level 4x4 confusion matrix (T10).
+    11: dict(track="v4", name="stage_best_abs_exact", model="sgd",
+             binary_multiclass="multiclass", modality="facial_text",
+             feature_set="rf", dataset="norm", window=5, stride=5,
+             aggregation="mode", agg_features=False, test_window_size=10,
+             test_stride=1, alpha=0.01, max_iter=500, tol=0.0001,
+             gemini_source="visual_audio", gemini_embedding="256d"),
+    # 12-16: the same configurations with SMOTE switched off (T3). Each pairs
+    # with its SMOTE-on twin in this file; nothing else differs.
+    12: dict(track="v5", name="recov_bin_best_embed_exact_nosmote", model="rf",
+             binary_multiclass="binary", modality="pose_facial_audio_gemini",
+             feature_set="full", dataset="norm", window=10, stride=10,
+             aggregation="average", agg_features=True, test_window_size=10,
+             test_stride=3, gemini_source="visual_audio", gemini_embedding="128d",
+             n_estimators=200, max_depth=10, use_smote=False),
+    13: dict(track="v4", name="detect_bin_embed_incl_nosmote", model="rf",
+             binary_multiclass="binary", modality="pose_facial_text_gemini",
+             feature_set="full", dataset="norm", window=10, stride=3,
+             aggregation="last", gemini_source="visual_audio", gemini_embedding="full",
+             use_smote=False),
+    14: dict(track="v4", name="detect_bin_engineered_nosmote", model="rf",
+             binary_multiclass="binary", modality="audio_text", feature_set="rf",
+             dataset="norm", window=15, stride=3, aggregation="average",
+             gemini_source="visual_audio", gemini_embedding="256d", use_smote=False),
+    15: dict(track="v5", name="recov_bin_engineered_nosmote", model="rf",
+             binary_multiclass="binary", modality="pose_facial_audio_cosine",
+             feature_set="full", dataset="norm", window=10, stride=10,
+             aggregation="last", gemini_source="visual", gemini_embedding="256d",
+             use_smote=False),
+    16: dict(track="v4", name="stage_best_abs_exact_nosmote", model="sgd",
+             binary_multiclass="multiclass", modality="facial_text",
+             feature_set="rf", dataset="norm", window=5, stride=5,
+             aggregation="mode", agg_features=False, test_window_size=10,
+             test_stride=1, alpha=0.01, max_iter=500, tol=0.0001,
+             gemini_source="visual_audio", gemini_embedding="256d", use_smote=False),
 }
 
 # W&B second-level F1 for the configs that reproduce a specific logged run, so
 # the driver can report whether the reproduction actually landed.
-EXPECTED_F1 = {8: 0.6819, 9: 0.6553}
+EXPECTED_F1 = {8: 0.6819, 9: 0.6553, 10: 0.7351, 11: 0.4695}
 
 # Hyperparameters the sweeps also set. Fixed at the grid's mid value: these runs
 # exist to produce PREDICTIONS for the time-matched / per-participant analyses,

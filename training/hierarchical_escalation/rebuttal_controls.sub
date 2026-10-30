@@ -1,0 +1,23 @@
+#!/bin/bash
+#SBATCH -J reb_ctrl
+#SBATCH -o training_outputs/reb_ctrl%j.out
+#SBATCH -e training_outputs/reb_ctrl%j.err
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=mb2554@cornell.edu
+#SBATCH -N 1
+#SBATCH -n 8
+#SBATCH --mem=64gb
+#SBATCH -t 12:00:00
+#SBATCH --partition=default_partition
+#SBATCH --requeue
+
+# HRI'27 rebuttal: temporal controls (T2), matched block ladder (T1) and
+# baseline-length sweep (T11) for the relative-feature arm, plus pooled
+# confusion matrices (T10). CPU only: every run is a logistic regression or a
+# random forest on <= 1,000 windows and takes seconds. Resumable: appends to
+# training/analysis/rebuttal/relative_controls.csv after every run.
+PYBIN=/share/ju/conda_virtualenvs/badidea/bin/python3
+cd "$SLURM_SUBMIT_DIR" || exit 1
+mkdir -p training_outputs
+
+"$PYBIN" rebuttal_controls.py --n_jobs 8 --n_boot 500

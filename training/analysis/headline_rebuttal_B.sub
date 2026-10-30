@@ -1,0 +1,25 @@
+#!/bin/bash
+#SBATCH -J head_rebB
+#SBATCH -o training_outputs/head_rebB%j.out
+#SBATCH -e training_outputs/head_rebB%j.err
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=mb2554@cornell.edu
+#SBATCH -N 1
+#SBATCH -n 4
+#SBATCH --mem=128gb
+#SBATCH -t 24:00:00
+#SBATCH --partition=default_partition
+#SBATCH --requeue
+
+# HRI'27 rebuttal, headline configs 13-15 (see run_headline.py HEADLINE):
+#  13 config 2 (iconic-sweep-99 modality) with SMOTE off   (T3)
+#  14 config 1 (best engineered detection) with SMOTE off (T3)
+#  15 config 4 (best engineered recovery) with SMOTE off  (T3)
+# Separate output registry so the published headline_predictions.csv is untouched.
+# Resumable: skips run_names already present in the --out file.
+PYBIN=/share/ju/conda_virtualenvs/badidea/bin/python3
+export WANDB__SERVICE_WAIT=300
+cd "$SLURM_SUBMIT_DIR" || exit 1
+mkdir -p training_outputs rebuttal
+
+"$PYBIN" run_headline.py --only 13 14 15 --out rebuttal/headline_predictions_rebuttal_B.csv

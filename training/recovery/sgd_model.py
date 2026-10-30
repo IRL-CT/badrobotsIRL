@@ -41,6 +41,14 @@ GEMINI_SOURCES = ("visual", "visual_audio")
 GEMINI_DIM_KEYS = ("128d", "256d", "768d", "full")
 
 
+
+def _cfg_get(config, key, default):
+    """Optional config key, from wandb.config or the run_headline stub alike."""
+    try:
+        return config[key]
+    except Exception:
+        return default
+
 def gemini_path(source, dim_key):
     """Path to one embedding CSV, e.g. ("visual_audio", "768d")."""
     return f"{GEMINI_EMBEDDING_DIR}/gemini_video_embeddings_{source}_{dim_key}.csv"
@@ -506,10 +514,17 @@ def train():
         X_train, X_val, X_test, y_train, y_val, y_test, _, _, _, _, _, _, _, session_train, session_val, session_test = splits
 
         # Balance training dataset
-        min_class_count = min(np.bincount(y_train))
-        smote_k = min(5, min_class_count - 1)
-        smote = SMOTE(random_state=42, k_neighbors=smote_k)
-        X_train_balanced, y_train_balanced = smote.fit_resample(X_train, y_train)
+        # HRI'27 rebuttal (T3): `use_smote` switch; default True is the published
+        # pipeline. SMOTE runs AFTER windowing/aggregation, on the training fold's
+        # window-level rows only; validation and test folds are never resampled.
+        if _cfg_get(config, "use_smote", True):
+            min_class_count = min(np.bincount(y_train))
+            smote_k = min(5, min_class_count - 1)
+            smote = SMOTE(random_state=42, k_neighbors=smote_k)
+            X_train_balanced, y_train_balanced = smote.fit_resample(X_train, y_train)
+        else:
+            X_train_balanced, y_train_balanced = X_train, y_train
+            wandb.log({"use_smote": False})
 
         # Initialize SGDClassifier with hyperparameters from sweep config
         sgd = SGDClassifier(
